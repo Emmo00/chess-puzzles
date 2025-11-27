@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import dbConnect from "../../../lib/db";
-import { authenticateUser } from "../../../lib/auth";
-import UserService from "../../../lib/services/users.service";
+import dbConnect from "../../../../lib/db";
+import { authenticateUser } from "../../../../lib/auth";
+import UserService from "../../../../lib/services/users.service";
 
 export async function GET(request: NextRequest) {
   try {

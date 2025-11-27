@@ -21,7 +21,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./app/*"],
-      "@/lib/*": ["./lib/*"]
+      "@/lib/*": ["./lib/*"],
+      "~/lib/*": ["./lib/*"]
     },
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
