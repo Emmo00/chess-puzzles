@@ -1,36 +1,90 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import ChessPiecesScene from "@/components/chess-pieces-scene"
+import StreakBadge from "@/components/streak-badge"
+import CTABlock from "@/components/cta-block"
+import PremiumBanner from "@/components/premium-banner"
+
 export default function Home() {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
+
+  const ctaBlocks = [
+    {
+      id: 1,
+      title: "Solve Puzzles",
+      subtitle: "3 Free Daily",
+      accentColor: "bg-cyan-400",
+      icon: "▲",
+      href: "/solve",
+    },
+    {
+      id: 2,
+      title: "Puzzle Rush",
+      subtitle: "1 Round Daily",
+      accentColor: "bg-magenta-500",
+      icon: "⚡",
+      href: "/rush",
+    },
+    {
+      id: 3,
+      title: "Leaderboard",
+      subtitle: "$CHESS Rewards",
+      accentColor: "bg-yellow-400",
+      icon: "★",
+      href: "#",
+    },
+    {
+      id: 4,
+      title: "Settings",
+      subtitle: "Rating Range, Themes",
+      accentColor: "bg-lime-400",
+      icon: "⚙",
+      href: "#",
+    },
+  ]
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
-        <h1 className="text-4xl font-bold text-center mb-8">
-          Chess-O-Clock
-        </h1>
-        <div className="text-center">
-          <h2 className="text-2xl mb-4">Chess Puzzle API</h2>
-          <p className="mb-4">
-            A Next.js API for chess puzzles with Farcaster authentication.
-          </p>
-          <div className="bg-gray-100 p-4 rounded-lg text-left">
-            <h3 className="font-bold mb-2">Available API Endpoints:</h3>
-            <ul className="space-y-1">
-              <li><code>/api/users/me</code> - Get authenticated user</li>
-              <li><code>/api/puzzles/daily</code> - Get daily puzzle</li>
-              <li><code>/api/puzzles/solve</code> - Submit puzzle solution</li>
-              <li><code>/api/puzzles/today/me</code> - Get today&apos;s puzzle count</li>
-              <li><code>/api/leaderboard/points</code> - Points leaderboard</li>
-              <li><code>/api/leaderboard/solved</code> - Solved puzzles leaderboard</li>
-            </ul>
-          </div>
-          <div className="mt-6">
-            <a 
-              href="/docs" 
-              className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              View Full Documentation
-            </a>
-          </div>
+    <div className="w-screen h-screen bg-white text-black flex flex-col overflow-hidden">
+      {/* Header with Streak Badge */}
+      <header className="pt-4 px-4 flex justify-between items-center flex-shrink-0">
+        <div></div>
+        <StreakBadge days={12} />
+      </header>
+
+      {/* Main Content - Centered, No Scroll */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 overflow-hidden gap-4">
+        {/* Headline */}
+        <h1 className="text-5xl font-black text-center leading-tight max-w-sm text-balance">Be the King of Chess</h1>
+
+        {/* 3D Chess Pieces Scene */}
+        <div className="w-full max-w-xs aspect-square flex-shrink-0">
+          <ChessPiecesScene />
         </div>
-      </div>
-    </main>
+
+        {/* 4 CTA Blocks - Responsive Grid */}
+        <div className="w-full max-w-sm grid grid-cols-2 gap-2 flex-shrink-0">
+          {ctaBlocks.map((cta) => (
+            <CTABlock
+              key={cta.id}
+              title={cta.title}
+              subtitle={cta.subtitle}
+              accentColor={cta.accentColor}
+              icon={cta.icon}
+              href={cta.href}
+            />
+          ))}
+        </div>
+      </main>
+
+      {/* Premium Banner - Bottom */}
+      <PremiumBanner />
+    </div>
   )
 }

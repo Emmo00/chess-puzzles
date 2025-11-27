@@ -1,13 +1,54 @@
-import './globals.css'
+import type React from "react"
+// <CHANGE> Added Three.js script tag for 3D chess pieces
+import type { Metadata } from "next"
+
+import { Analytics } from "@vercel/analytics/next"
+import "./globals.css"
+
+import { Inter, JetBrains_Mono, Source_Serif_4 } from 'next/font/google'
+
+// Initialize fonts
+const inter = Inter({ subsets: ['latin'] })
+const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'] })
+const sourceSerif4 = Source_Serif_4({ subsets: ['latin'], weight: ["200","300","400","500","600","700","800","900"] })
+
+export const metadata: Metadata = {
+  title: "Chess Puzzle - Launch",
+  description: "Neo-brutalist chess puzzle application",
+  generator: "v0.app",
+  icons: {
+    icon: [
+      {
+        url: "/icon-light-32x32.png",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/icon-dark-32x32.png",
+        media: "(prefers-color-scheme: dark)",
+      },
+      {
+        url: "/icon.svg",
+        type: "image/svg+xml",
+      },
+    ],
+    apple: "/apple-icon.png",
+  },
+}
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+      </head>
+      <body className={`${inter.className} antialiased`}>
+        {children}
+        <Analytics />
+      </body>
     </html>
   )
 }
