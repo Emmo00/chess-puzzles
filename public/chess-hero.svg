@@ -1,0 +1,68 @@
+<svg width="800" height="400" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="heroGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2D1810;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1A0F08;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0F0504;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="400" fill="url(#heroGradient)"/>
+  
+  <!-- Chess board in perspective -->
+  <g transform="translate(400, 300) scale(1, 0.6)">
+    <!-- Board squares -->
+    <g transform="rotate(-15)">
+      <rect x="-120" y="-120" width="30" height="30" fill="#F0D9B5"/>
+      <rect x="-90" y="-120" width="30" height="30" fill="#B58863"/>
+      <rect x="-60" y="-120" width="30" height="30" fill="#F0D9B5"/>
+      <rect x="-30" y="-120" width="30" height="30" fill="#B58863"/>
+      <rect x="0" y="-120" width="30" height="30" fill="#F0D9B5"/>
+      <rect x="30" y="-120" width="30" height="30" fill="#B58863"/>
+      <rect x="60" y="-120" width="30" height="30" fill="#F0D9B5"/>
+      <rect x="90" y="-120" width="30" height="30" fill="#B58863"/>
+      
+      <rect x="-120" y="-90" width="30" height="30" fill="#B58863"/>
+      <rect x="-90" y="-90" width="30" height="30" fill="#F0D9B5"/>
+      <rect x="-60" y="-90" width="30" height="30" fill="#B58863"/>
+      <rect x="-30" y="-90" width="30" height="30" fill="#F0D9B5"/>
+      <rect x="0" y="-90" width="30" height="30" fill="#B58863"/>
+      <rect x="30" y="-90" width="30" height="30" fill="#F0D9B5"/>
+      <rect x="60" y="-90" width="30" height="30" fill="#B58863"/>
+      <rect x="90" y="-90" width="30" height="30" fill="#F0D9B5"/>
+      
+      <!-- Chess pieces on board -->
+      <text x="-105" y="-95" font-family="Arial, sans-serif" font-size="20" fill="#333" text-anchor="middle">♜</text>
+      <text x="-75" y="-95" font-family="Arial, sans-serif" font-size="20" fill="#333" text-anchor="middle">♞</text>
+      <text x="-45" y="-95" font-family="Arial, sans-serif" font-size="20" fill="#333" text-anchor="middle">♝</text>
+      <text x="-15" y="-95" font-family="Arial, sans-serif" font-size="20" fill="#333" text-anchor="middle">♛</text>
+      <text x="15" y="-95" font-family="Arial, sans-serif" font-size="20" fill="#333" text-anchor="middle">♚</text>
+      
+      <text x="-105" y="-65" font-family="Arial, sans-serif" font-size="18" fill="#333" text-anchor="middle">♟</text>
+      <text x="-75" y="-65" font-family="Arial, sans-serif" font-size="18" fill="#333" text-anchor="middle">♟</text>
+      <text x="-45" y="-65" font-family="Arial, sans-serif" font-size="18" fill="#333" text-anchor="middle">♟</text>
+      
+      <!-- White pieces -->
+      <text x="15" y="95" font-family="Arial, sans-serif" font-size="20" fill="#FFF" text-anchor="middle">♔</text>
+      <text x="45" y="95" font-family="Arial, sans-serif" font-size="20" fill="#FFF" text-anchor="middle">♕</text>
+      <text x="75" y="95" font-family="Arial, sans-serif" font-size="20" fill="#FFF" text-anchor="middle">♖</text>
+    </g>
+  </g>
+  
+  <!-- Title area -->
+  <g transform="translate(400, 100)">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#FFD700" text-anchor="middle">
+      Chess Puzzles
+    </text>
+    <text x="0" y="40" font-family="Arial, sans-serif" font-size="24" fill="#F0D9B5" text-anchor="middle">
+      Sharpen Your Tactical Skills
+    </text>
+  </g>
+  
+  <!-- Decorative elements -->
+  <circle cx="100" cy="100" r="3" fill="#FFD700" opacity="0.6"/>
+  <circle cx="700" cy="80" r="2" fill="#F0D9B5" opacity="0.4"/>
+  <circle cx="150" cy="350" r="2" fill="#B58863" opacity="0.3"/>
+  <circle cx="650" cy="320" r="4" fill="#FFD700" opacity="0.5"/>
+</svg>
