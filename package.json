@@ -1,0 +1,38 @@
+{
+  "name": "chess-o-clock-nextjs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "jest --forceExit --detectOpenHandles"
+  },
+  "dependencies": {
+    "@farcaster/quick-auth": "^0.0.7",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "envalid": "^8.1.0",
+    "mongoose": "^8.17.1",
+    "next": "^14.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-react": "^5.10.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/mongoose": "^5.11.97",
+    "@types/node": "^24.3.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@types/supertest": "^6.0.3",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^14.0.0",
+    "supertest": "^7.1.4",
+    "tailwindcss": "^3.3.0",
+    "typescript": "5.8.3"
+  }
+}
