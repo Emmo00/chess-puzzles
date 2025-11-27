@@ -33,7 +33,7 @@ export async function authenticateUser(request: NextRequest): Promise<QuickAuthU
   try {
     const payload = await client.verifyJwt({
       token: authorization.split(" ")[1] as string,
-      domain: process.env.HOSTNAME,
+      domain: process.env.HOSTNAME || "localhost:3000",
     });
 
     const user = await resolveUser(payload.sub);
