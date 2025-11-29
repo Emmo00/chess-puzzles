@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { useAccount } from "wagmi"
-import ChessPiecesScene from "./components/chess-pieces-scene"
-import StreakBadge from "./components/streak-badge"
-import CTABlock from "./components/cta-block"
+import ChessPiecesScene from "../components/chess-pieces-scene"
+import StreakBadge from "../components/streak-badge"
+import CTABlock from "../components/cta-block"
 import { WalletConnect } from "@/components/WalletConnect"
-import { PaymentModal } from "../components/PaymentModal"
+import { PaymentModal } from "@/components/PaymentModal"
 import { useUserStats } from "../lib/hooks/useUserStats"
 
 export default function Home() {

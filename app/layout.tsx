@@ -65,7 +65,6 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} antialiased`}>
         <WalletProvider>
-          <ChainNotification />
           {children}
         </WalletProvider>
       </body>

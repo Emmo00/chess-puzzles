@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react'
 import { useAccount } from 'wagmi'
 import { useRouter } from 'next/navigation'
 import Link from "next/link"
-import StreakBadge from "../components/streak-badge"
-import ChessBoard from "../components/chess-board"
-import PuzzleCounter from "../components/puzzle-counter"
-import PuzzleActions from "../components/puzzle-actions"
-import PuzzleProgress from "../components/puzzle-progress"
-import PaywallCard from "../components/paywall-card"
+import StreakBadge from "../../components/streak-badge"
+import ChessBoard from "../../components/chess-board"
+import PuzzleCounter from "../../components/puzzle-counter"
+import PuzzleActions from "../../components/puzzle-actions"
+import PuzzleProgress from "../../components/puzzle-progress"
+import PaywallCard from "../../components/paywall-card"
 import { useUserStats } from "../../lib/hooks/useUserStats"
 
 export default function SolvePage() {

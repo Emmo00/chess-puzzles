@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { injected, useAccount, useConnect, useDisconnect } from "wagmi";
 import { formatAddress } from "@/lib/utils/formatAddress";
 import { isMiniPay } from "@/lib/config/wagmi";
-import { useChainSwitching } from "../../lib/hooks/useChainSwitching";
+import { useChainSwitching } from "../lib/hooks/useChainSwitching";
 
 export function WalletConnect() {
   const { address, isConnected } = useAccount();
