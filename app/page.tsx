@@ -109,8 +109,9 @@ export default function Home() {
       <main className="flex-1 flex flex-col items-center justify-center px-4 overflow-hidden gap-4">
 
         {/* Headline */}
-        <h1 className="text-5xl font-black text-center leading-tight max-w-sm text-balance">
-          Be the King of Chess
+        <h1 className="text-[2.3rem] font-black text-center leading-tight max-w-sm text-balance">
+          Be the King of <span className="text-orange-400 bg-black px-2">Chess</span>
+          
         </h1>
 
         {/* 3D Chess Pieces Scene */}
