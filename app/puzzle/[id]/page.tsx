@@ -7,21 +7,6 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const puzzleId = params.id
-  
-  const miniAppEmbed = {
-    version: "1",
-    imageUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/og?title=Puzzle%20${puzzleId}&subtitle=Solve%20This%20Chess%20Tactic`,
-    button: {
-      title: "🏁 Solve Puzzle",
-      action: {
-        type: "launch_miniapp",
-        name: "Chess Puzzles",
-        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/puzzle/${puzzleId}`,
-        splashImageUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/icon.png`,
-        splashBackgroundColor: "#1a1a1a"
-      }
-    }
-  }
 
   return {
     title: `Chess Puzzle #${puzzleId} - Master Your Tactics`,
@@ -38,10 +23,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         }
       ],
       type: "website"
-    },
-    other: {
-      "fc:miniapp": JSON.stringify(miniAppEmbed),
-      "fc:frame": JSON.stringify(miniAppEmbed) // For backward compatibility
     }
   }
 }

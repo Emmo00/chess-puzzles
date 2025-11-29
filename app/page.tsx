@@ -5,12 +5,10 @@ import ChessPiecesScene from "@/components/chess-pieces-scene"
 import StreakBadge from "@/components/streak-badge"
 import CTABlock from "@/components/cta-block"
 import PremiumBanner from "@/components/premium-banner"
-import { MiniAppAuth } from "../components/MiniAppAuth"
-import { useMiniAppContext } from "@/lib/contexts/MiniAppContext"
+import { WalletConnect } from "@/components/WalletConnect"
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
-  const { isInMiniApp, user, isLoading } = useMiniAppContext()
 
   useEffect(() => {
     setMounted(true)
@@ -55,30 +53,18 @@ export default function Home() {
 
   return (
     <div className="w-screen h-screen bg-white text-black flex flex-col overflow-hidden">
-      {/* Header with Streak Badge and MiniApp indicator */}
+      {/* Header with Streak Badge and Wallet */}
       <header className="pt-4 px-4 flex justify-between items-center shrink-0">
-        <div>
-          {isInMiniApp && (
-            <div className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
-              Farcaster App
-            </div>
-          )}
-        </div>
-        <StreakBadge days={user ? 12 : 0} />
+        <WalletConnect />
+        <StreakBadge days={12} />
       </header>
 
       {/* Main Content - Centered, No Scroll */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 overflow-hidden gap-4">
-        {/* MiniApp Authentication */}
-        {!isLoading && (
-          <div className="w-full max-w-sm shrink-0">
-            <MiniAppAuth />
-          </div>
-        )}
 
         {/* Headline */}
         <h1 className="text-5xl font-black text-center leading-tight max-w-sm text-balance">
-          {user ? `Welcome, ${user.displayName || user.username}!` : "Be the King of Chess"}
+          Be the King of Chess
         </h1>
 
         {/* 3D Chess Pieces Scene */}

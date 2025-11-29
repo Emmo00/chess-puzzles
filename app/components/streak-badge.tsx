@@ -23,7 +23,7 @@ export default function StreakBadge({ days }: StreakBadgeProps) {
       }}
     >
       <div
-        className="border-4 border-white px-6 py-3 bg-black font-black text-sm tracking-wider uppercase hover:scale-105 transition-transform duration-300 cursor-pointer"
+        className="border-4 border-white px-6 py-3 font-black text-sm tracking-wider uppercase hover:scale-105 transition-transform duration-300 cursor-pointer"
         style={{
           boxShadow: "8px 8px 0px rgba(255, 255, 255, 0.15), 12px 12px 0px rgba(255, 255, 255, 0.05)",
         }}
