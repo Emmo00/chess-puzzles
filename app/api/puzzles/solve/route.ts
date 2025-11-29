@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     
-    const user = await authenticateUser(request);
+    const user = await authenticateWalletUser(request);
     const body = await request.json();
     const { puzzleId, attempts } = body;
 

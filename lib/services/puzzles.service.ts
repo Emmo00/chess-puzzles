@@ -55,7 +55,7 @@ class PuzzleService {
     return updatedUserPuzzle;
   }
 
-  public async getNumberOfPuzzlesGivenToday(userfid: number, type = "free") {
+  public async getNumberOfPuzzlesGivenToday(userfid: string | number, type = "free") {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
