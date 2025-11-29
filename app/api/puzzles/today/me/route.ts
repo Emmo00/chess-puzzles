@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "../../../../../lib/db";
-import { authenticateUser } from "../../../../../lib/auth";
+import { authenticateWalletUser } from "../../../../../lib/auth";
 import PuzzleService from "../../../../../lib/services/puzzles.service";
 
 export async function GET(request: NextRequest) {

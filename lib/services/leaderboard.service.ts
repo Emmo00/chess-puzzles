@@ -5,9 +5,9 @@ class LeaderboardService {
 
   /**
    * Get leaderboard for points or total puzzles solved, paginated, with optional friends filter.
-   * @param category 'points' | 'totalPuzzlesSolved'
+   * @param category 'points' | 'totalPuzzlesSolved' | 'solved'
    * @param filter 'global' | 'friends'
-   * @param userFid current user's fid
+   * @param userIdentifier current user's wallet address or fid
    * @param page page number (1-based)
    * @param limit page size
    */
@@ -18,23 +18,36 @@ class LeaderboardService {
     page = 1,
     limit = 10,
   }: {
-    category: "points" | "totalPuzzlesSolved",
+    category: "points" | "totalPuzzlesSolved" | "solved",
     filter: string,
-    userFid?: number,
+    userFid?: string | number, // Updated to support wallet addresses
     page: number,
     limit: number,
   }) {
     let query: any = {};
+    
+    // Map category to actual field name
+    const fieldName = category === 'solved' ? 'puzzles_solved' : 
+                     category === 'points' ? 'total_points' : 
+                     category;
+    
     // Exclude users with zero points/solved
-    query[category] = { $gt: 0 };
+    query[fieldName] = { $gt: 0 };
+    
     if (filter === "friends" && userFid) {
-      // Fetch friend FIDs from Neynar best friends API
-      const friends = await this.getBestFriendsFids(userFid);
-      query.fid = { $in: friends };
+      // For wallet-based users, skip friends filter for now
+      if (typeof userFid === 'string') {
+        // Wallet address - no friends support yet
+      } else {
+        // Legacy FID - fetch friend FIDs from Neynar best friends API
+        const friends = await this.getBestFriendsFids(userFid);
+        query.fid = { $in: friends };
+      }
     }
-    // Sort by category desc
+    
+    // Sort by field desc
     const sort: any = {};
-    sort[category] = -1;
+    sort[fieldName] = -1;
     // Pagination
     const skip = (page - 1) * limit;
     const users = await this.users.find(query).sort(sort).skip(skip).limit(limit).lean();

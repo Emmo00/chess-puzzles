@@ -1,18 +1,60 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import ChessPiecesScene from "@/components/chess-pieces-scene"
-import StreakBadge from "@/components/streak-badge"
-import CTABlock from "@/components/cta-block"
-import PremiumBanner from "@/components/premium-banner"
+import { useAccount } from "wagmi"
+import ChessPiecesScene from "./components/chess-pieces-scene"
+import StreakBadge from "./components/streak-badge"
+import CTABlock from "./components/cta-block"
+import PremiumBanner from "./components/premium-banner"
 import { WalletConnect } from "@/components/WalletConnect"
+import { PaymentModal } from "../components/PaymentModal"
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentStatus, setPaymentStatus] = useState<{ hasAccess: boolean; hasPremium: boolean } | null>(null)
+  const { address, isConnected } = useAccount()
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Check payment status when wallet connects
+  useEffect(() => {
+    if (address && isConnected) {
+      checkPaymentStatus()
+    }
+  }, [address, isConnected])
+
+  const checkPaymentStatus = async () => {
+    try {
+      const response = await fetch(`/api/payments/status?walletAddress=${address}`)
+      if (response.ok) {
+        const status = await response.json()
+        setPaymentStatus(status)
+      }
+    } catch (error) {
+      console.error('Failed to check payment status:', error)
+    }
+  }
+
+  const handleSolvePuzzlesClick = () => {
+    if (!isConnected) {
+      alert('Please connect your wallet first')
+      return
+    }
+    
+    if (!paymentStatus?.hasAccess) {
+      setShowPaymentModal(true)
+    } else {
+      // Navigate to solve puzzles
+      window.location.href = '/solve'
+    }
+  }
+
+  const handlePaymentSuccess = () => {
+    checkPaymentStatus() // Refresh payment status
+  }
 
   if (!mounted) return null
 
@@ -20,10 +62,13 @@ export default function Home() {
     {
       id: 1,
       title: "Solve Puzzles",
-      subtitle: "3 Free Daily",
-      accentColor: "bg-cyan-400",
-      icon: "▲",
+      subtitle: paymentStatus?.hasAccess 
+        ? (paymentStatus?.hasPremium ? "Premium Access" : "Daily Access")
+        : "0.1 USDC or $1 Premium",
+      accentColor: paymentStatus?.hasAccess ? "bg-green-400" : "bg-cyan-400",
+      icon: paymentStatus?.hasAccess ? "✓" : "▲",
       href: "/solve",
+      onClick: handleSolvePuzzlesClick,
     },
     {
       id: 2,
@@ -82,6 +127,7 @@ export default function Home() {
               accentColor={cta.accentColor}
               icon={cta.icon}
               href={cta.href}
+              onClick={cta.onClick}
             />
           ))}
         </div>
@@ -89,6 +135,13 @@ export default function Home() {
 
       {/* Premium Banner - Bottom */}
       <PremiumBanner />
+      
+      {/* Payment Modal */}
+      <PaymentModal 
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSuccess={handlePaymentSuccess}
+      />
     </div>
   )
 }

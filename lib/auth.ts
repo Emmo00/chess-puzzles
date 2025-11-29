@@ -1,17 +1,29 @@
 import { NextRequest } from "next/server";
-import { QuickAuthUser } from "./types";
 
-// Simple wallet-based auth placeholder
-// In a real app, you would verify wallet signatures or JWT tokens
-export async function authenticateUser(request: NextRequest): Promise<QuickAuthUser> {
-  // For now, return a mock user for development
-  // In production, you would verify wallet signatures
-  const mockUser: QuickAuthUser = {
-    fid: 1,
-    username: "wallet_user",
-    displayName: "Wallet User",
-    pfpUrl: undefined,
-  };
+export interface WalletUser {
+  walletAddress: string;
+  displayName: string;
+}
+
+export async function authenticateWalletUser(request: NextRequest): Promise<WalletUser> {
+  const walletAddress = request.headers.get("x-wallet-address");
   
-  return mockUser;
+  if (!walletAddress) {
+    throw new Error("Wallet address not provided");
+  }
+
+  // Validate wallet address format (basic check)
+  if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+    throw new Error("Invalid wallet address format");
+  }
+
+  return {
+    walletAddress: walletAddress.toLowerCase(),
+    displayName: `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
+  };
+}
+
+// Legacy function for backward compatibility - will be updated in API routes
+export async function authenticateUser(request: NextRequest) {
+  return authenticateWalletUser(request);
 }

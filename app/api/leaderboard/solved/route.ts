@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "../../../../lib/db";
-import { authenticateUser } from "../../../../lib/auth";
+import { authenticateWalletUser } from "../../../../lib/auth";
 import LeaderboardService from "../../../../lib/services/leaderboard.service";
 
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     
-    const user = await authenticateUser(request);
+    const user = await authenticateWalletUser(request);
     const { searchParams } = new URL(request.url);
     
     const page = Math.max(Number(searchParams.get('page')) || 1, 1);
@@ -17,9 +17,9 @@ export async function GET(request: NextRequest) {
     const leaderboardService = new LeaderboardService();
     
     const result = await leaderboardService.getLeaderboard({
-      category: "totalPuzzlesSolved",
+      category: "solved",
       filter,
-      userFid: user.fid,
+      userFid: user.walletAddress,
       page,
       limit,
     });

@@ -9,9 +9,10 @@ interface CtaBlockProps {
   accentColor: string
   icon: string
   href?: string
+  onClick?: () => void
 }
 
-export default function CTABlock({ title, subtitle, accentColor, icon, href = "#" }: CtaBlockProps) {
+export default function CTABlock({ title, subtitle, accentColor, icon, href = "#", onClick }: CtaBlockProps) {
   const [mounted, setMounted] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
 
@@ -49,7 +50,9 @@ export default function CTABlock({ title, subtitle, accentColor, icon, href = "#
         animation: `slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards`,
       }}
     >
-      {href && href !== "#" ? (
+      {onClick ? (
+        <button onClick={onClick} className="w-full">{buttonContent}</button>
+      ) : href && href !== "#" ? (
         <Link href={href} className="block">
           {buttonContent}
         </Link>

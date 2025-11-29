@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "../../../../lib/db";
-import { authenticateUser } from "../../../../lib/auth";
+import { authenticateWalletUser } from "../../../../lib/auth";
 import PuzzleService from "../../../../lib/services/puzzles.service";
 
 const MAX_DAILY_FREE_PUZZLES = 3;
@@ -9,11 +9,11 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     
-    const user = await authenticateUser(request);
+    const user = await authenticateWalletUser(request);
     const puzzleService = new PuzzleService();
     
     // check if the user has used up their daily free puzzles
-    const count = await puzzleService.getNumberOfPuzzlesGivenToday(user.fid);
+    const count = await puzzleService.getNumberOfPuzzlesGivenToday(user.walletAddress);
     if (count >= MAX_DAILY_FREE_PUZZLES) {
       return NextResponse.json(
         { message: "Daily puzzle limit reached" },
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     // store in database
     await puzzleService.createUserPuzzle({
-      userfid: user.fid,
+      userfid: user.walletAddress,
       puzzleId: puzzle.puzzleid,
       type: "free"
     });

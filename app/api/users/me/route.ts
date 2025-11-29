@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "../../../../lib/db";
-import { authenticateUser } from "../../../../lib/auth";
+import { authenticateWalletUser } from "../../../../lib/auth";
 import UserService from "../../../../lib/services/users.service";
 
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     
-    const user = await authenticateUser(request);
+    const user = await authenticateWalletUser(request);
     const userService = new UserService();
     
     const userData = await userService.createUser(user);
