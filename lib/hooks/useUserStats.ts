@@ -30,12 +30,17 @@ export function useUserStats() {
     setError(null)
 
     try {
-      const response = await fetch('/api/users/me')
+      const response = await fetch(`/api/users/me?walletAddress=${address}`, {
+        headers: {
+          'x-wallet-address': address,
+        },
+      })
       if (response.ok) {
         const userData = await response.json()
         setUserStats(userData)
       } else {
-        throw new Error('Failed to fetch user stats')
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch user stats' }))
+        throw new Error(errorData.message || 'Failed to fetch user stats')
       }
     } catch (error) {
       console.error('Error fetching user stats:', error)

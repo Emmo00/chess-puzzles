@@ -6,7 +6,13 @@ export interface WalletUser {
 }
 
 export async function authenticateWalletUser(request: NextRequest): Promise<WalletUser> {
-  const walletAddress = request.headers.get("x-wallet-address");
+  // Try to get wallet address from header first, then from query params
+  let walletAddress = request.headers.get("x-wallet-address");
+  
+  if (!walletAddress) {
+    const { searchParams } = new URL(request.url);
+    walletAddress = searchParams.get("walletAddress");
+  }
   
   if (!walletAddress) {
     throw new Error("Wallet address not provided");

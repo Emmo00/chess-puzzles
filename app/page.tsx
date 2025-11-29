@@ -78,7 +78,7 @@ export default function Home() {
       subtitle: "1 Round Daily",
       accentColor: "bg-magenta-500",
       icon: "⚡",
-      href: "/rush",
+      href: "/coming-soon",
     },
     {
       id: 3,
@@ -86,7 +86,7 @@ export default function Home() {
       subtitle: "$CHESS Rewards",
       accentColor: "bg-yellow-400",
       icon: "★",
-      href: "#",
+      href: "/coming-soon",
     },
     {
       id: 4,
@@ -94,7 +94,7 @@ export default function Home() {
       subtitle: "Rating Range, Themes",
       accentColor: "bg-lime-400",
       icon: "⚙",
-      href: "#",
+      href: "/coming-soon",
     },
   ]
 
