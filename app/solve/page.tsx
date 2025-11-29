@@ -17,6 +17,7 @@ export default function SolvePage() {
   const [loading, setLoading] = useState(true)
   const [attemptCount, setAttemptCount] = useState(1)
   const [puzzleProgress, setPuzzleProgress] = useState(2)
+  const [userStats, setUserStats] = useState<{currentStreak: number} | null>(null)
   const { address, isConnected } = useAccount()
   const router = useRouter()
 
@@ -101,7 +102,7 @@ export default function SolvePage() {
           }`}>
             {paymentStatus?.hasPremium ? '🏆 Premium' : '⚡ Daily Access'}
           </div>
-          <StreakBadge days={12} />
+          <StreakBadge days={userStats?.currentStreak || 0} />
         </div>
       </header>
 

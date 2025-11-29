@@ -13,6 +13,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentStatus, setPaymentStatus] = useState<{ hasAccess: boolean; hasPremium: boolean } | null>(null)
+  const [userStats, setUserStats] = useState<{currentStreak: number} | null>(null)
   const { address, isConnected } = useAccount()
 
   useEffect(() => {
@@ -32,6 +33,13 @@ export default function Home() {
       if (response.ok) {
         const status = await response.json()
         setPaymentStatus(status)
+      }
+      
+      // Fetch user stats including streak
+      const userResponse = await fetch('/api/users/me')
+      if (userResponse.ok) {
+        const userData = await userResponse.json()
+        setUserStats(userData)
       }
     } catch (error) {
       console.error('Failed to check payment status:', error)
@@ -101,7 +109,7 @@ export default function Home() {
       {/* Header with Streak Badge and Wallet */}
       <header className="pt-4 px-4 flex justify-between items-center shrink-0">
         <WalletConnect />
-        <StreakBadge days={12} />
+        <StreakBadge days={userStats?.currentStreak || 0} />
       </header>
 
       {/* Main Content - Centered, No Scroll */}

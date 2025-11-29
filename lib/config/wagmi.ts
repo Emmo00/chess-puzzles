@@ -21,9 +21,9 @@ export const CUSD_ADDRESSES = {
 export const PAYMENT_RECIPIENT = "0x7b054580aEA6B6cbdF30BbbE84777bae623F4d1e";
 
 // MiniPay detection helper
-export const isMiniPay = () => {
+export const isMiniPay = (): boolean => {
   if (typeof window !== 'undefined' && window.ethereum) {
-    return window.ethereum.isMiniPay;
+    return Boolean(window.ethereum.isMiniPay);
   }
   return false;
 };
