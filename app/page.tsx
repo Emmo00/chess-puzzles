@@ -5,7 +5,6 @@ import { useAccount } from "wagmi"
 import ChessPiecesScene from "./components/chess-pieces-scene"
 import StreakBadge from "./components/streak-badge"
 import CTABlock from "./components/cta-block"
-import PremiumBanner from "./components/premium-banner"
 import { WalletConnect } from "@/components/WalletConnect"
 import { PaymentModal } from "../components/PaymentModal"
 import { useUserStats } from "../lib/hooks/useUserStats"
@@ -134,9 +133,6 @@ export default function Home() {
           ))}
         </div>
       </main>
-
-      {/* Premium Banner - Bottom */}
-      <PremiumBanner />
       
       {/* Payment Modal */}
       <PaymentModal 
