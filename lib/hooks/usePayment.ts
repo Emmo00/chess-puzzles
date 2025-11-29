@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
-import { parseUnits } from 'viem'
-import { ERC20_ABI, getUSDCAddress, PAYMENT_AMOUNTS, PAYMENT_RECIPIENT } from '../utils/payment'
+import { CUSD_ABI, getCUSDAddress, PAYMENT_AMOUNTS, PAYMENT_RECIPIENT } from '../utils/payment'
 import { PaymentType } from '../types/payment'
 
 export function usePayment() {
@@ -22,14 +21,15 @@ export function usePayment() {
 
     try {
       setPaymentType(type)
-      const usdcAddress = getUSDCAddress(chainId)
+      const cusdAddress = getCUSDAddress(chainId)
       const amount = type === PaymentType.DAILY_ACCESS 
         ? PAYMENT_AMOUNTS.DAILY_ACCESS 
         : PAYMENT_AMOUNTS.PREMIUM
 
+      // Use writeContract with proper parameters for MiniPay compatibility
       await writeContract({
-        address: usdcAddress as `0x${string}`,
-        abi: ERC20_ABI,
+        address: cusdAddress as `0x${string}`,
+        abi: CUSD_ABI,
         functionName: 'transfer',
         args: [PAYMENT_RECIPIENT as `0x${string}`, amount],
       })

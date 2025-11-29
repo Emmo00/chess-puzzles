@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const userService = new UserService();
 
     const userPuzzleData: Partial<UserPuzzle> = {
-      userfid: user.fid,
+      userfid: user.walletAddress,
       puzzleId,
       completed: true,
       attempts,
@@ -37,18 +37,18 @@ export async function POST(request: NextRequest) {
 
     if (updatedUserPuzzle) {
       // Update user stats
-      const currentUser = await userService.getUser(user.fid);
+      const currentUser = await userService.getUser(user.walletAddress);
       const newPoints = currentUser.points + userPuzzleData.points!;
       const newTotalSolved = currentUser.totalPuzzlesSolved + 1;
 
-      await userService.updateUserStats(user.fid, {
+      await userService.updateUserStats(user.walletAddress, {
         points: newPoints,
         totalPuzzlesSolved: newTotalSolved,
         lastLoggedIn: new Date(),
       });
 
       // Update streak
-      await userService.updateUserStreak(user.fid);
+      await userService.updateUserStreak(user.walletAddress);
     }
 
     return NextResponse.json({

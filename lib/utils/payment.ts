@@ -1,63 +1,45 @@
 import { parseUnits } from "viem";
-import { USDC_ADDRESSES, PAYMENT_RECIPIENT } from "../config/wagmi";
+import { CUSD_ADDRESSES, PAYMENT_RECIPIENT } from "../config/wagmi";
+import { stableTokenABI } from "@celo/abis";
 
-// Payment amounts in USDC (6 decimals)
+// Payment amounts in cUSD (18 decimals)
 export const PAYMENT_AMOUNTS = {
-  DAILY_ACCESS: parseUnits("0.1", 6), // 0.1 USDC
-  PREMIUM: parseUnits("1", 6), // 1 USDC
+  DAILY_ACCESS: parseUnits("0.1", 18), // 0.1 cUSD
+  PREMIUM: parseUnits("1", 18), // 1 cUSD
 } as const;
 
-// ERC20 ABI for USDC transfers
-export const ERC20_ABI = [
-  {
-    name: "transfer",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-  },
-  {
-    name: "balanceOf",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "owner", type: "address" }],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-  {
-    name: "allowance",
-    type: "function",
-    stateMutability: "view",
-    inputs: [
-      { name: "owner", type: "address" },
-      { name: "spender", type: "address" },
-    ],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-  {
-    name: "approve",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-  },
-] as const;
+// Use Celo's stable token ABI for cUSD
+export const CUSD_ABI = stableTokenABI;
 
-export function getUSDCAddress(chainId: number): string {
-  const address = USDC_ADDRESSES[chainId as keyof typeof USDC_ADDRESSES];
+export function getCUSDAddress(chainId: number): string {
+  const address = CUSD_ADDRESSES[chainId as keyof typeof CUSD_ADDRESSES];
   if (!address) {
-    throw new Error(`USDC not supported on chain ${chainId}`);
+    throw new Error(`cUSD not supported on chain ${chainId}`);
   }
   return address;
 }
 
-export function formatUSDC(amount: bigint): string {
-  return (Number(amount) / 1e6).toFixed(2);
+export function formatCUSD(amount: bigint): string {
+  return (Number(amount) / 1e18).toFixed(2);
+}
+
+// MiniPay auto-connect helper
+export async function autoConnectMiniPay(): Promise<string | null> {
+  if (typeof window === 'undefined' || !window.ethereum) {
+    return null;
+  }
+
+  try {
+    const accounts = await window.ethereum.request({
+      method: "eth_requestAccounts",
+      params: [],
+    });
+    
+    return accounts[0] || null;
+  } catch (error) {
+    console.error('Failed to auto-connect MiniPay:', error);
+    return null;
+  }
 }
 
 export { PAYMENT_RECIPIENT };

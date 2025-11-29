@@ -7,10 +7,10 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     
-    const user = await authenticateUser(request);
+    const user = await authenticateWalletUser(request);
     const puzzleService = new PuzzleService();
     
-    const count = await puzzleService.getNumberOfPuzzlesGivenToday(user.fid);
+    const count = await puzzleService.getNumberOfPuzzlesGivenToday(user.walletAddress);
     
     return NextResponse.json({ count });
   } catch (error: any) {

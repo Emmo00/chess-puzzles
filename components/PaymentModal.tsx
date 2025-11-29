@@ -86,13 +86,13 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                 <span className="text-xl font-bold text-blue-600">$0.10</span>
               </div>
               <p className="text-gray-600 text-sm mb-3">
-                Solve 3 puzzles today with USDC payment
+                Solve 3 puzzles today with cUSD payment
               </p>
               <button
                 onClick={() => handlePayment(PaymentType.DAILY_ACCESS)}
-                className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+                className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
               >
-                Pay $0.10 USDC
+                📱 Pay $0.10 cUSD
               </button>
             </div>
 
@@ -106,15 +106,15 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
               </p>
               <button
                 onClick={() => handlePayment(PaymentType.PREMIUM)}
-                className="w-full bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-colors"
+                className="w-full bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
               >
-                Pay $1.00 USDC
+                📱 Pay $1.00 cUSD
               </button>
             </div>
 
             <p className="text-xs text-gray-500 text-center">
-              Payments are made using USDC on your connected network.
-              Make sure you have sufficient USDC balance.
+              Payments are made using cUSD on Celo via MiniPay.
+              Make sure you have sufficient cUSD balance in your MiniPay wallet.
             </p>
           </div>
         )}
@@ -127,8 +127,8 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
             </h3>
             <p className="text-gray-600">
               {selectedPayment === PaymentType.DAILY_ACCESS 
-                ? 'Paying $0.10 for daily access' 
-                : 'Paying $1.00 for premium access'}
+                ? 'Paying $0.10 cUSD for daily access' 
+                : 'Paying $1.00 cUSD for premium access'}
             </p>
             {transactionHash && (
               <p className="text-xs text-gray-500 mt-2 break-all">

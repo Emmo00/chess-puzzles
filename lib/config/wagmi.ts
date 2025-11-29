@@ -1,28 +1,32 @@
 import { http, createConfig } from "wagmi";
-import { mainnet, polygon, optimism, arbitrum, base, celo, celoSepolia } from "wagmi/chains";
+import { celo, celoSepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 
 export const config = createConfig({
-  chains: [celoSepolia, celo, base, mainnet],
+  chains: [celoSepolia, celo],
   connectors: [injected()],
   transports: {
     [celoSepolia.id]: http(),
     [celo.id]: http(),
-    [base.id]: http(),
-    [mainnet.id]: http(),
   },
 });
 
-// USDC Contract Addresses
-export const USDC_ADDRESSES = {
-  [base.id]: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // Base USDC
-  [mainnet.id]: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // Ethereum USDC
-  [celo.id]: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C", // Celo USDC (cUSD)
-  [celoSepolia.id]: "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1", // Celo Testnet USDC
+// cUSD Contract Addresses (using cUSD instead of USDC for MiniPay)
+export const CUSD_ADDRESSES = {
+  [celo.id]: "0x765DE816845861e75A25fCA122bb6898B8B1282a", // Celo cUSD Mainnet
+  [celoSepolia.id]: "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1", // Celo Sepolia cUSD
 } as const;
 
 // Payment recipient address
 export const PAYMENT_RECIPIENT = "0x7b054580aEA6B6cbdF30BbbE84777bae623F4d1e";
+
+// MiniPay detection helper
+export const isMiniPay = () => {
+  if (typeof window !== 'undefined' && window.ethereum) {
+    return window.ethereum.isMiniPay;
+  }
+  return false;
+};
 
 declare module "wagmi" {
   interface Register {
