@@ -11,6 +11,15 @@ export const config = createConfig({
   },
 });
 
+// Preferred chain (Celo mainnet for production, Sepolia for development)
+export const PREFERRED_CHAIN = process.env.NODE_ENV === 'production' ? celo : celoSepolia;
+
+// Helper to check if user is on correct chain
+export const isOnCorrectChain = (chainId?: number): boolean => {
+  if (!chainId) return false;
+  return chainId === celo.id || chainId === celoSepolia.id;
+};
+
 // cUSD Contract Addresses (using cUSD instead of USDC for MiniPay)
 export const CUSD_ADDRESSES = {
   [celo.id]: "0x765DE816845861e75A25fCA122bb6898B8B1282a", // Celo cUSD Mainnet

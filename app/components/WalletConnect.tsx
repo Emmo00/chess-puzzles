@@ -4,12 +4,14 @@ import { useState, useEffect } from "react";
 import { injected, useAccount, useConnect, useDisconnect } from "wagmi";
 import { formatAddress } from "@/lib/utils/formatAddress";
 import { isMiniPay } from "@/lib/config/wagmi";
+import { useChainSwitching } from "../../lib/hooks/useChainSwitching";
 
 export function WalletConnect() {
   const { address, isConnected } = useAccount();
   const { connect, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
   const [isMiniPayDetected, setIsMiniPayDetected] = useState(false);
+  const { isOnCorrectChain, switchToPreferredChain } = useChainSwitching();
 
   useEffect(() => {
     const miniPayDetected = isMiniPay() || false;
@@ -27,10 +29,23 @@ export function WalletConnect() {
   if (isConnected) {
     return (
       <div className="relative">
-        <button className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors flex items-center gap-2">
+        <button 
+          onClick={!isOnCorrectChain ? switchToPreferredChain : undefined}
+          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+            isOnCorrectChain 
+              ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+              : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 cursor-pointer'
+          }`}
+        >
           {isMiniPayDetected && <span className="text-xs">📱</span>}
+          {!isOnCorrectChain && <span className="text-xs">⚠️</span>}
           {formatAddress(address)}
         </button>
+        {!isOnCorrectChain && (
+          <div className="absolute top-full mt-1 right-0 bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs text-yellow-800 whitespace-nowrap z-50">
+            Click to switch to Celo
+          </div>
+        )}
       </div>
     );
   }

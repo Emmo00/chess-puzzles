@@ -10,6 +10,7 @@ import PuzzleCounter from "../components/puzzle-counter"
 import PuzzleActions from "../components/puzzle-actions"
 import PuzzleProgress from "../components/puzzle-progress"
 import PaywallCard from "../components/paywall-card"
+import { useUserStats } from "../../lib/hooks/useUserStats"
 
 export default function SolvePage() {
   const [mounted, setMounted] = useState(false)
@@ -17,9 +18,9 @@ export default function SolvePage() {
   const [loading, setLoading] = useState(true)
   const [attemptCount, setAttemptCount] = useState(1)
   const [puzzleProgress, setPuzzleProgress] = useState(2)
-  const [userStats, setUserStats] = useState<{currentStreak: number} | null>(null)
   const { address, isConnected } = useAccount()
   const router = useRouter()
+  const { userStats } = useUserStats()
 
   useEffect(() => {
     setMounted(true)

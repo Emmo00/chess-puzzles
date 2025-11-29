@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { CUSD_ABI, getCUSDAddress, PAYMENT_AMOUNTS, PAYMENT_RECIPIENT } from '../utils/payment'
 import { PaymentType } from '../types/payment'
+import { isOnCorrectChain } from '../config/wagmi'
 
 export function usePayment() {
   const { address, chainId } = useAccount()
@@ -17,6 +18,10 @@ export function usePayment() {
   const makePayment = async (type: PaymentType) => {
     if (!address || !chainId) {
       throw new Error('Wallet not connected')
+    }
+
+    if (!isOnCorrectChain(chainId)) {
+      throw new Error('Please switch to Celo network to make payments')
     }
 
     try {

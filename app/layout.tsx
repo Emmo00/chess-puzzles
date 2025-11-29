@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import "./globals.css";
 import { WalletProvider } from "../lib/providers/WalletProvider";
+import { ChainNotification } from "../components/ChainNotification";
 import { Inter, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 
 // Initialize fonts
@@ -64,6 +65,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} antialiased`}>
         <WalletProvider>
+          <ChainNotification />
           {children}
         </WalletProvider>
       </body>
