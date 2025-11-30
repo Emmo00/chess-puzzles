@@ -94,19 +94,30 @@ export async function POST(request: NextRequest) {
         : "1000000000000000000"; // 1.0 cUSD
 
     // For ERC20 transfers, we need to check the logs
+    // Transfer event signature: keccak256("Transfer(address,address,uint256)") = 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
+    const transferEventSignature =
+      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
     console.log("Looking for transfer logs in transaction, total logs:", receipt.logs.length);
     const transferLog = receipt.logs.find(
-      (log) => log.address.toLowerCase() === cusdAddress.toLowerCase()
+      (log) =>
+        log.address.toLowerCase() === cusdAddress.toLowerCase() &&
+        log.topics[0] === transferEventSignature &&
+        log.topics[2] &&
+        `0x${log.topics[2].slice(-40)}`.toLowerCase() === PAYMENT_RECIPIENT.toLowerCase()
     );
 
     if (!transferLog) {
       console.error(
-        "cUSD transfer not found. Available log addresses:",
-        receipt.logs.map((log) => log.address)
+        "cUSD Transfer event not found. Available logs from cUSD contract:",
+        receipt.logs
+          .filter((log) => log.address.toLowerCase() === cusdAddress.toLowerCase())
+          .map((log, index) => ({ index, topics: log.topics, address: log.address }))
       );
       console.error("Expected cUSD address:", cusdAddress);
+      console.error("Expected Transfer event signature:", transferEventSignature);
       return NextResponse.json(
-        { error: "cUSD transfer not found in transaction" },
+        { error: "cUSD Transfer event not found in transaction" },
         { status: 400 }
       );
     }
