@@ -50,8 +50,9 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
       />
       
       {/* Neo-brutalist modal */}
-      <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-md w-full transform rotate-1">
-        <div className="bg-purple-400 border-b-4 border-black p-4">
+      <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-md w-full max-h-[85vh] transform rotate-1 flex flex-col">
+        {/* Fixed header */}
+        <div className="bg-purple-400 border-b-4 border-black p-4 flex-shrink-0">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-black uppercase tracking-wider text-black">
               🔥 Your Streak
@@ -65,7 +66,8 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
           </div>
         </div>
 
-        <div className="p-6 bg-white space-y-6">
+        {/* Scrollable content */}
+        <div className="p-6 bg-white space-y-6 overflow-y-auto flex-1 min-h-0">
           {isLoading ? (
             <div className="text-center py-8">
               <div className="w-16 h-16 mx-auto mb-4 bg-black border-4 border-purple-400 animate-bounce">
