@@ -1,62 +1,77 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, Clock, Wrench } from 'lucide-react'
 
 export default function ComingSoonPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-      <div className="max-w-md w-full text-center space-y-8">
-        {/* Icon */}
+    <div className="min-h-screen bg-yellow-300 flex items-center justify-center p-4 overflow-hidden">
+      {/* Background elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-10 left-10 w-32 h-32 bg-red-500 border-4 border-black transform rotate-45 shadow-[8px_8px_0px_rgba(0,0,0,1)]"></div>
+        <div className="absolute top-20 right-20 w-24 h-24 bg-blue-500 border-4 border-black transform -rotate-12 shadow-[6px_6px_0px_rgba(0,0,0,1)]"></div>
+        <div className="absolute bottom-20 left-20 w-28 h-28 bg-green-500 border-4 border-black transform rotate-12 shadow-[7px_7px_0px_rgba(0,0,0,1)]"></div>
+        <div className="absolute bottom-10 right-10 w-20 h-20 bg-purple-500 border-4 border-black transform rotate-45 shadow-[5px_5px_0px_rgba(0,0,0,1)]"></div>
+      </div>
+
+      <div className="relative max-w-lg w-full text-center space-y-8 z-10">
+        {/* Main Icon */}
         <div className="flex justify-center">
-          <div className="relative">
-            <div className="w-24 h-24 bg-purple-500/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-purple-500/30">
-              <Wrench className="w-12 h-12 text-purple-400" />
-            </div>
-            <div className="absolute -top-2 -right-2">
-              <Clock className="w-8 h-8 text-yellow-400 animate-pulse" />
-            </div>
+          <div className="bg-orange-400 border-8 border-black p-8 transform -rotate-3 shadow-[12px_12px_0px_rgba(0,0,0,1)]">
+            <div className="text-8xl animate-bounce">🚧</div>
           </div>
         </div>
 
-        {/* Title */}
-        <div className="space-y-4">
-          <h1 className="text-4xl font-bold text-white">
-            Coming Soon
-          </h1>
-          <p className="text-lg text-gray-300">
-            We're working hard to bring you this feature
-          </p>
+        {/* Title Section */}
+        <div className="space-y-6">
+          <div className="bg-black border-4 border-white p-4 transform rotate-2 shadow-[8px_8px_0px_rgba(255,255,255,1)]">
+            <h1 className="text-5xl font-black text-yellow-300 uppercase tracking-wider">
+              COMING
+            </h1>
+          </div>
+          <div className="bg-magenta-500 border-4 border-black p-4 transform -rotate-1 shadow-[6px_6px_0px_rgba(0,0,0,1)]">
+            <h2 className="text-5xl font-black text-black uppercase tracking-wider">
+              SOON!
+            </h2>
+          </div>
         </div>
 
-        {/* Description */}
-        <div className="space-y-4 text-gray-400">
-          <p>
-            This feature is currently under development. 
-          </p>
-          <p>
-            In the meantime, enjoy solving daily chess puzzles to improve your skills!
-          </p>
+        {/* Description Cards */}
+        <div className="space-y-4">
+          <div className="bg-cyan-400 border-4 border-black p-4 transform rotate-1 shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+            <p className="font-black text-black uppercase tracking-wide text-sm">
+              🔨 This Feature is Under Construction!
+            </p>
+          </div>
+          <div className="bg-lime-400 border-4 border-black p-4 transform -rotate-2 shadow-[5px_5px_0px_rgba(0,0,0,1)]">
+            <p className="font-black text-black uppercase tracking-wide text-sm">
+              ♟️ Keep Solving Puzzles While You Wait!
+            </p>
+          </div>
         </div>
 
         {/* Back Button */}
-        <div className="pt-4">
+        <div className="pt-6">
           <Link 
             href="/"
-            className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            className="inline-block"
           >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Home
+            <div className="bg-red-500 border-4 border-black px-8 py-4 font-black text-xl uppercase tracking-wider text-black shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:shadow-[8px_8px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 transition-all duration-150 transform rotate-1 hover:rotate-0">
+              ← BACK TO HOME
+            </div>
           </Link>
         </div>
 
-        {/* Progress Indicator */}
+        {/* Progress Animation */}
         <div className="pt-8">
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-            <div className="w-2 h-2 bg-purple-500/50 rounded-full animate-pulse delay-100"></div>
-            <div className="w-2 h-2 bg-purple-500/30 rounded-full animate-pulse delay-200"></div>
-            <span className="ml-2">Building something awesome...</span>
+          <div className="bg-white border-4 border-black p-4 transform rotate-1 shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-4 h-4 bg-black animate-pulse"></div>
+              <div className="w-4 h-4 bg-black animate-pulse delay-100"></div>
+              <div className="w-4 h-4 bg-black animate-pulse delay-200"></div>
+              <span className="font-black text-black uppercase tracking-wide text-sm ml-4">
+                Building Epicness...
+              </span>
+            </div>
           </div>
         </div>
       </div>

@@ -78,7 +78,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 p-4 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 p-4 flex items-center justify-center pointer-events-auto" >
       {/* Neo-brutalist backdrop */}
       <div 
         className="absolute inset-0 bg-black/80"
