@@ -33,14 +33,14 @@ export default function StreakBadge({ days, onClick, isPremium }: StreakBadgePro
     >
       <button
         onClick={onClick}
-        className={`border-4 border-black px-4 py-3 font-black text-sm tracking-wider uppercase transition-all duration-200 transform hover:scale-105 hover:rotate-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] ${
+        className={`border-4 border-black px-4 py-2 font-black text-sm tracking-wider uppercase transition-all duration-200 transform hover:scale-105 hover:rotate-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] ${
           isPremium ? 'bg-yellow-400 text-black' : 'bg-white text-black'
         }`}
       >
         <div className="flex items-center gap-2">
           <span className="text-lg">{getStreakEmoji()}</span>
-          <div className="flex flex-col items-start">
-            <span className="text-xs leading-none">STREAK</span>
+          <div className="flex justify-center items-center gap-1">
+            <span className="text-xs leading-none">STREAK:</span>
             <span className="text-lg font-black leading-none">{days}</span>
           </div>
           {isPremium && (

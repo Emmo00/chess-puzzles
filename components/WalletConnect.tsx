@@ -31,19 +31,19 @@ export function WalletConnect() {
       <div className="relative">
         <button 
           onClick={!isOnCorrectChain ? switchToPreferredChain : undefined}
-          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+          className={`px-4 py-3 border-4 border-black font-black text-xs uppercase tracking-wider transition-all duration-200 flex items-center gap-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 ${
             isOnCorrectChain 
-              ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-              : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 cursor-pointer'
+              ? 'bg-green-400 text-black hover:bg-green-300' 
+              : 'bg-yellow-400 text-black hover:bg-yellow-300 cursor-pointer animate-pulse'
           }`}
         >
-          {isMiniPayDetected && <span className="text-xs">📱</span>}
-          {!isOnCorrectChain && <span className="text-xs">⚠️</span>}
-          {formatAddress(address)}
+          {isMiniPayDetected && <span className="text-lg">📱</span>}
+          {!isOnCorrectChain && <span className="text-lg animate-bounce">⚠️</span>}
+          <span className="font-black">{formatAddress(address)}</span>
         </button>
         {!isOnCorrectChain && (
-          <div className="absolute top-full mt-1 right-0 bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs text-yellow-800 whitespace-nowrap z-50">
-            Click to switch to Celo
+          <div className="absolute top-full mt-2 right-0 bg-red-400 border-4 border-black p-3 text-xs font-black text-black uppercase tracking-wide whitespace-nowrap z-50 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-2">
+            ⚡ CLICK TO SWITCH TO CELO!
           </div>
         )}
       </div>
@@ -61,9 +61,10 @@ export function WalletConnect() {
           }
         }}
         disabled={isPending}
-        className="bg-blue-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+        className="bg-cyan-400 border-4 border-black px-4 py-3 font-black text-xs uppercase tracking-wider text-black transition-all duration-200 flex items-center gap-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-[4px_4px_0px_rgba(0,0,0,1)]"
       >
-        📱 {isPending ? "Connecting..." : "Connect MiniPay"}
+        <span className="text-lg">📱</span>
+        {isPending ? "CONNECTING..." : "CONNECT MINIPAY"}
       </button>
     );
   }
@@ -73,9 +74,9 @@ export function WalletConnect() {
       <button
         onClick={() => connect({ connector: injected() })}
         disabled={isPending}
-        className="bg-blue-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
+        className="bg-purple-400 border-4 border-black px-4 py-3 font-black text-xs uppercase tracking-wider text-black transition-all duration-200 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-[4px_4px_0px_rgba(0,0,0,1)]"
       >
-        {isPending ? "Connecting..." : "Connect Wallet"}
+        {isPending ? "CONNECTING..." : "CONNECT WALLET"}
       </button>
     </div>
   );

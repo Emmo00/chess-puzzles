@@ -25,7 +25,7 @@ export const CUSD_ADDRESSES = {
 } as const;
 
 // Payment recipient address
-export const PAYMENT_RECIPIENT = "0x7b054580aEA6B6cbdF30BbbE84777bae623F4d1e";
+export const PAYMENT_RECIPIENT = "0xEA22ca862C3AFDA79Ef7Fb5Ae8f13D245354f05b";
 
 // MiniPay detection helper
 export const isMiniPay = (): boolean => {
