@@ -4,9 +4,11 @@ import { useEffect, useState } from "react"
 
 interface StreakBadgeProps {
   days: number
+  onClick?: () => void
+  isPremium?: boolean
 }
 
-export default function StreakBadge({ days }: StreakBadgeProps) {
+export default function StreakBadge({ days, onClick, isPremium }: StreakBadgeProps) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -15,6 +17,13 @@ export default function StreakBadge({ days }: StreakBadgeProps) {
 
   if (!mounted) return null
 
+  const getStreakEmoji = () => {
+    if (days >= 30) return "🔥"
+    if (days >= 7) return "⚡"
+    if (days >= 3) return "🎯"
+    return "📈"
+  }
+
   return (
     <div
       className="animate-in fade-in slide-in-from-right-4 duration-700"
@@ -22,14 +31,23 @@ export default function StreakBadge({ days }: StreakBadgeProps) {
         animation: "slideInRight 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
       }}
     >
-      <div
-        className="border-4 border-white px-6 py-3 font-black text-sm tracking-wider uppercase hover:scale-105 transition-transform duration-300 cursor-pointer"
-        style={{
-          boxShadow: "8px 8px 0px rgba(255, 255, 255, 0.15), 12px 12px 0px rgba(255, 255, 255, 0.05)",
-        }}
+      <button
+        onClick={onClick}
+        className={`border-4 border-black px-4 py-3 font-black text-sm tracking-wider uppercase transition-all duration-200 transform hover:scale-105 hover:rotate-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] ${
+          isPremium ? 'bg-yellow-400 text-black' : 'bg-white text-black'
+        }`}
       >
-        Streak: {days} days
-      </div>
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{getStreakEmoji()}</span>
+          <div className="flex flex-col items-start">
+            <span className="text-xs leading-none">STREAK</span>
+            <span className="text-lg font-black leading-none">{days}</span>
+          </div>
+          {isPremium && (
+            <span className="text-xs">👑</span>
+          )}
+        </div>
+      </button>
       <style jsx>{`
         @keyframes slideInRight {
           from {

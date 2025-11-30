@@ -7,17 +7,21 @@ import StreakBadge from "../components/streak-badge";
 import CTABlock from "../components/cta-block";
 import { WalletConnect } from "@/components/WalletConnect";
 import { PaymentModal } from "@/components/PaymentModal";
+import { StreakModal } from "@/components/StreakModal";
 import { useUserStats } from "../lib/hooks/useUserStats";
+import { useStreak } from "../lib/hooks/useStreak";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showStreakModal, setShowStreakModal] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<{
     hasAccess: boolean;
     hasPremium: boolean;
   } | null>(null);
   const { address, isConnected } = useAccount();
   const { userStats } = useUserStats();
+  const { streakData, isLoading: streakLoading } = useStreak();
 
   useEffect(() => {
     setMounted(true);
@@ -48,7 +52,10 @@ export default function Home() {
       return;
     }
 
-    if (!paymentStatus?.hasAccess) {
+    // Check if user has premium access (either paid or free premium days)
+    const hasPremiumAccess = streakData?.premiumStatus?.isActive || paymentStatus?.hasAccess;
+    
+    if (!hasPremiumAccess) {
       setShowPaymentModal(true);
     } else {
       // Navigate to solve puzzles
@@ -60,19 +67,33 @@ export default function Home() {
     checkPaymentStatus(); // Refresh payment status
   };
 
+  const handleStreakClick = () => {
+    if (!isConnected) {
+      alert("Please connect your wallet first");
+      return;
+    }
+    setShowStreakModal(true);
+  };
+
   if (!mounted) return null;
+
+  // Determine access status combining paid premium and free premium days
+  const hasPremiumAccess = streakData?.premiumStatus?.isActive || paymentStatus?.hasAccess;
+  const accessText = hasPremiumAccess 
+    ? (streakData?.premiumStatus?.isActive && streakData?.freePremiumDaysRemaining > 0)
+      ? "Free Premium Active"
+      : paymentStatus?.hasPremium 
+        ? "Premium Access"
+        : "Daily Access"
+    : "0.1 USDC or $1 Premium";
 
   const ctaBlocks = [
     {
       id: 1,
       title: "Solve Puzzles",
-      subtitle: paymentStatus?.hasAccess
-        ? paymentStatus?.hasPremium
-          ? "Premium Access"
-          : "Daily Access"
-        : "0.1 USDC or $1 Premium",
-      accentColor: paymentStatus?.hasAccess ? "bg-green-400" : "bg-cyan-400",
-      icon: paymentStatus?.hasAccess ? "✓" : "▲",
+      subtitle: accessText,
+      accentColor: hasPremiumAccess ? "bg-green-400" : "bg-cyan-400",
+      icon: hasPremiumAccess ? "✓" : "▲",
       href: "/solve",
       onClick: handleSolvePuzzlesClick,
     },
@@ -114,7 +135,11 @@ export default function Home() {
         {/* Header with Streak Badge and Wallet */}
         <header className="pt-6 px-6 flex justify-between items-center shrink-0 pointer-events-auto">
           <WalletConnect />
-          <StreakBadge days={userStats?.currentStreak || 0} />
+          <StreakBadge 
+            days={streakData?.currentStreak || userStats?.currentStreak || 0} 
+            onClick={handleStreakClick}
+            isPremium={streakData?.premiumStatus?.isActive || false}
+          />
         </header>
 
         {/* Main Content - Centered, No Scroll */}
@@ -150,6 +175,13 @@ export default function Home() {
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
           onSuccess={handlePaymentSuccess}
+        />
+
+        {/* Streak Modal */}
+        <StreakModal
+          isOpen={showStreakModal}
+          onClose={() => setShowStreakModal(false)}
+          userStats={streakData}
         />
       </div>
     </div>

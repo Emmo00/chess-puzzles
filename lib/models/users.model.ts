@@ -19,6 +19,10 @@ const userSchema = new mongoose.Schema({
   lastLoggedIn: { type: Date, default: Date.now },
   longestStreak: { type: Number, default: 1 },
   totalPuzzlesSolved: { type: Number, default: 0 },
+  // Premium and streak monetization fields
+  lastPuzzleDate: { type: String, default: null },
+  freePremiumDaysRemaining: { type: Number, default: 0 },
+  paidPremiumExpiry: { type: String, default: null },
 });
 
 // Create compound unique index to ensure either fid OR walletAddress is unique

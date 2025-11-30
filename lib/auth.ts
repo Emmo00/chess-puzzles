@@ -6,9 +6,18 @@ export interface WalletUser {
 }
 
 export async function authenticateWalletUser(request: NextRequest): Promise<WalletUser> {
-  // Try to get wallet address from header first, then from query params
+  // Try to get wallet address from various sources
   let walletAddress = request.headers.get("x-wallet-address");
   
+  // Check Authorization header (Bearer token format)
+  if (!walletAddress) {
+    const authHeader = request.headers.get("authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      walletAddress = authHeader.substring(7);
+    }
+  }
+  
+  // Check query params
   if (!walletAddress) {
     const { searchParams } = new URL(request.url);
     walletAddress = searchParams.get("walletAddress");

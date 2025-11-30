@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Payment } from '../../../../lib/models/payment.model';
 import { PaymentType } from '../../../../lib/types/payment';
+import userModel from '../../../../lib/models/users.model';
+import { calculateIsPremiumActive, getPremiumStatus } from '../../../../lib/utils/premium';
 import dbConnect from '../../../../lib/db';
 
 export async function GET(request: NextRequest) {
@@ -38,9 +40,14 @@ export async function GET(request: NextRequest) {
       expiresAt: { $gt: now },
     }).sort({ createdAt: -1 });
 
+    // Check user's streak-based premium status
+    const user = await userModel.findOne({ walletAddress: walletAddress.toLowerCase() });
+    const hasStreakPremium = user ? calculateIsPremiumActive(user) : false;
+    const streakPremiumStatus = user ? getPremiumStatus(user) : null;
+
     const hasPremium = !!premiumPayment;
     const hasDailyAccess = !!dailyPayment;
-    const hasAccess = hasPremium || hasDailyAccess;
+    const hasAccess = hasPremium || hasDailyAccess || hasStreakPremium;
 
     return NextResponse.json({
       hasAccess,
@@ -48,8 +55,10 @@ export async function GET(request: NextRequest) {
       premiumExpiresAt: premiumPayment?.expiresAt?.toISOString(),
       hasDailyAccess,
       dailyAccessDate: dailyPayment?.createdAt?.toISOString(),
+      hasStreakPremium,
+      streakPremiumStatus,
       message: hasAccess 
-        ? (hasPremium ? 'Premium access active' : 'Daily access active')
+        ? (hasStreakPremium ? 'Free premium from streak active' : hasPremium ? 'Premium access active' : 'Daily access active')
         : 'No active access found'
     });
 
