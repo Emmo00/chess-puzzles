@@ -1,213 +1,273 @@
-"use client"
+import React, { useEffect, useRef } from "react";
+import * as THREE from "three";
 
-import { useEffect, useRef } from "react"
-import * as THREE from "three"
+// Helper to generate smooth points from control points
+const generateSmoothProfile = (points: [number, number][], segments: number = 128) => {
+  const vectorPoints = points.map((p) => new THREE.Vector2(p[0], p[1]));
+  const curve = new THREE.SplineCurve(vectorPoints);
+  return curve.getPoints(segments);
+};
 
-export default function ChessPiecesScene() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const sceneRef = useRef<THREE.Scene | null>(null)
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
-  const piecesRef = useRef<THREE.Group[]>([])
+// High-fidelity King Profile using Spline Control Points
+const KING_CONTROL_POINTS: [number, number][] = [
+  [0, 0],
+  [0.45, 0],
+  [0.45, 0.15], // Base
+  [0.38, 0.4],
+  [0.28, 1.0],
+  [0.22, 1.8], // Body curve
+  [0.32, 2.1],
+  [0.25, 2.3], // Neck
+  [0.38, 2.5],
+  [0.42, 2.8],
+  [0.35, 3.1], // Head
+  [0.15, 3.2],
+  [0.15, 3.3], // Top detail
+  [0.05, 3.4],
+  [0.05, 3.6],
+  [0.15, 3.6],
+  [0.15, 3.7],
+  [0, 3.7], // Cross
+];
+
+// High-fidelity Pawn Profile
+const PAWN_CONTROL_POINTS: [number, number][] = [
+  [0, 0],
+  [0.42, 0],
+  [0.42, 0.15], // Base
+  [0.35, 0.3],
+  [0.25, 0.8],
+  [0.18, 1.4], // Body curve
+  [0.25, 1.55], // Collar
+  [0.15, 1.65],
+  [0.28, 1.9],
+  [0.28, 2.1], // Head bottom
+  [0.15, 2.25],
+  [0, 2.3], // Head top
+];
+
+const KING_PROFILE = generateSmoothProfile(KING_CONTROL_POINTS);
+const PAWN_PROFILE = generateSmoothProfile(PAWN_CONTROL_POINTS);
+
+export const THEME_COLORS = {
+  primary: "#8b5cf6",
+  primaryDark: "#7c3aed",
+  dark: "#111827",
+  light: "#f3f4f6",
+};
+
+interface ChessPiecesSceneProps {
+  className?: string;
+}
+
+const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const animationRef = useRef<number>(0);
+
+  // Mouse interaction state
+  const mouseRef = useRef({ x: 0, y: 0 });
+  const targetRotationRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    if (!containerRef.current) return
+    if (!containerRef.current) return;
 
-    // Scene setup
-    const scene = new THREE.Scene()
-    sceneRef.current = scene
-    scene.background = new THREE.Color(0xffffff)
+    // 1. Scene Setup
+    const scene = new THREE.Scene();
+    sceneRef.current = scene;
+    // Transparent background to blend with parent UI
+    scene.background = null;
 
-    const container = containerRef.current
-    const width = container.clientWidth
-    const height = container.clientHeight
+    const width = containerRef.current.clientWidth;
+    const height = containerRef.current.clientHeight;
 
-    // Camera
-    const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000)
-    camera.position.z = 4
-    cameraRef.current = camera
+    // 2. Camera
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+    camera.position.set(0, 0, 8);
+    cameraRef.current = camera;
 
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
-    renderer.setSize(width, height)
-    renderer.setPixelRatio(window.devicePixelRatio)
-    renderer.shadowMap.enabled = true
-    rendererRef.current = renderer
-    container.appendChild(renderer.domElement)
+    // 3. Renderer
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: "high-performance",
+    });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8)
-    scene.add(ambientLight)
+    containerRef.current.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
 
-    const pointLight = new THREE.PointLight(0xffffff, 0.8)
-    pointLight.position.set(3, 4, 5)
-    pointLight.castShadow = true
-    scene.add(pointLight)
+    // 4. Lighting (Premium Studio Setup)
 
-    const whitePiece = createChessKing(0xf5f5f5, 0xcccccc)
-    const blackPiece = createChessPawn(0x1a1a1a, 0x333333)
+    // Key Light (Warm, from top right)
+    const keyLight = new THREE.SpotLight(0xfff5ea, 120);
+    keyLight.position.set(6, 8, 6);
+    keyLight.angle = Math.PI / 6;
+    keyLight.penumbra = 0.5;
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.bias = -0.0001;
+    keyLight.shadow.radius = 4; // Softer shadows
+    scene.add(keyLight);
 
-    whitePiece.position.x = -1
-    whitePiece.position.y = 0
-    blackPiece.position.x = 1.2
-    blackPiece.position.y = -0.2
+    // Fill Light (Cool, from left)
+    const fillLight = new THREE.SpotLight(0xdbeafe, 60);
+    fillLight.position.set(-6, 2, 4);
+    fillLight.lookAt(0, 0, 0);
+    scene.add(fillLight);
 
-    scene.add(whitePiece)
-    scene.add(blackPiece)
+    // Rim Light (Sharp, from back)
+    const rimLight = new THREE.DirectionalLight(0xffffff, 40);
+    rimLight.position.set(0, 5, -8);
+    scene.add(rimLight);
 
-    piecesRef.current = [whitePiece, blackPiece]
+    // Ambient (Soft base)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
 
-    // Animation loop
-    let animationId: number
+    // 5. Materials
+
+    // Matte Black (The King)
+    const blackMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0x1a1a1a,
+      metalness: 0.1,
+      roughness: 0.4,
+      clearcoat: 0.3,
+      clearcoatRoughness: 0.2,
+      sheen: 0.2,
+    });
+
+    // Glossy White (The Pawn) - Ceramic feel
+    const whiteMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      metalness: 0.0,
+      roughness: 0.1,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.1,
+      transmission: 0.1, // Slight translucency
+      thickness: 2,
+      ior: 1.5,
+    });
+
+    // 6. Geometry & Meshes
+    const kingGeometry = new THREE.LatheGeometry(KING_PROFILE, 128);
+    // Scale down slightly and center pivot
+    kingGeometry.computeBoundingBox();
+    const kingHeight = kingGeometry.boundingBox!.max.y - kingGeometry.boundingBox!.min.y;
+    kingGeometry.translate(0, -kingHeight / 2, 0);
+
+    const pawnGeometry = new THREE.LatheGeometry(PAWN_PROFILE, 128);
+    pawnGeometry.computeBoundingBox();
+    const pawnHeight = pawnGeometry.boundingBox!.max.y - pawnGeometry.boundingBox!.min.y;
+    pawnGeometry.translate(0, -pawnHeight / 2, 0);
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    // King Object
+    const king = new THREE.Mesh(kingGeometry, blackMaterial);
+    king.position.set(-1.2, -0.5, 0);
+    king.castShadow = true;
+    king.receiveShadow = true;
+    // Slight tilt
+    king.rotation.z = 0.1;
+    king.rotation.x = 0.1;
+    group.add(king);
+
+    // Pawn Object
+    const pawn = new THREE.Mesh(pawnGeometry, whiteMaterial);
+    pawn.position.set(1.2, -0.8, 0.5);
+    pawn.castShadow = true;
+    pawn.receiveShadow = true;
+    // Slight tilt opposite way
+    pawn.rotation.z = -0.15;
+    pawn.rotation.x = 0.1;
+    group.add(pawn);
+
+    // Shadow Plane (invisible but receives shadows)
+    const planeGeo = new THREE.PlaneGeometry(20, 20);
+    const planeMat = new THREE.ShadowMaterial({ opacity: 0.15, color: 0x000000 });
+    const plane = new THREE.Mesh(planeGeo, planeMat);
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.y = -2.5;
+    plane.receiveShadow = true;
+    group.add(plane);
+
+    // 7. Animation Loop
+    const clock = new THREE.Clock();
+
     const animate = () => {
-      animationId = requestAnimationFrame(animate)
+      const time = clock.getElapsedTime();
 
-      // Gentle rotation
-      whitePiece.rotation.y += 0.003
-      blackPiece.rotation.y -= 0.003
+      // Smooth mouse follow
+      targetRotationRef.current.x +=
+        (mouseRef.current.x * 0.3 - targetRotationRef.current.x) * 0.05;
+      targetRotationRef.current.y +=
+        (mouseRef.current.y * 0.3 - targetRotationRef.current.y) * 0.05;
 
-      // Subtle floating animation
-      whitePiece.position.y = Math.sin(Date.now() * 0.001) * 0.1
-      blackPiece.position.y = Math.cos(Date.now() * 0.001) * 0.1 - 0.2
+      // Apply rotation to group
+      group.rotation.y = targetRotationRef.current.x + Math.sin(time * 0.2) * 0.1;
+      group.rotation.x = -targetRotationRef.current.y * 0.5;
 
-      renderer.render(scene, camera)
-    }
+      // Float animation
+      king.position.y = -0.5 + Math.sin(time * 0.8) * 0.1;
+      pawn.position.y = -0.8 + Math.sin(time * 0.7 + 2) * 0.08;
 
-    animate()
+      // Subtle self-rotation
+      king.rotation.y += 0.002;
+      pawn.rotation.y -= 0.003;
 
-    // Handle window resize
+      renderer.render(scene, camera);
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    // 8. Event Listeners
     const handleResize = () => {
-      const newWidth = container.clientWidth
-      const newHeight = container.clientHeight
-      camera.aspect = newWidth / newHeight
-      camera.updateProjectionMatrix()
-      renderer.setSize(newWidth, newHeight)
-    }
+      if (!containerRef.current || !rendererRef.current || !cameraRef.current) return;
+      const w = containerRef.current.clientWidth;
+      const h = containerRef.current.clientHeight;
+      cameraRef.current.aspect = w / h;
+      cameraRef.current.updateProjectionMatrix();
+      rendererRef.current.setSize(w, h);
+    };
 
-    window.addEventListener("resize", handleResize)
+    const handleMouseMove = (e: MouseEvent) => {
+      // Normalize mouse position from -1 to 1
+      const x = (e.clientX / window.innerWidth) * 2 - 1;
+      const y = -(e.clientY / window.innerHeight) * 2 + 1;
+      mouseRef.current = { x, y };
+    };
+
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("mousemove", handleMouseMove);
 
     return () => {
-      window.removeEventListener("resize", handleResize)
-      cancelAnimationFrame(animationId)
-      if (container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement)
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("mousemove", handleMouseMove);
+      cancelAnimationFrame(animationRef.current);
+      renderer.dispose();
+      if (containerRef.current) {
+        containerRef.current.removeChild(renderer.domElement);
       }
-    }
-  }, [])
+    };
+  }, []);
 
-  return <div ref={containerRef} className="w-full h-full" />
-}
+  return (
+    <div
+      ref={containerRef}
+      className={`w-full h-full cursor-move ${className}`}
+      style={{ touchAction: "none" }}
+    />
+  );
+};
 
-function createChessKing(mainColor: number, accentColor: number): THREE.Group {
-  const group = new THREE.Group()
-
-  // Base
-  const baseGeometry = new THREE.CylinderGeometry(0.35, 0.45, 0.15, 32)
-  const baseMaterial = new THREE.MeshStandardMaterial({
-    color: mainColor,
-    metalness: 0.3,
-    roughness: 0.7,
-  })
-  const base = new THREE.Mesh(baseGeometry, baseMaterial)
-  base.position.y = -0.55
-  base.castShadow = true
-  group.add(base)
-
-  // Shaft
-  const shaftGeometry = new THREE.CylinderGeometry(0.12, 0.18, 1.0, 32)
-  const shaftMaterial = new THREE.MeshStandardMaterial({
-    color: mainColor,
-    metalness: 0.3,
-    roughness: 0.7,
-  })
-  const shaft = new THREE.Mesh(shaftGeometry, shaftMaterial)
-  shaft.castShadow = true
-  group.add(shaft)
-
-  // Main sphere
-  const sphereGeometry = new THREE.SphereGeometry(0.22, 32, 32)
-  const sphereMaterial = new THREE.MeshStandardMaterial({
-    color: accentColor,
-    metalness: 0.6,
-    roughness: 0.4,
-  })
-  const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial)
-  sphere.position.y = 0.6
-  sphere.castShadow = true
-  group.add(sphere)
-
-  // Crown cross (vertical)
-  const crossVertGeometry = new THREE.CylinderGeometry(0.04, 0.04, 0.35, 8)
-  const crossMaterial = new THREE.MeshStandardMaterial({
-    color: accentColor,
-    metalness: 0.8,
-    roughness: 0.2,
-  })
-  const crossVert = new THREE.Mesh(crossVertGeometry, crossMaterial)
-  crossVert.position.y = 1.0
-  crossVert.castShadow = true
-  group.add(crossVert)
-
-  // Crown cross (horizontal)
-  const crossHorizGeometry = new THREE.CylinderGeometry(0.04, 0.04, 0.35, 8)
-  const crossHoriz = new THREE.Mesh(crossHorizGeometry, crossMaterial)
-  crossHoriz.rotation.z = Math.PI / 2
-  crossHoriz.position.y = 1.0
-  crossHoriz.castShadow = true
-  group.add(crossHoriz)
-
-  return group
-}
-
-function createChessPawn(mainColor: number, accentColor: number): THREE.Group {
-  const group = new THREE.Group()
-
-  // Base
-  const baseGeometry = new THREE.CylinderGeometry(0.3, 0.38, 0.12, 32)
-  const baseMaterial = new THREE.MeshStandardMaterial({
-    color: mainColor,
-    metalness: 0.3,
-    roughness: 0.7,
-  })
-  const base = new THREE.Mesh(baseGeometry, baseMaterial)
-  base.position.y = -0.5
-  base.castShadow = true
-  group.add(base)
-
-  // Shaft
-  const shaftGeometry = new THREE.CylinderGeometry(0.1, 0.15, 0.85, 32)
-  const shaftMaterial = new THREE.MeshStandardMaterial({
-    color: mainColor,
-    metalness: 0.3,
-    roughness: 0.7,
-  })
-  const shaft = new THREE.Mesh(shaftGeometry, shaftMaterial)
-  shaft.castShadow = true
-  group.add(shaft)
-
-  // Head (small sphere)
-  const headGeometry = new THREE.SphereGeometry(0.18, 32, 32)
-  const headMaterial = new THREE.MeshStandardMaterial({
-    color: accentColor,
-    metalness: 0.6,
-    roughness: 0.4,
-  })
-  const head = new THREE.Mesh(headGeometry, headMaterial)
-  head.position.y = 0.55
-  head.castShadow = true
-  group.add(head)
-
-  // Top finial
-  const finialGeometry = new THREE.SphereGeometry(0.08, 24, 24)
-  const finialMaterial = new THREE.MeshStandardMaterial({
-    color: accentColor,
-    metalness: 0.8,
-    roughness: 0.2,
-  })
-  const finial = new THREE.Mesh(finialGeometry, finialMaterial)
-  finial.position.y = 0.85
-  finial.castShadow = true
-  group.add(finial)
-
-  return group
-}
+export default ChessPiecesScene;
