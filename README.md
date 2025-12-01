@@ -1,4 +1,4 @@
-# ChessPuzzles
+0xEA22ca862C3AFDA79Ef7Fb5Ae8f13D245354f05b# ChessPuzzles
 
 **ChessPuzzles** is a blockchain-integrated chess puzzle platform that brings engaging puzzle-solving experiences to the Celo network. Players can solve daily puzzles, participate in fast-paced “Puzzle Rush” sessions, track their progress, and earn rewards in `$CHESS`.
 
@@ -45,10 +45,10 @@
    
    # Next.js Configuration
    NEXTAUTH_URL=http://localhost:3000
-   NEXTAUTH_SECRET=your_nextauth_secret
-   
-   # Optional: Analytics & Monitoring
-   NEXT_PUBLIC_VERCEL_ANALYTICS_ID=your_analytics_id
+
+   # puzzle api setup
+   PUZZLE_API_URL=chess-puzzles.p.rapidapi.com
+   PUZZLE_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    ```
 
 4. **Database Setup**
@@ -80,42 +80,125 @@ npm run build
 npm start
 ```
 
-### 🏗️ Tech Stack
+## 🏗️ Tech Stack
 
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
-- **Blockchain**: Wagmi, Viem, Celo SDK (@celo/abis, @celo/identity)
-- **Database**: MongoDB with Mongoose
-- **Payments**: cUSD on Celo blockchain
-- **Authentication**: Wallet-based (MiniPay optimized)
+- **Chess Engine**: react-chessboard 5.8.6, chess.js for game logic
+- **Blockchain**: Wagmi, Viem, Celo SDK for cUSD payments
+- **Database**: MongoDB with Mongoose ODM
+- **Payments**: MiniPay integration with cUSD on Celo
+- **UI Components**: Radix UI, Lucide icons, custom animations
 
-### 📂 Key Files
+## 📂 Project Structure
 
 ```
-├── lib/config/wagmi.ts        # Celo blockchain configuration
-├── lib/hooks/usePayment.ts    # Payment processing hook
-├── app/api/payments/          # Payment verification APIs
-├── app/components/            # React components
-└── MINIPAY_INTEGRATION.md     # Detailed MiniPay guide
+├── app/
+│   ├── api/                   # API routes
+│   │   ├── payments/          # Payment verification
+│   │   ├── puzzles/           # Puzzle data endpoints
+│   │   └── users/             # User management
+│   ├── daily/                 # Main puzzle interface
+│   └── demo-video/            # Demo redirect
+├── components/
+│   ├── chess-board.tsx        # Interactive chess component
+│   ├── PaymentModal.tsx       # cUSD payment interface
+│   └── paywall-card.tsx       # Access control UI
+├── lib/
+│   ├── config/wagmi.ts        # Celo blockchain config
+│   ├── hooks/                 # React hooks
+│   ├── services/              # API services
+│   └── db.ts                  # MongoDB connection
+└── MINIPAY_INTEGRATION.md     # MiniPay setup guide
 ```
 
-### Environment Variables
+## 🔧 Environment Variables
 
-| Variable | Description | Required |
+### Required Variables
+
+| Variable | Description | Example |
 |----------|-------------|----------|
-| `MONGODB_URI` | MongoDB connection string | ✅ |
-| `NEXTAUTH_URL` | Application URL | ✅ |
-| `NEXTAUTH_SECRET` | NextAuth secret key | ✅ |
+| `MONGO_CONNECTION_URL` | MongoDB connection string | `mongodb://127.0.0.1:27017/chess-puzzles` |
+| `PUZZLE_API_URL` | RapidAPI chess puzzles endpoint | `chess-puzzles.p.rapidapi.com` |
+| `PUZZLE_API_KEY` | RapidAPI key for puzzle data | `your_rapidapi_key_here` |
 
-### 🚀 Deployment
+### Optional Variables
 
-**Vercel (Recommended)**
-1. Push code to GitHub
-2. Connect repository to Vercel
-3. Add environment variables
-4. Deploy automatically
+| Variable | Description | Default |
+|----------|-------------|----------|
+| `NODE_ENV` | Environment mode | `development` |
+| `PORT` | Application port | `8000` |
+| `APP_PATH` | Application host | `127.0.0.1` |
 
-**Other Platforms**: Netlify, Railway, Heroku, DigitalOcean
+### Getting API Keys
 
-## License
+**RapidAPI (Required):**
+1. Create account at [rapidapi.com](https://rapidapi.com/)
+2. Subscribe to [Chess Puzzles API](https://rapidapi.com/KeeghanM/api/chess-puzzles)
+3. Copy your API key from the dashboard
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+
+1. **Push to GitHub**
+   ```bash
+   git add .
+   git commit -m "Initial commit"
+   git push origin main
+   ```
+
+2. **Deploy to Vercel**
+   - Go to [vercel.com](https://vercel.com)
+   - Import your GitHub repository
+   - Add environment variables from your `.env`
+   - Deploy automatically
+
+3. **Configure for MiniPay**
+   - Use your Vercel URL in MiniPay browser
+   - Test cUSD payments in production
+
+### Production Checklist
+- [ ] MongoDB Atlas connection configured
+- [ ] RapidAPI key added to environment
+- [ ] Domain configured for MiniPay
+- [ ] Payment flows tested with real cUSD
+- [ ] Error monitoring setup (optional)
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**RapidAPI Rate Limits**
+- Free tier has limited requests
+- Upgrade plan or implement caching
+- Check API usage in RapidAPI dashboard
+
+**MiniPay Connection Issues**
+- Ensure app is deployed to HTTPS URL
+- Check wallet permissions in MiniPay
+- Verify Celo network configuration
+
+### Development Scripts
+
+```bash
+npm run dev      # Start development server
+npm run build    # Build for production
+npm run start    # Start production server
+npm run lint     # Run ESLint
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
+
+## 📝 License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+---
+
+**Built with ♟️ for the Celo ecosystem and MiniPay**
