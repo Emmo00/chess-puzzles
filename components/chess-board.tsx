@@ -10,9 +10,10 @@ interface ChessBoardProps {
   onComplete?: () => void;
   onProgress?: (progress: number) => void;
   onWrongMove?: () => void;
+  onMoveIndexChange?: (moveIndex: number) => void;
 }
 
-export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove }: ChessBoardProps) {
+export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove, onMoveIndexChange }: ChessBoardProps) {
   const [mounted, setMounted] = useState(false);
   const [game, setGame] = useState<Chess | null>(null);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
@@ -47,6 +48,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
           chess.move(puzzle.moves[0]);
           setBoardPosition(chess.fen());
           setCurrentMoveIndex(0);
+          onMoveIndexChange?.(0);
           setIsPlayerTurn(true); // Now it's player's turn
         }
       }, 1000); // 1 second delay to show animation
@@ -87,6 +89,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
             setBoardPosition(gameCopy.fen());
             const newMoveIndex = currentMoveIndex + 1;
             setCurrentMoveIndex(newMoveIndex);
+            onMoveIndexChange?.(newMoveIndex);
             setIsPlayerTurn(false);
 
             // Update progress - count only player moves (odd indices after the first move)
@@ -108,6 +111,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
                   setGame(gameCopy);
                   setBoardPosition(gameCopy.fen());
                   setCurrentMoveIndex(newMoveIndex + 1);
+                  onMoveIndexChange?.(newMoveIndex + 1);
                   setIsPlayerTurn(true);
                 }
               }, 1000);
@@ -259,6 +263,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
             setBoardPosition(gameCopy.fen());
             const newMoveIndex = currentMoveIndex + 1;
             setCurrentMoveIndex(newMoveIndex);
+            onMoveIndexChange?.(newMoveIndex);
             setIsPlayerTurn(false);
             
             // Update progress
@@ -280,6 +285,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
                   setGame(gameCopy);
                   setBoardPosition(gameCopy.fen());
                   setCurrentMoveIndex(newMoveIndex + 1);
+                  onMoveIndexChange?.(newMoveIndex + 1);
                   setIsPlayerTurn(true);
                 }
               }, 1000);

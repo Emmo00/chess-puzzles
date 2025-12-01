@@ -34,6 +34,8 @@ export default function DailyPuzzlePage() {
     points: number;
   } | null>(null)
   const [showHint, setShowHint] = useState(false)
+  const [showSolution, setShowSolution] = useState(false)
+  const [currentMoveIndex, setCurrentMoveIndex] = useState(0)
   
   const { address, isConnected } = useAccount()
   const router = useRouter()
@@ -178,6 +180,8 @@ export default function DailyPuzzlePage() {
     setAttemptCount(prev => prev + 1)
     setPuzzleProgress(0)
     setShowHint(false)
+    setShowSolution(false)
+    setCurrentMoveIndex(0)
     // Reset the puzzle by refetching it
     if (currentPuzzle) {
       const tempPuzzle = currentPuzzle
@@ -199,6 +203,8 @@ export default function DailyPuzzlePage() {
     setStartTime(null)
     setElapsedTime(0)
     setShowHint(false)
+    setShowSolution(false)
+    setCurrentMoveIndex(0)
   }
 
   const formatTime = (ms: number) => {
@@ -293,6 +299,7 @@ export default function DailyPuzzlePage() {
                 onComplete={handlePuzzleComplete}
                 onProgress={setPuzzleProgress}
                 onWrongMove={() => setAttemptCount(prev => prev + 1)}
+                onMoveIndexChange={setCurrentMoveIndex}
               />
             </div>
 
@@ -311,6 +318,12 @@ export default function DailyPuzzlePage() {
                 >
                   {showHint ? 'HIDE HINT' : 'SHOW HINT'}
                 </button>
+                <button
+                  onClick={() => setShowSolution(!showSolution)}
+                  className="flex-1 bg-purple-400 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
+                >
+                  {showSolution ? 'HIDE SOLUTION' : 'SHOW SOLUTION'}
+                </button>
               </div>
               
               {showHint && currentPuzzle && (
@@ -328,6 +341,38 @@ export default function DailyPuzzlePage() {
                   </div>
                   <div className="mt-2 text-xs font-bold text-black">
                     RATING: {currentPuzzle.rating}
+                  </div>
+                </div>
+              )}
+              
+              {showSolution && currentPuzzle && (
+                <div className="bg-purple-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] p-3">
+                  <div className="font-black text-sm text-black mb-2">SOLUTION MOVES:</div>
+                  <div className="grid grid-cols-2 gap-1 text-xs">
+                    {currentPuzzle.moves.map((move, index) => {
+                      const isCurrentMove = index === currentMoveIndex;
+                      const isCompletedMove = index < currentMoveIndex;
+                      const moveNumber = Math.floor(index / 2) + 1;
+                      const isWhiteMove = index % 2 === 0;
+                      
+                      return (
+                        <div 
+                          key={index}
+                          className={`px-2 py-1 border border-black font-bold ${
+                            isCurrentMove 
+                              ? 'bg-orange-300 text-black' 
+                              : isCompletedMove
+                              ? 'bg-green-300 text-black'
+                              : 'bg-white text-black'
+                          }`}
+                        >
+                          {moveNumber}{isWhiteMove ? '.' : '...'} {move.toUpperCase()}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-2 text-xs font-bold text-black">
+                    🟠 CURRENT MOVE • 🟢 COMPLETED • ⚪ REMAINING
                   </div>
                 </div>
               )}
