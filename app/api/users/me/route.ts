@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
       longestStreak: fullUserData.longest_streak || fullUserData.longestStreak || 0,
       totalPuzzlesSolved: fullUserData.puzzles_solved || fullUserData.totalPuzzlesSolved || 0,
       points: fullUserData.total_points || fullUserData.points || 0,
-      lastLogin: fullUserData.last_login || fullUserData.lastLoggedIn
+      lastLogin: fullUserData.last_login || fullUserData.lastLoggedIn,
+      lastPuzzleDate: fullUserData.lastPuzzleDate
     });
   } catch (error: any) {
     console.error("Authentication error:", error);

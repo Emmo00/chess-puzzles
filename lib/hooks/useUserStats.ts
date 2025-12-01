@@ -12,6 +12,7 @@ export interface UserStats {
   totalPuzzlesSolved: number
   points: number
   lastLogin: string
+  lastPuzzleDate?: string | null
 }
 
 export function useUserStats() {

@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
         points: newPoints,
         totalPuzzlesSolved: newTotalSolved,
         lastLoggedIn: new Date(),
+        lastPuzzleDate: new Date().toISOString(),
       });
 
       // Update streak
