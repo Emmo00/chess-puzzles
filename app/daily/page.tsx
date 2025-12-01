@@ -28,6 +28,7 @@ export default function DailyPuzzlePage() {
     attempts: number;
     points: number;
   } | null>(null)
+  const [showHint, setShowHint] = useState(false)
   
   const { address, isConnected } = useAccount()
   const router = useRouter()
@@ -177,6 +178,17 @@ export default function DailyPuzzlePage() {
   const handleRetry = () => {
     setAttemptCount(prev => prev + 1)
     setPuzzleProgress(0)
+    setShowHint(false)
+    // Reset the puzzle by refetching it
+    if (currentPuzzle) {
+      const tempPuzzle = currentPuzzle
+      setCurrentPuzzle(null)
+      setTimeout(() => {
+        setCurrentPuzzle(tempPuzzle)
+        setStartTime(Date.now())
+        setElapsedTime(0)
+      }, 100)
+    }
   }
 
   const handleStartNewPuzzle = () => {
@@ -187,6 +199,7 @@ export default function DailyPuzzlePage() {
     setPuzzleProgress(0)
     setStartTime(null)
     setElapsedTime(0)
+    setShowHint(false)
   }
 
   const formatTime = (ms: number) => {
@@ -271,8 +284,37 @@ export default function DailyPuzzlePage() {
               <PuzzleProgress current={puzzleProgress} total={currentPuzzle.moves.length} />
             </div>
 
-            <div className="w-full max-w-xs shrink-0">
+            <div className="w-full max-w-xs shrink-0 space-y-3">
               <PuzzleActions onRetry={handleRetry} />
+              
+              {/* Hint Section */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowHint(!showHint)}
+                  className="flex-1 bg-yellow-400 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
+                >
+                  {showHint ? 'HIDE HINT' : 'SHOW HINT'}
+                </button>
+              </div>
+              
+              {showHint && currentPuzzle && (
+                <div className="bg-blue-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] p-3">
+                  <div className="font-black text-sm text-black mb-2">PUZZLE THEMES:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {currentPuzzle.themes.map((theme, index) => (
+                      <span 
+                        key={index}
+                        className="bg-white border border-black px-2 py-1 text-xs font-bold text-black"
+                      >
+                        {theme.toUpperCase()}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-2 text-xs font-bold text-black">
+                    RATING: {currentPuzzle.rating}
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
