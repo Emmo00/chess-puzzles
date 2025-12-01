@@ -112,17 +112,8 @@ export default function DailyPuzzlePage() {
     
     setPuzzleLoading(true)
     try {
-      // First get today's puzzle (shared for all users)
-      const puzzleResponse = await fetch('/api/puzzles/today')
-      
-      if (!puzzleResponse.ok) {
-        throw new Error('Failed to fetch today\'s puzzle')
-      }
-      
-      const puzzle = await puzzleResponse.json()
-      
-      // Then create a user puzzle entry to track this attempt
-      const userPuzzleResponse = await fetch('/api/puzzles/daily', {
+      // Get today's puzzle and create user tracking in one call
+      const response = await fetch('/api/puzzles/daily', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -130,16 +121,19 @@ export default function DailyPuzzlePage() {
         },
       })
       
-      if (userPuzzleResponse.status === 429) {
+      if (response.status === 429) {
         // Daily limit reached
         return
       }
       
-      if (userPuzzleResponse.ok) {
-        setCurrentPuzzle(puzzle)
+      if (response.ok) {
+        const data = await response.json()
+        setCurrentPuzzle(data.puzzle)
         setStartTime(Date.now())
         setElapsedTime(0)
         setDailyCount(prev => prev + 1)
+      } else {
+        throw new Error('Failed to fetch daily puzzle')
       }
     } catch (error) {
       console.error('Failed to fetch daily puzzle:', error)

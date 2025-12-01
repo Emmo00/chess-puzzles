@@ -94,7 +94,8 @@ export async function POST(request: NextRequest) {
       success: true, 
       message: "Puzzle attempt recorded",
       userType: puzzleType,
-      puzzleCount: count + 1
+      puzzleCount: count + 1,
+      puzzle: puzzle // Return the puzzle data
     });
   } catch (error: any) {
     console.error("Error creating daily puzzle attempt:", error);
