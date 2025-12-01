@@ -23,10 +23,76 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
   const [moveFrom, setMoveFrom] = useState<string>("");
   const [wrongMoveSquares, setWrongMoveSquares] = useState<Record<string, React.CSSProperties>>({});
   const [isAnimatingWrongMove, setIsAnimatingWrongMove] = useState(false);
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Initialize audio context on first user interaction
+  const initAudioContext = () => {
+    if (!audioContext && typeof window !== 'undefined') {
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        setAudioContext(ctx);
+        
+        // Resume context if it's suspended (required by browser policies)
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+        
+        return ctx;
+      } catch (error) {
+        console.warn('Could not create AudioContext:', error);
+        return null;
+      }
+    }
+    return audioContext;
+  };
+
+  // Audio effects for moves
+  const playMoveSound = (isCorrect: boolean = true) => {
+    try {
+      const ctx = initAudioContext();
+      if (!ctx) return;
+      
+      if (isCorrect) {
+        // Correct move sound - pleasant tone
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        oscillator.frequency.setValueAtTime(800, ctx.currentTime);
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+        
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.2);
+      } else {
+        // Wrong move sound - buzzer-like tone
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        oscillator.frequency.setValueAtTime(200, ctx.currentTime);
+        oscillator.type = 'sawtooth';
+        
+        gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.3);
+      }
+    } catch (error) {
+      console.warn('Could not play move sound:', error);
+    }
+  };
 
   useEffect(() => {
     if (puzzle) {
@@ -46,6 +112,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
       setTimeout(() => {
         if (puzzle.moves.length > 0) {
           chess.move(puzzle.moves[0]);
+          playMoveSound(true); // Opening move sound
           setBoardPosition(chess.fen());
           setCurrentMoveIndex(0);
           onMoveIndexChange?.(0);
@@ -85,6 +152,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
 
           if (madeMove === expectedMove) {
             // Correct move!
+            playMoveSound(true);
             setGame(gameCopy);
             setBoardPosition(gameCopy.fen());
             const newMoveIndex = currentMoveIndex + 1;
@@ -108,6 +176,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
                 if (newMoveIndex + 1 < puzzle.moves.length) {
                   const nextMove = puzzle.moves[newMoveIndex + 1];
                   gameCopy.move(nextMove);
+                  playMoveSound(true); // Opponent move sound
                   setGame(gameCopy);
                   setBoardPosition(gameCopy.fen());
                   setCurrentMoveIndex(newMoveIndex + 1);
@@ -120,6 +189,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
             return true;
           } else {
             // Wrong move! Show animation and revert
+            playMoveSound(false);
             setIsAnimatingWrongMove(true);
             setWrongMoveSquares({
               [sourceSquare]: { background: "rgba(255, 0, 0, 0.7)" },
@@ -199,6 +269,9 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
   function onSquareClick({ square, piece }: SquareHandlerArgs) {
     if (!game || !puzzle) return;
 
+    // Initialize audio on first click (user gesture required)
+    initAudioContext();
+
     // piece clicked to move
     if (!moveFrom && piece) {
       // get the move options for the square
@@ -259,6 +332,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
           
           if (madeMove === expectedMove) {
             // Correct move!
+            playMoveSound(true);
             setGame(gameCopy);
             setBoardPosition(gameCopy.fen());
             const newMoveIndex = currentMoveIndex + 1;
@@ -282,6 +356,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
                 if (newMoveIndex + 1 < puzzle.moves.length) {
                   const nextMove = puzzle.moves[newMoveIndex + 1];
                   gameCopy.move(nextMove);
+                  playMoveSound(true); // Opponent move sound
                   setGame(gameCopy);
                   setBoardPosition(gameCopy.fen());
                   setCurrentMoveIndex(newMoveIndex + 1);
@@ -292,6 +367,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
             }
           } else {
             // Wrong move! Show animation and revert
+            playMoveSound(false);
             setIsAnimatingWrongMove(true);
             setWrongMoveSquares({
               [moveFrom]: { background: "rgba(255, 0, 0, 0.7)" },
