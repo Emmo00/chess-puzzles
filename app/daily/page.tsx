@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import Link from "next/link"
 import ChessBoard from "../../components/chess-board"
 import PuzzleActions from "../../components/puzzle-actions"
-import PuzzleProgress from "../../components/puzzle-progress"
 import PaywallCard from "../../components/paywall-card"
 import { useUserStats } from "../../lib/hooks/useUserStats"
 import { Puzzle } from "../../lib/types"
@@ -301,10 +300,6 @@ export default function DailyPuzzlePage() {
                 onWrongMove={() => setAttemptCount(prev => prev + 1)}
                 onMoveIndexChange={setCurrentMoveIndex}
               />
-            </div>
-
-            <div className="w-full max-w-xs shrink-0">
-              <PuzzleProgress current={puzzleProgress} total={(currentPuzzle.moves.length) / 2} />
             </div>
 
             <div className="w-full max-w-xs shrink-0 space-y-3">
