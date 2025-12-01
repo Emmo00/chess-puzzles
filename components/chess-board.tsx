@@ -9,9 +9,10 @@ interface ChessBoardProps {
   puzzle?: Puzzle;
   onComplete?: () => void;
   onProgress?: (progress: number) => void;
+  onWrongMove?: () => void;
 }
 
-export default function ChessBoard({ puzzle, onComplete, onProgress }: ChessBoardProps) {
+export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove }: ChessBoardProps) {
   const [mounted, setMounted] = useState(false);
   const [game, setGame] = useState<Chess | null>(null);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
@@ -19,6 +20,8 @@ export default function ChessBoard({ puzzle, onComplete, onProgress }: ChessBoar
   const [isPlayerTurn, setIsPlayerTurn] = useState(false);
   const [optionSquares, setOptionSquares] = useState<Record<string, React.CSSProperties>>({});
   const [moveFrom, setMoveFrom] = useState<string>("");
+  const [wrongMoveSquares, setWrongMoveSquares] = useState<Record<string, React.CSSProperties>>({});
+  const [isAnimatingWrongMove, setIsAnimatingWrongMove] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -111,6 +114,30 @@ export default function ChessBoard({ puzzle, onComplete, onProgress }: ChessBoar
             }
 
             return true;
+          } else {
+            // Wrong move! Show animation and revert
+            setIsAnimatingWrongMove(true);
+            setWrongMoveSquares({
+              [sourceSquare]: { background: "rgba(255, 0, 0, 0.7)" },
+              [targetSquare]: { background: "rgba(255, 0, 0, 0.7)" }
+            });
+            
+            // Temporarily show the wrong move
+            setGame(gameCopy);
+            setBoardPosition(gameCopy.fen());
+            
+            // Increase attempt count
+            onWrongMove?.();
+            
+            setTimeout(() => {
+              // Revert to previous position
+              setGame(game);
+              setBoardPosition(game.fen());
+              setWrongMoveSquares({});
+              setIsAnimatingWrongMove(false);
+            }, 800);
+            
+            return true; // Allow the move temporarily for animation
           }
         }
       }
@@ -257,6 +284,28 @@ export default function ChessBoard({ puzzle, onComplete, onProgress }: ChessBoar
                 }
               }, 1000);
             }
+          } else {
+            // Wrong move! Show animation and revert
+            setIsAnimatingWrongMove(true);
+            setWrongMoveSquares({
+              [moveFrom]: { background: "rgba(255, 0, 0, 0.7)" },
+              [square]: { background: "rgba(255, 0, 0, 0.7)" }
+            });
+            
+            // Temporarily show the wrong move
+            setGame(gameCopy);
+            setBoardPosition(gameCopy.fen());
+            
+            // Increase attempt count
+            onWrongMove?.();
+            
+            setTimeout(() => {
+              // Revert to previous position
+              setGame(game);
+              setBoardPosition(game.fen());
+              setWrongMoveSquares({});
+              setIsAnimatingWrongMove(false);
+            }, 800);
           }
         }
       }
@@ -275,19 +324,22 @@ export default function ChessBoard({ puzzle, onComplete, onProgress }: ChessBoar
   if (!mounted) return null;
 
   return (
-    <div className="inline-block border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-      <div style={{ width: "320px", height: "320px" }}>
+    <div className={`inline-block border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] ${isAnimatingWrongMove ? 'animate-pulse' : ''}`}>
+      <div 
+        style={{ width: "320px", height: "320px" }}
+        className={isAnimatingWrongMove ? 'animate-bounce' : ''}
+      >
         <Chessboard
           options={{
             position: boardPosition,
             onSquareClick,
             allowDragging: false,
             boardOrientation: "white",
-            animationDurationInMs: 500,
+            animationDurationInMs: isAnimatingWrongMove ? 200 : 500,
             boardStyle: {
               borderRadius: "0px",
             },
-            squareStyles: optionSquares,
+            squareStyles: { ...optionSquares, ...wrongMoveSquares },
             lightSquareStyle: { backgroundColor: "#EEEED2" },
             darkSquareStyle: { backgroundColor: "#739552" },
             id: "click-to-move",

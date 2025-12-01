@@ -292,6 +292,7 @@ export default function DailyPuzzlePage() {
                 puzzle={currentPuzzle}
                 onComplete={handlePuzzleComplete}
                 onProgress={setPuzzleProgress}
+                onWrongMove={() => setAttemptCount(prev => prev + 1)}
               />
             </div>
 
