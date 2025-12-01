@@ -7,12 +7,6 @@ import { PaymentType } from "../../../../lib/types/payment";
 
 const MAX_DAILY_FREE_PUZZLES = 3;
 
-// Cache for today's puzzle (shared across all users)
-let dailyPuzzleCache: {
-  date: string;
-  puzzle: any;
-} | null = null;
-
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
@@ -68,19 +62,8 @@ export async function POST(request: NextRequest) {
       console.log(`Free user ${user.walletAddress} accessing puzzle ${count + 1}/3`);
     }
 
-    // Get today's puzzle (same for all users)
-    const today = new Date().toDateString();
-    let puzzle;
-    
-    if (dailyPuzzleCache && dailyPuzzleCache.date === today) {
-      puzzle = dailyPuzzleCache.puzzle;
-    } else {
-      puzzle = await puzzleService.fetchPuzzle();
-      dailyPuzzleCache = {
-        date: today,
-        puzzle
-      };
-    }
+    // Get today's puzzle
+    const puzzle = await puzzleService.fetchPuzzle();
 
     // Store user puzzle attempt in database with appropriate type
     const puzzleType = hasPremium ? "premium" : hasDailyAccess ? "daily" : "free";
