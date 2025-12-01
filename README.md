@@ -1,8 +1,12 @@
-0xEA22ca862C3AFDA79Ef7Fb5Ae8f13D245354f05b# ChessPuzzles
+# ChessPuzzles
 
 **ChessPuzzles** is a blockchain-integrated chess puzzle platform that brings engaging puzzle-solving experiences to the Celo network. Players can solve daily puzzles, participate in fast-paced “Puzzle Rush” sessions, track their progress, and earn rewards in `$CHESS`.
 
 ---
+
+## Smart Contract
+
+[0xEA22ca862C3AFDA79Ef7Fb5Ae8f13D245354f05b](https://celoscan.io/address/0xEA22ca862C3AFDA79Ef7Fb5Ae8f13D245354f05b#code)
 
 ## Features
 
