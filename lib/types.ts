@@ -30,7 +30,7 @@ export interface UserPuzzle {
   puzzleId: string;
   completed: boolean;
   attempts: number;
-  type: "free" | "premium";
+  type: "free" | "premium" | "daily";
   points: number;
   solvedAt?: Date;
   createdAt: Date;

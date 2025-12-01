@@ -13,7 +13,12 @@ import { Puzzle } from "../../lib/types"
 
 export default function DailyPuzzlePage() {
   const [mounted, setMounted] = useState(false)
-  const [paymentStatus, setPaymentStatus] = useState<{ hasAccess: boolean; hasPremium: boolean } | null>(null)
+  const [paymentStatus, setPaymentStatus] = useState<{ 
+    hasAccess: boolean; 
+    hasPremium: boolean;
+    hasDailyAccess?: boolean;
+    hasStreakPremium?: boolean;
+  } | null>(null)
   const [loading, setLoading] = useState(true)
   const [attemptCount, setAttemptCount] = useState(1)
   const [puzzleProgress, setPuzzleProgress] = useState(0)
@@ -283,7 +288,7 @@ export default function DailyPuzzlePage() {
               <div className="bg-orange-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] px-3 py-1 font-black text-sm">
                 {Math.floor(elapsedTime / 1000)}s
               </div>
-              <div className="bg-magenta-500 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] px-3 py-1 font-black text-sm text-white">
+              <div className="bg-magenta-500 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] px-3 py-1 font-black text-sm">
                 TRY {attemptCount}
               </div>
             </div>

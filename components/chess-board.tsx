@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Chess } from "chess.js"
-import { Chessboard, ChessboardProvider } from "react-chessboard"
+import { Chessboard } from "react-chessboard"
 import { Puzzle } from "../lib/types"
 
 interface ChessBoardProps {
@@ -15,7 +15,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress }: ChessBoar
   const [mounted, setMounted] = useState(false)
   const [game, setGame] = useState<Chess | null>(null)
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0)
-  const [boardPosition, setBoardPosition] = useState<string>("")
+  const [boardPosition, setBoardPosition] = useState<string>("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
   const [isPlayerTurn, setIsPlayerTurn] = useState(false)
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress }: ChessBoar
     }
   }, [puzzle, onProgress])
 
-  const handlePieceDrop = ({ piece, sourceSquare, targetSquare }: { piece: any, sourceSquare: string, targetSquare: string | null }) => {
+  const onPieceDrop = ({ piece, sourceSquare, targetSquare }: { piece: any, sourceSquare: string, targetSquare: string | null }) => {
     if (!game || !puzzle || !isPlayerTurn || !targetSquare) return false
 
     const gameCopy = new Chess(game.fen())
@@ -112,32 +112,33 @@ export default function ChessBoard({ puzzle, onComplete, onProgress }: ChessBoar
     return false
   }
 
-  const canDragPiece = ({ piece }: { piece: any, isSparePiece: boolean, square: string | null }) => {
-    // Only allow white pieces to be dragged and only when it's player's turn
-    return isPlayerTurn && piece.pieceType?.charAt(0) === 'w'
+  const canDragPiece = ({ piece, square }: { piece: any, isSparePiece: boolean, square: string | null }) => {
+    if (!isPlayerTurn || !game || !square) return false
+    
+    // Get the piece from the game state to check its color
+    const pieceOnSquare = game.get(square as any)
+    return !!(pieceOnSquare && pieceOnSquare.color === 'w')
   }
 
   if (!mounted) return null
 
-  const chessboardOptions = {
-    position: boardPosition,
-    onPieceDrop: handlePieceDrop,
-    canDragPiece: canDragPiece,
-    boardOrientation: "white" as const,
-    animationDurationInMs: 300,
-    boardStyle: {
-      borderRadius: "0px",
-    },
-    lightSquareStyle: { backgroundColor: "#EEEED2" },
-    darkSquareStyle: { backgroundColor: "#739552" },
-  }
-
   return (
     <div className="inline-block border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
       <div style={{ width: "320px", height: "320px" }}>
-        <ChessboardProvider options={chessboardOptions}>
-          <Chessboard />
-        </ChessboardProvider>
+        <Chessboard
+          options={{
+            position: boardPosition,
+            onPieceDrop: onPieceDrop,
+            canDragPiece: canDragPiece,
+            boardOrientation: "white",
+            animationDurationInMs: 300,
+            boardStyle: {
+              borderRadius: "0px",
+            },
+            lightSquareStyle: { backgroundColor: "#EEEED2" },
+            darkSquareStyle: { backgroundColor: "#739552" },
+          }}
+        />
       </div>
     </div>
   )
