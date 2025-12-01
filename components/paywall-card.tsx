@@ -30,8 +30,8 @@ export default function PaywallCard() {
       >
         <div className="flex flex-col items-center gap-4 text-center">
           <div>
-            <h2 className="text-lg font-black uppercase tracking-wider mb-2">Access Exhausted</h2>
-            <p className="text-sm font-bold opacity-80">No more free puzzles today</p>
+            <h2 className="text-lg font-black uppercase tracking-wider mb-2">Payment Required</h2>
+            <p className="text-sm font-bold opacity-80">Purchase access to solve puzzles</p>
           </div>
 
           <div className="w-full border-4 border-black bg-white py-4">
@@ -39,7 +39,7 @@ export default function PaywallCard() {
             <div className="space-y-2">
               <div className="border-2 border-gray-300 p-2">
                 <p className="text-lg font-black text-cyan-600">Daily Pass - $0.10</p>
-                <p className="text-xs font-bold">+3 extra puzzles today (6 total)</p>
+                <p className="text-xs font-bold">3 puzzles today</p>
               </div>
               <div className="border-2 border-green-500 p-2 bg-green-50">
                 <p className="text-lg font-black text-green-600">Premium - $1.00</p>

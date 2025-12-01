@@ -124,10 +124,10 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                   </span>
                 </div>
                 <p className="text-black font-bold text-sm mb-2 uppercase tracking-wide">
-                  ⚡ +3 Extra Puzzles Today!
+                  ⚡ 3 Puzzles Today!
                 </p>
                 <p className="text-black font-bold text-xs mb-4 opacity-80">
-                  Total: 6 puzzles (3 free + 3 paid)
+                  Solve 3 chess puzzles today
                 </p>
                 <button
                   onClick={() => handlePayment(PaymentType.DAILY_ACCESS)}
