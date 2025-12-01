@@ -132,7 +132,8 @@ export default function DailyPuzzlePage() {
         setCurrentPuzzle(data.puzzle)
         setStartTime(Date.now())
         setElapsedTime(0)
-        setDailyCount(prev => prev + 1)
+        // Update count from server response to ensure accuracy
+        setDailyCount(data.puzzleCount || dailyCount + 1)
       } else {
         throw new Error('Failed to fetch daily puzzle')
       }
@@ -224,8 +225,8 @@ export default function DailyPuzzlePage() {
   // Calculate limits based on payment status
   const getMaxDailyPuzzles = () => {
     if (paymentStatus?.hasPremium || paymentStatus?.hasStreakPremium) return Infinity
-    if (paymentStatus?.hasDailyAccess) return 6 // 3 free + 3 daily access
-    return 3 // free only
+    if (paymentStatus?.hasDailyAccess) return 3 // daily access gives 3 puzzles
+    return 0 // no payment = no access
   }
   
   const MAX_DAILY_PUZZLES = getMaxDailyPuzzles()
@@ -252,8 +253,8 @@ export default function DailyPuzzlePage() {
             {(paymentStatus?.hasPremium || paymentStatus?.hasStreakPremium) 
               ? '🏆 PREMIUM' 
               : paymentStatus?.hasDailyAccess
-              ? `💎 DAILY+ (${dailyCount}/${MAX_DAILY_PUZZLES})`
-              : `⚡ FREE (${dailyCount}/${MAX_DAILY_PUZZLES})`
+              ? `⚡ PUZZLES (${dailyCount}/${MAX_DAILY_PUZZLES})`
+              : '🔒 NO ACCESS'
             }
           </div>
         </div>

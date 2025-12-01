@@ -43,23 +43,20 @@ export async function POST(request: NextRequest) {
       // Premium users get unlimited puzzles
       console.log(`Premium user ${user.walletAddress} accessing puzzle ${count + 1}`);
     } else if (hasDailyAccess) {
-      // Daily access users get 3 additional puzzles on top of free ones
-      if (count >= (MAX_DAILY_FREE_PUZZLES + 3)) {
-        return NextResponse.json(
-          { message: "Daily access limit reached (6 puzzles total)" },
-          { status: 429 }
-        );
-      }
-      console.log(`Daily access user ${user.walletAddress} accessing puzzle ${count + 1}/6`);
-    } else {
-      // Free users get only 3 puzzles
+      // Daily access users get 3 puzzles
       if (count >= MAX_DAILY_FREE_PUZZLES) {
         return NextResponse.json(
-          { message: "Daily free puzzle limit reached" },
+          { message: "Daily access limit reached (3 puzzles total)" },
           { status: 429 }
         );
       }
-      console.log(`Free user ${user.walletAddress} accessing puzzle ${count + 1}/3`);
+      console.log(`Daily access user ${user.walletAddress} accessing puzzle ${count + 1}/3`);
+    } else {
+      // Free users get no access
+      return NextResponse.json(
+        { message: "Payment required. Purchase daily access or premium to solve puzzles." },
+        { status: 403 }
+      );
     }
 
     // Get today's puzzle
