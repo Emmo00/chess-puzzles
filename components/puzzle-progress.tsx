@@ -26,7 +26,7 @@ export default function PuzzleProgress({ current, total }: PuzzleProgressProps) 
         opacity: 0,
       }}
     >
-      <div className="bg-black text-white px-3 py-1 font-black text-sm uppercase tracking-wider border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">PUZZLE PROGRESS</div>
+      {/* <div className="bg-black text-white px-3 py-1 font-black text-sm uppercase tracking-wider border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">PUZZLE PROGRESS</div> */}
       <div
         className="w-full h-8 bg-white border-4 border-black relative overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
       >

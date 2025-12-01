@@ -297,7 +297,7 @@ export default function DailyPuzzlePage() {
             </div>
 
             <div className="w-full max-w-xs shrink-0">
-              <PuzzleProgress current={puzzleProgress} total={currentPuzzle.moves.length} />
+              <PuzzleProgress current={puzzleProgress} total={(currentPuzzle.moves.length) / 2} />
             </div>
 
             <div className="w-full max-w-xs shrink-0 space-y-3">
