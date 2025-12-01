@@ -1,0 +1,327 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useAccount } from 'wagmi'
+import { useRouter } from 'next/navigation'
+import Link from "next/link"
+import ChessBoard from "../../components/chess-board"
+import PuzzleActions from "../../components/puzzle-actions"
+import PuzzleProgress from "../../components/puzzle-progress"
+import PaywallCard from "../../components/paywall-card"
+import { useUserStats } from "../../lib/hooks/useUserStats"
+import { Puzzle } from "../../lib/types"
+
+export default function DailyPuzzlePage() {
+  const [mounted, setMounted] = useState(false)
+  const [paymentStatus, setPaymentStatus] = useState<{ hasAccess: boolean; hasPremium: boolean } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [attemptCount, setAttemptCount] = useState(1)
+  const [puzzleProgress, setPuzzleProgress] = useState(0)
+  const [currentPuzzle, setCurrentPuzzle] = useState<Puzzle | null>(null)
+  const [puzzleLoading, setPuzzleLoading] = useState(false)
+  const [dailyCount, setDailyCount] = useState(0)
+  const [startTime, setStartTime] = useState<number | null>(null)
+  const [elapsedTime, setElapsedTime] = useState(0)
+  const [isCompleted, setIsCompleted] = useState(false)
+  const [completionStats, setCompletionStats] = useState<{
+    timeElapsed: number;
+    attempts: number;
+    points: number;
+  } | null>(null)
+  
+  const { address, isConnected } = useAccount()
+  const router = useRouter()
+  const { userStats } = useUserStats()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted && !isConnected) {
+      router.push('/')
+      return
+    }
+    
+    if (mounted && address) {
+      checkPaymentStatus()
+      checkDailyCount()
+    }
+  }, [mounted, address, isConnected, router])
+
+  // Redirect to home if no access
+  useEffect(() => {
+    if (mounted && !loading && paymentStatus && !paymentStatus.hasAccess) {
+      router.push('/')
+    }
+  }, [mounted, loading, paymentStatus, router])
+
+  // Timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (startTime && !isCompleted) {
+      interval = setInterval(() => {
+        setElapsedTime(Date.now() - startTime)
+      }, 100)
+    }
+    return () => clearInterval(interval)
+  }, [startTime, isCompleted])
+
+  const checkPaymentStatus = async () => {
+    if (!address) return
+    
+    try {
+      const response = await fetch(`/api/payments/status?walletAddress=${address}`)
+      if (response.ok) {
+        const status = await response.json()
+        setPaymentStatus(status)
+      }
+    } catch (error) {
+      console.error('Failed to check payment status:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const checkDailyCount = async () => {
+    if (!address) return
+    
+    try {
+      const response = await fetch(`/api/puzzles/today/me`, {
+        headers: {
+          'Authorization': `Bearer ${address}`,
+        },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setDailyCount(data.count)
+      }
+    } catch (error) {
+      console.error('Failed to check daily count:', error)
+    }
+  }
+
+  const fetchDailyPuzzle = async () => {
+    if (!address) return
+    
+    setPuzzleLoading(true)
+    try {
+      // First get today's puzzle (shared for all users)
+      const puzzleResponse = await fetch('/api/puzzles/today')
+      
+      if (!puzzleResponse.ok) {
+        throw new Error('Failed to fetch today\'s puzzle')
+      }
+      
+      const puzzle = await puzzleResponse.json()
+      
+      // Then create a user puzzle entry to track this attempt
+      const userPuzzleResponse = await fetch('/api/puzzles/daily', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${address}`,
+        },
+      })
+      
+      if (userPuzzleResponse.status === 429) {
+        // Daily limit reached
+        return
+      }
+      
+      if (userPuzzleResponse.ok) {
+        setCurrentPuzzle(puzzle)
+        setStartTime(Date.now())
+        setElapsedTime(0)
+        setDailyCount(prev => prev + 1)
+      }
+    } catch (error) {
+      console.error('Failed to fetch daily puzzle:', error)
+    } finally {
+      setPuzzleLoading(false)
+    }
+  }
+
+  const handlePuzzleComplete = async () => {
+    if (!currentPuzzle || !startTime) return
+    
+    const finalElapsedTime = Date.now() - startTime
+    setIsCompleted(true)
+    
+    try {
+      const response = await fetch('/api/puzzles/solve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${address}`,
+        },
+        body: JSON.stringify({
+          puzzleId: currentPuzzle.puzzleid,
+          attempts: attemptCount,
+        }),
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        setCompletionStats({
+          timeElapsed: finalElapsedTime,
+          attempts: attemptCount,
+          points: result.points,
+        })
+      }
+    } catch (error) {
+      console.error('Failed to submit puzzle solution:', error)
+    }
+  }
+
+  const handleRetry = () => {
+    setAttemptCount(prev => prev + 1)
+    setPuzzleProgress(0)
+  }
+
+  const handleStartNewPuzzle = () => {
+    setCurrentPuzzle(null)
+    setIsCompleted(false)
+    setCompletionStats(null)
+    setAttemptCount(1)
+    setPuzzleProgress(0)
+    setStartTime(null)
+    setElapsedTime(0)
+  }
+
+  const formatTime = (ms: number) => {
+    const seconds = Math.floor(ms / 1000)
+    return `${seconds}s`
+  }
+
+  if (!mounted) return null
+
+  if (loading) {
+    return (
+      <div className="w-screen h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  const MAX_DAILY_PUZZLES = paymentStatus?.hasPremium ? Infinity : 3
+  const hasAccess = paymentStatus?.hasAccess
+  const isAccessExhausted = !paymentStatus?.hasAccess || (dailyCount >= 3 && !paymentStatus?.hasPremium)
+
+  return (
+    <div className="w-screen h-screen bg-white text-black flex flex-col overflow-hidden">
+      {/* Header with Streak Badge and Back Button */}
+      <header className="pt-4 px-4 flex justify-between items-center shrink-0">
+        <Link href="/" className="bg-black text-white px-2 py-1 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all">
+          ← BACK
+        </Link>
+        <div className="flex items-center gap-3">
+          <div className={`px-4 py-2 font-black text-sm border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${
+            paymentStatus?.hasPremium 
+              ? 'bg-green-400 text-black' 
+              : 'bg-cyan-400 text-black'
+          }`}>
+            {paymentStatus?.hasPremium ? '🏆 PREMIUM' : `⚡ DAILY (${dailyCount}/${MAX_DAILY_PUZZLES === Infinity ? '∞' : MAX_DAILY_PUZZLES})`}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 overflow-hidden gap-3">
+        
+        {/* Show completion stats if puzzle is completed */}
+        {isCompleted && completionStats && (
+          <div className="w-full max-w-xs bg-green-400 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 text-center mb-4">
+            <div className="text-3xl font-black text-black mb-4 transform -rotate-2">PUZZLE SOLVED! 🎉</div>
+            <div className="space-y-2 text-lg font-black text-black">
+              <div className="bg-white border-2 border-black p-2">TIME: {formatTime(completionStats.timeElapsed)}</div>
+              <div className="bg-white border-2 border-black p-2">TRIES: {completionStats.attempts}</div>
+              <div className="bg-white border-2 border-black p-2">POINTS: {completionStats.points}</div>
+            </div>
+            <button
+              onClick={handleStartNewPuzzle}
+              className="mt-4 bg-black text-white px-6 py-3 font-black text-lg border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+            >
+              NEW PUZZLE
+            </button>
+          </div>
+        )}
+
+        {/* Show puzzle interface if puzzle is loaded and not completed */}
+        {currentPuzzle && !isCompleted && (
+          <>
+            <div className="flex gap-2 mb-3 justify-center">
+              <div className="bg-orange-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] px-3 py-1 font-black text-sm">
+                {Math.floor(elapsedTime / 1000)}s
+              </div>
+              <div className="bg-magenta-500 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] px-3 py-1 font-black text-sm text-white">
+                TRY {attemptCount}
+              </div>
+            </div>
+
+            <div className="w-full max-w-xs shrink-0">
+              <ChessBoard 
+                puzzle={currentPuzzle}
+                onComplete={handlePuzzleComplete}
+                onProgress={setPuzzleProgress}
+              />
+            </div>
+
+            <div className="w-full max-w-xs shrink-0">
+              <PuzzleProgress current={puzzleProgress} total={currentPuzzle.moves.length} />
+            </div>
+
+            <div className="w-full max-w-xs shrink-0">
+              <PuzzleActions onRetry={handleRetry} />
+            </div>
+          </>
+        )}
+
+        {/* Show start button if no puzzle loaded */}
+        {!currentPuzzle && !isCompleted && hasAccess && (
+          <div className="w-full max-w-xs text-center space-y-6">
+            <div className="bg-yellow-400 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 transform -rotate-1">
+              <h2 className="text-3xl font-black text-black mb-3">DAILY CHESS PUZZLE</h2>
+              <p className="text-lg font-bold text-black">
+                SOLVE TODAY'S PUZZLE AND EARN POINTS!
+              </p>
+            </div>
+
+            <button
+              onClick={fetchDailyPuzzle}
+              disabled={puzzleLoading}
+              className="w-full bg-green-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50 disabled:hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] disabled:hover:translate-x-0 disabled:hover:translate-y-0"
+            >
+              {puzzleLoading ? 'LOADING PUZZLE...' : 'START DAILY PUZZLE'}
+            </button>
+          </div>
+        )}
+
+        {/* Show paywall if access exhausted */}
+        {isAccessExhausted && !currentPuzzle && (
+          <div className="w-full max-w-xs shrink-0">
+            <PaywallCard />
+          </div>
+        )}
+
+        {/* Show access required message if no access */}
+        {!hasAccess && !currentPuzzle && (
+          <div className="w-full max-w-xs text-center space-y-6">
+            <div className="bg-red-400 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 transform rotate-2">
+              <h2 className="text-3xl font-black text-black mb-3">PREMIUM REQUIRED</h2>
+              <p className="text-lg font-bold text-black">
+                DAILY PUZZLES REQUIRE PREMIUM ACCESS. UPGRADE NOW TO START SOLVING!
+              </p>
+            </div>
+            <Link 
+              href="/"
+              className="block w-full bg-black text-white py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all text-center"
+            >
+              GET PREMIUM ACCESS
+            </Link>
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}

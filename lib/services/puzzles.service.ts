@@ -16,7 +16,7 @@ class PuzzleService {
     const numberOfMoves = randomInt(2, 4);
 
     const response = await fetch(
-      `${PUZZLE_API_URL}/?themesType=ALL&playerMoves=${numberOfMoves}&count=1`,
+      `https://${PUZZLE_API_URL}/?themesType=ALL&playerMoves=${numberOfMoves}&count=1`,
       {
         method: "GET",
         headers: {
@@ -30,7 +30,11 @@ class PuzzleService {
       throw new HttpException(500, "Failed to fetch puzzle");
     }
 
-    const puzzles: Puzzle[] = await response.json();
+    const puzzles: Puzzle[] = (await response.json()).puzzles as Puzzle[];
+    console.log("Fetched puzzle:", puzzles);
+    if (puzzles.length === 0) {
+      throw new HttpException(500, "No puzzles available");
+    }
     const puzzle = puzzles[0];
     return puzzle;
   }

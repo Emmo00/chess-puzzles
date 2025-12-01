@@ -15,12 +15,6 @@ export default function PuzzleActions({ onRetry }: PuzzleActionsProps) {
 
   if (!mounted) return null
 
-  const actions = [
-    { id: "submit", label: "Submit Move", color: "bg-cyan-400" },
-    { id: "retry", label: "Retry Puzzle", color: "bg-magenta-500" },
-    { id: "next", label: "Next Puzzle", color: "bg-yellow-400" },
-  ]
-
   return (
     <div
       className="flex flex-col gap-3 w-full"
@@ -29,18 +23,12 @@ export default function PuzzleActions({ onRetry }: PuzzleActionsProps) {
         opacity: 0,
       }}
     >
-      {actions.map((action, idx) => (
-        <button
-          key={action.id}
-          className={`w-full border-4 border-black ${action.color} px-4 py-4 font-black text-sm uppercase tracking-widest text-black transition-all duration-300 hover:shadow-lg`}
-          style={{
-            boxShadow: "4px 4px 0px rgba(0, 0, 0, 0.2)",
-            animationDelay: `${idx * 80}ms`,
-          }}
-        >
-          {action.label}
-        </button>
-      ))}
+      <button
+        onClick={onRetry}
+        className="w-full border-4 border-black bg-orange-400 px-4 py-4 font-black text-lg uppercase tracking-widest text-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
+      >
+        🔄 RETRY PUZZLE
+      </button>
       <style jsx>{`
         @keyframes slideUp {
           from {
@@ -51,11 +39,6 @@ export default function PuzzleActions({ onRetry }: PuzzleActionsProps) {
             opacity: 1;
             transform: translateY(0) rotate(0deg);
           }
-        }
-
-        button:hover {
-          transform: translate(-2px, -2px);
-          box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.3) !important;
         }
       `}</style>
     </div>

@@ -87,6 +87,19 @@ export interface StreakModalState {
   hasError: boolean;
 }
 
+// StreakData interface from useStreak hook
+export interface StreakData {
+  currentStreak: number;
+  longestStreak: number;
+  totalPuzzlesSolved: number;
+  points: number;
+  lastLogin: string;
+  lastPuzzleDate: string | null;
+  freePremiumDaysRemaining: number;
+  paidPremiumExpiry: string | null;
+  premiumStatus: PremiumStatus;
+}
+
 // Extended NextRequest interface
 export interface AuthenticatedRequest {
   user?: WalletUser | null;

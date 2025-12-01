@@ -15,6 +15,8 @@ export default function PuzzleCounter({ remaining }: PuzzleCounterProps) {
 
   if (!mounted) return null
 
+  const displayRemaining = remaining === Infinity ? '∞' : remaining;
+
   return (
     <div
       className="animate-in fade-in slide-in-from-top-4 duration-700"
@@ -23,13 +25,10 @@ export default function PuzzleCounter({ remaining }: PuzzleCounterProps) {
       }}
     >
       <div
-        className="border-4 border-black bg-cyan-400 px-6 py-3 font-black text-sm tracking-wider uppercase text-black"
-        style={{
-          boxShadow: "4px 4px 0px rgba(0, 0, 0, 0.2)",
-        }}
+        className="border-4 border-black bg-cyan-400 px-6 py-3 font-black text-lg tracking-wider uppercase text-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
       >
-        <span>Daily Puzzles: </span>
-        <span className="font-black">{remaining}/3 Remaining</span>
+        <span>PUZZLES LEFT: </span>
+        <span className="font-black">{displayRemaining}</span>
       </div>
       <style jsx>{`
         @keyframes slideInDown {

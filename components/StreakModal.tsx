@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { PremiumStatus, UserStats } from '@/lib/types'
+import { PremiumStatus, UserStats, StreakData } from '@/lib/types'
 import { getPremiumStatus } from '@/lib/utils/premium'
 import Link from 'next/link'
 
 interface StreakModalProps {
   isOpen: boolean
   onClose: () => void
-  userStats: UserStats | null
+  userStats: UserStats | StreakData | null
 }
 
 export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
@@ -18,7 +18,17 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
   useEffect(() => {
     if (isOpen && userStats) {
       setIsLoading(true)
-      const status = getPremiumStatus(userStats)
+      
+      // Handle both UserStats and StreakData types
+      let status: PremiumStatus
+      if ('premiumStatus' in userStats) {
+        // StreakData already has premiumStatus
+        status = userStats.premiumStatus
+      } else {
+        // UserStats needs to be converted
+        status = getPremiumStatus(userStats)
+      }
+      
       setPremiumStatus(status)
       setIsLoading(false)
     }
@@ -52,7 +62,7 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
       {/* Neo-brutalist modal */}
       <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-md w-full max-h-[85vh] transform rotate-1 flex flex-col">
         {/* Fixed header */}
-        <div className="bg-purple-400 border-b-4 border-black p-4 flex-shrink-0">
+        <div className="bg-purple-400 border-b-4 border-black p-4 shrink-0">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-black uppercase tracking-wider text-black">
               🔥 Your Streak
@@ -93,7 +103,7 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-black">Last Puzzle:</span>
-                    <span className="font-black text-black">{formatDate(userStats?.lastPuzzleDate)}</span>
+                    <span className="font-black text-black">{formatDate(userStats?.lastPuzzleDate || null)}</span>
                   </div>
                 </div>
                 {getNextRewardText() && (
@@ -141,7 +151,7 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-black">Paid Premium Ends:</span>
                     <span className="font-black text-black text-xs">
-                      {formatDate(premiumStatus?.paidExpiryDate)}
+                      {formatDate(premiumStatus?.paidExpiryDate || null)}
                     </span>
                   </div>
                 </div>

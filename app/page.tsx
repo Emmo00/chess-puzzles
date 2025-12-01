@@ -46,7 +46,7 @@ export default function Home() {
     }
   };
 
-  const handleSolvePuzzlesClick = () => {
+  const handleDailyPuzzleClick = () => {
     if (!isConnected) {
       alert("Please connect your wallet first");
       return;
@@ -58,8 +58,8 @@ export default function Home() {
     if (!hasPremiumAccess) {
       setShowPaymentModal(true);
     } else {
-      // Navigate to solve puzzles
-      window.location.href = "/solve";
+      // Navigate to daily puzzle page
+      window.location.href = "/daily";
     }
   };
 
@@ -90,26 +90,18 @@ export default function Home() {
   const ctaBlocks = [
     {
       id: 1,
-      title: "Solve Puzzles",
-      subtitle: accessText,
+      title: "Daily Puzzle",
+      subtitle: "Solve & Earn " + accessText,
       accentColor: hasPremiumAccess ? "bg-green-400" : "bg-cyan-400",
       icon: hasPremiumAccess ? "✓" : "▲",
-      href: "/solve",
-      onClick: handleSolvePuzzlesClick,
-    },
-    {
-      id: 2,
-      title: "Puzzle Rush",
-      subtitle: "1 Round Daily",
-      accentColor: "bg-magenta-500",
-      icon: "⚡",
-      href: "/coming-soon",
+      href: "/daily",
+      onClick: handleDailyPuzzleClick,
     },
     {
       id: 3,
       title: "Leaderboard",
       subtitle: "$CHESS Rewards",
-      accentColor: "bg-yellow-400",
+      accentColor: "bg-magenta-500",
       icon: "★",
       href: "/coming-soon",
     },
@@ -155,7 +147,7 @@ export default function Home() {
           </div>
 
           {/* 4 CTA Blocks - Responsive Grid */}
-          <div className="w-full grid grid-cols-2 gap-3 mb-8 pointer-events-auto">
+          <div className="w-full flex flex-col gap-2 mb-8 pointer-events-auto">
             {ctaBlocks.map((cta) => (
               <CTABlock
                 key={cta.id}
@@ -181,7 +173,7 @@ export default function Home() {
         <StreakModal
           isOpen={showStreakModal}
           onClose={() => setShowStreakModal(false)}
-          userStats={streakData}
+          userStats={streakData || null}
         />
       </div>
     </div>
