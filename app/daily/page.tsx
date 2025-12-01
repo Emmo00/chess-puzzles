@@ -320,7 +320,7 @@ export default function DailyPuzzlePage() {
         )}
 
         {/* Show start button if no puzzle loaded */}
-        {!currentPuzzle && !isCompleted && hasAccess && (
+        {!currentPuzzle && !isCompleted && hasAccess && !isAccessExhausted && (
           <div className="w-full max-w-xs text-center space-y-6">
             <div className="bg-yellow-400 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 transform -rotate-1">
               <h2 className="text-3xl font-black text-black mb-3">DAILY CHESS PUZZLE</h2>

@@ -1,10 +1,12 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { PaymentModal } from "./PaymentModal"
 
 export default function PaywallCard() {
   const [mounted, setMounted] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -42,6 +44,7 @@ export default function PaywallCard() {
           <button
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            onClick={() => setShowPaymentModal(true)}
             className="w-full border-4 border-black bg-lime-400 text-black px-4 py-3 font-black text-sm uppercase tracking-widest transition-all duration-300"
             style={{
               boxShadow: isHovered ? "6px 6px 0px rgba(0, 0, 0, 0.3)" : "4px 4px 0px rgba(0, 0, 0, 0.2)",
@@ -54,6 +57,17 @@ export default function PaywallCard() {
           <p className="text-xs font-bold opacity-70">Or come back tomorrow for free puzzles</p>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSuccess={() => {
+          // Refresh the page or trigger a state update to reflect the new access
+          window.location.reload()
+        }}
+      />
+
       <style jsx>{`
         @keyframes slideUpPaywall {
           from {
