@@ -35,6 +35,7 @@ export default function DailyPuzzlePage() {
   const [showHint, setShowHint] = useState(false)
   const [showSolution, setShowSolution] = useState(false)
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0)
+  const [currentTurn, setCurrentTurn] = useState<'w' | 'b'>('w')
   
   const { address, isConnected } = useAccount()
   const router = useRouter()
@@ -294,12 +295,22 @@ export default function DailyPuzzlePage() {
             </div>
 
             <div className="w-full max-w-xs shrink-0">
+              {/* Turn Indicator */}
+              <div className="mb-3 text-center">
+                <div className={`inline-block px-4 py-2 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
+                  currentTurn === 'w' ? 'bg-white text-black' : 'bg-gray-800 text-white'
+                }`}>
+                  {currentTurn === 'w' ? '⚪ WHITE TO MOVE' : '⚫ BLACK TO MOVE'}
+                </div>
+              </div>
+              
               <ChessBoard 
                 puzzle={currentPuzzle}
                 onComplete={handlePuzzleComplete}
                 onProgress={setPuzzleProgress}
                 onWrongMove={() => setAttemptCount(prev => prev + 1)}
                 onMoveIndexChange={setCurrentMoveIndex}
+                onTurnChange={setCurrentTurn}
               />
             </div>
 

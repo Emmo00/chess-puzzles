@@ -11,9 +11,10 @@ interface ChessBoardProps {
   onProgress?: (progress: number) => void;
   onWrongMove?: () => void;
   onMoveIndexChange?: (moveIndex: number) => void;
+  onTurnChange?: (turn: 'w' | 'b') => void;
 }
 
-export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove, onMoveIndexChange }: ChessBoardProps) {
+export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove, onMoveIndexChange, onTurnChange }: ChessBoardProps) {
   const [mounted, setMounted] = useState(false);
   const [game, setGame] = useState<Chess | null>(null);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
@@ -107,6 +108,11 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
       setCurrentMoveIndex(-1); // -1 means we haven't applied the first move yet
       setIsPlayerTurn(false);
       onProgress?.(0);
+      
+      // Notify parent about initial turn
+      if (onTurnChange) {
+        onTurnChange(chess.turn());
+      }
 
       // After a timeout, apply the first move (opponent's move) to show the puzzle position
       setTimeout(() => {
@@ -117,6 +123,11 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
           setCurrentMoveIndex(0);
           onMoveIndexChange?.(0);
           setIsPlayerTurn(true); // Now it's player's turn
+          
+          // Notify parent about turn change
+          if (onTurnChange) {
+            onTurnChange(chess.turn());
+          }
         }
       }, 1000); // 1 second delay to show animation
     }
@@ -179,9 +190,19 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
                   playMoveSound(true); // Opponent move sound
                   setGame(gameCopy);
                   setBoardPosition(gameCopy.fen());
-                  setCurrentMoveIndex(newMoveIndex + 1);
-                  onMoveIndexChange?.(newMoveIndex + 1);
+                  setCurrentMoveIndex(newMoveIndex);
+                  onMoveIndexChange?.(newMoveIndex);
                   setIsPlayerTurn(true);
+                  
+                  // Notify parent about turn change
+                  if (onTurnChange) {
+                    onTurnChange(gameCopy.turn());
+                  }
+                  
+                  // Notify parent about turn change
+                  if (onTurnChange) {
+                    onTurnChange(gameCopy.turn());
+                  }
                 }
               }, 1000);
             }
