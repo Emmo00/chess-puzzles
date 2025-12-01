@@ -49,37 +49,64 @@ export function usePayment() {
     }
   };
 
-  const verifyPayment = async () => {
+  const verifyPayment = async (maxRetries = 5) => {
     if (!hash || !address || !chainId || !paymentType) {
       return false;
     }
 
-    try {
-      // Call backend to verify payment
-      const response = await fetch("/api/payments/verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          transactionHash: hash,
-          walletAddress: address,
-          paymentType,
-          chainId,
-        }),
-      });
+    let retries = 0;
+    
+    while (retries <= maxRetries) {
+      try {
+        // Call backend to verify payment
+        const response = await fetch("/api/payments/verify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            transactionHash: hash,
+            walletAddress: address,
+            paymentType,
+            chainId,
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error("Payment verification failed");
+        if (response.ok) {
+          const result = await response.json();
+          setPaymentType(null);
+          return result.verified;
+        } else if (response.status === 202) {
+          // Transaction is still being processed, retry after delay
+          const result = await response.json();
+          console.log("Transaction still processing, retrying...", result.error);
+          
+          if (retries < maxRetries) {
+            retries++;
+            await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+            continue;
+          } else {
+            throw new Error("Transaction verification timed out. Please check your transaction status manually.");
+          }
+        } else {
+          const errorResult = await response.json();
+          throw new Error(errorResult.error || "Payment verification failed");
+        }
+      } catch (error) {
+        console.error("Payment verification error:", error);
+        
+        if (retries < maxRetries && error instanceof Error && error.message.includes("still being processed")) {
+          retries++;
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          continue;
+        }
+        
+        setPaymentType(null);
+        throw error;
       }
-
-      const result = await response.json();
-      setPaymentType(null);
-      return result.verified;
-    } catch (error) {
-      console.error("Payment verification error:", error);
-      return false;
     }
+    
+    return false;
   };
 
   return {

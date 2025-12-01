@@ -55,15 +55,58 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Get transaction receipt
+    // Get transaction receipt with retry logic
     console.log("Fetching transaction receipt for:", transactionHash);
-    const receipt = await celoClient.getTransactionReceipt({
-      hash: transactionHash as `0x${string}`,
-    });
+    let receipt;
+    let retries = 0;
+    const maxRetries = 10;
+    const retryDelay = 2000; // 2 seconds
+
+    while (retries < maxRetries) {
+      try {
+        receipt = await celoClient.getTransactionReceipt({
+          hash: transactionHash as `0x${string}`,
+        });
+        
+        if (receipt) {
+          console.log("Transaction receipt found after", retries, "retries");
+          break;
+        }
+      } catch (error: any) {
+        if (error.name === 'TransactionReceiptNotFoundError') {
+          console.log(`Transaction receipt not found, retry ${retries + 1}/${maxRetries}`);
+          retries++;
+          
+          if (retries < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            continue;
+          }
+          
+          // If we've exhausted retries, return a more helpful error
+          console.error("Transaction receipt not found after all retries:", transactionHash);
+          return NextResponse.json(
+            { 
+              error: "Transaction is still being processed. Please try again in a few moments.",
+              retryable: true 
+            }, 
+            { status: 202 } // 202 Accepted - request received but not yet processed
+          );
+        } else {
+          // Re-throw other errors
+          throw error;
+        }
+      }
+    }
 
     if (!receipt) {
-      console.error("Transaction receipt not found:", transactionHash);
-      return NextResponse.json({ error: "Transaction not found" }, { status: 400 });
+      console.error("Transaction receipt not found after retries:", transactionHash);
+      return NextResponse.json(
+        { 
+          error: "Transaction not found after multiple attempts. Please check the transaction hash.",
+          retryable: false 
+        }, 
+        { status: 400 }
+      );
     }
 
     if (receipt.status !== "success") {

@@ -35,10 +35,17 @@ export default function PaywallCard() {
           </div>
 
           <div className="w-full border-4 border-black bg-white py-4">
-            <p className="text-xs font-black uppercase tracking-wider opacity-70 mb-1">Upgrade to Premium</p>
-            <p className="text-2xl font-black text-magenta-500">$1/month</p>
-            <p className="text-xs font-bold mt-2">• Unlimited puzzles daily</p>
-            <p className="text-xs font-bold">• Premium badges</p>
+            <p className="text-xs font-black uppercase tracking-wider opacity-70 mb-1">Choose Your Access</p>
+            <div className="space-y-2">
+              <div className="border-2 border-gray-300 p-2">
+                <p className="text-lg font-black text-cyan-600">Daily Pass - $0.10</p>
+                <p className="text-xs font-bold">+3 extra puzzles today (6 total)</p>
+              </div>
+              <div className="border-2 border-green-500 p-2 bg-green-50">
+                <p className="text-lg font-black text-green-600">Premium - $1.00</p>
+                <p className="text-xs font-bold">Unlimited puzzles for 30 days</p>
+              </div>
+            </div>
           </div>
 
           <button

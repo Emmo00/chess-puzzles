@@ -47,6 +47,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
     
     try {
       setIsVerifying(true)
+      setError(null) // Clear any previous errors
       const verified = await verifyPayment()
       if (verified) {
         onSuccess()
@@ -63,7 +64,8 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
       }
     } catch (error) {
       console.error('Verification error:', error)
-      setError('Failed to verify payment')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to verify payment'
+      setError(errorMessage)
       setIsVerifying(false)
     }
   }
@@ -121,8 +123,11 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                     $0.10
                   </span>
                 </div>
-                <p className="text-black font-bold text-sm mb-4 uppercase tracking-wide">
-                  ⚡ 3 Puzzles Today Only!
+                <p className="text-black font-bold text-sm mb-2 uppercase tracking-wide">
+                  ⚡ +3 Extra Puzzles Today!
+                </p>
+                <p className="text-black font-bold text-xs mb-4 opacity-80">
+                  Total: 6 puzzles (3 free + 3 paid)
                 </p>
                 <button
                   onClick={() => handlePayment(PaymentType.DAILY_ACCESS)}
@@ -187,7 +192,28 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
             </div>
           )}
 
-          {(isSuccess || isVerifying) && (
+          {isVerifying && (
+            <div className="text-center py-8">
+              <div className="bg-blue-400 border-4 border-black p-6 shadow-[6px_6px_0px_rgba(0,0,0,1)] transform rotate-1">
+                <div className="w-16 h-16 mx-auto mb-4 bg-black border-4 border-blue-400 animate-pulse">
+                  <div className="w-full h-full bg-blue-400 border-2 border-black animate-spin"></div>
+                </div>
+                <h3 className="font-black text-xl uppercase mb-2 text-black tracking-wider">
+                  🔍 Verifying Payment...
+                </h3>
+                <p className="font-bold text-black text-sm uppercase tracking-wide">
+                  This may take a few moments while we wait for blockchain confirmation
+                </p>
+                {transactionHash && (
+                  <div className="bg-black text-blue-400 p-2 mt-4 border-2 border-blue-400 text-xs font-mono break-all">
+                    TX: {transactionHash.slice(0, 20)}...
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isSuccess && !isVerifying && (
             <div className="text-center py-8">
               <div className="bg-green-400 border-4 border-black p-6 shadow-[6px_6px_0px_rgba(0,0,0,1)] transform rotate-2">
                 <div className="text-6xl mb-4 animate-bounce">🎉</div>
@@ -195,7 +221,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                   Success!
                 </h3>
                 <p className="font-bold text-black uppercase tracking-wide">
-                  {isVerifying ? '🔍 Verifying Payment...' : '✅ Access Granted!'}
+                  ✅ Access Granted!
                 </p>
               </div>
             </div>

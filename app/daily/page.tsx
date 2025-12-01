@@ -217,9 +217,18 @@ export default function DailyPuzzlePage() {
     )
   }
 
-  const MAX_DAILY_PUZZLES = paymentStatus?.hasPremium ? Infinity : 3
+  // Calculate limits based on payment status
+  const getMaxDailyPuzzles = () => {
+    if (paymentStatus?.hasPremium || paymentStatus?.hasStreakPremium) return Infinity
+    if (paymentStatus?.hasDailyAccess) return 6 // 3 free + 3 daily access
+    return 3 // free only
+  }
+  
+  const MAX_DAILY_PUZZLES = getMaxDailyPuzzles()
   const hasAccess = paymentStatus?.hasAccess
-  const isAccessExhausted = !paymentStatus?.hasAccess || (dailyCount >= 3 && !paymentStatus?.hasPremium)
+  const isAccessExhausted = !paymentStatus?.hasAccess || (
+    dailyCount >= MAX_DAILY_PUZZLES && MAX_DAILY_PUZZLES !== Infinity
+  )
 
   return (
     <div className="w-screen h-screen bg-white text-black flex flex-col overflow-hidden">
@@ -230,11 +239,18 @@ export default function DailyPuzzlePage() {
         </Link>
         <div className="flex items-center gap-3">
           <div className={`px-4 py-2 font-black text-sm border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${
-            paymentStatus?.hasPremium 
+            (paymentStatus?.hasPremium || paymentStatus?.hasStreakPremium)
               ? 'bg-green-400 text-black' 
+              : paymentStatus?.hasDailyAccess
+              ? 'bg-yellow-400 text-black'
               : 'bg-cyan-400 text-black'
           }`}>
-            {paymentStatus?.hasPremium ? '🏆 PREMIUM' : `⚡ DAILY (${dailyCount}/${MAX_DAILY_PUZZLES === Infinity ? '∞' : MAX_DAILY_PUZZLES})`}
+            {(paymentStatus?.hasPremium || paymentStatus?.hasStreakPremium) 
+              ? '🏆 PREMIUM' 
+              : paymentStatus?.hasDailyAccess
+              ? `💎 DAILY+ (${dailyCount}/${MAX_DAILY_PUZZLES})`
+              : `⚡ FREE (${dailyCount}/${MAX_DAILY_PUZZLES})`
+            }
           </div>
         </div>
       </header>
