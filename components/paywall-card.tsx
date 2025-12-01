@@ -43,7 +43,7 @@ export default function PaywallCard() {
               </div>
               <div className="border-2 border-green-500 p-2 bg-green-50">
                 <p className="text-lg font-black text-green-600">Premium - $1.00</p>
-                <p className="text-xs font-bold">Unlimited puzzles for 30 days</p>
+                <p className="text-xs font-bold">Unlimited puzzles for 1 month</p>
               </div>
             </div>
           </div>

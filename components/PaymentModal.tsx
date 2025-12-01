@@ -149,7 +149,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                   </span>
                 </div>
                 <p className="text-black font-bold text-sm mb-4 uppercase tracking-wide">
-                  🚀 Unlimited for 30 Days!
+                  🚀 Unlimited for 1 Month!
                 </p>
                 <button
                   onClick={() => handlePayment(PaymentType.PREMIUM)}

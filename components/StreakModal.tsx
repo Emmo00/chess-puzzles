@@ -149,11 +149,19 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
                   </div>
                   
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-black">Paid Premium Ends:</span>
+                    <span className="font-bold text-black">Premium Expires:</span>
                     <span className="font-black text-black text-xs">
                       {formatDate(premiumStatus?.paidExpiryDate || null)}
                     </span>
                   </div>
+                  
+                  {premiumStatus?.paidExpiryDate && (
+                    <div className="bg-blue-200 border-2 border-black p-2 mt-2 text-center">
+                      <p className="text-xs font-bold text-black">
+                        💎 Premium lasts for 1 month (30 days)
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Upsell for inactive premium */}

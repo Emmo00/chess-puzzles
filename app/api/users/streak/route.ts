@@ -3,6 +3,8 @@ import dbConnect from "../../../../lib/db";
 import { authenticateWalletUser } from "../../../../lib/auth";
 import UserService from "../../../../lib/services/users.service";
 import userModel from "../../../../lib/models/users.model";
+import { Payment } from "../../../../lib/models/payment.model";
+import { PaymentType } from "../../../../lib/types/payment";
 import { updateStreak, getPremiumStatus } from "../../../../lib/utils/premium";
 
 export async function GET(request: NextRequest) {
@@ -37,7 +39,26 @@ export async function GET(request: NextRequest) {
       };
     }
     
-    const premiumStatus = getPremiumStatus(userData);
+    // Check for paid premium subscription
+    const now = new Date();
+    const paidPremium = await Payment.findOne({
+      walletAddress: user.walletAddress.toLowerCase(),
+      paymentType: PaymentType.PREMIUM,
+      verified: true,
+      expiresAt: { $gt: now },
+    }).sort({ createdAt: -1 });
+    
+    const streakPremiumStatus = getPremiumStatus(userData);
+    const hasPaidPremium = !!paidPremium;
+    const paidExpiryDate = paidPremium?.expiresAt?.toISOString() || null;
+    
+    // Combine paid premium with streak-based premium status
+    const combinedPremiumStatus = {
+      isActive: streakPremiumStatus.isActive || hasPaidPremium,
+      freeDaysRemaining: streakPremiumStatus.freeDaysRemaining,
+      paidExpiryDate: paidExpiryDate,
+      nextRewardAt: streakPremiumStatus.nextRewardAt
+    };
     
     return NextResponse.json({
       currentStreak: userData.current_streak || userData.currentStreak || 0,
@@ -47,8 +68,8 @@ export async function GET(request: NextRequest) {
       lastLogin: userData.last_login || userData.lastLoggedIn,
       lastPuzzleDate: userData.lastPuzzleDate,
       freePremiumDaysRemaining: userData.freePremiumDaysRemaining || 0,
-      paidPremiumExpiry: userData.paidPremiumExpiry,
-      premiumStatus
+      paidPremiumExpiry: paidExpiryDate,
+      premiumStatus: combinedPremiumStatus
     });
   } catch (error: any) {
     console.error("Error fetching user streak:", error);
@@ -87,13 +108,31 @@ export async function POST(request: NextRequest) {
       puzzles_solved: (userData.puzzles_solved || 0) + 1
     });
 
-    const premiumStatus = getPremiumStatus(updatedUser);
+    // Check for paid premium subscription for updated response
+    const now = new Date();
+    const paidPremium = await Payment.findOne({
+      walletAddress: user.walletAddress.toLowerCase(),
+      paymentType: PaymentType.PREMIUM,
+      verified: true,
+      expiresAt: { $gt: now },
+    }).sort({ createdAt: -1 });
+    
+    const streakPremiumStatus = getPremiumStatus(updatedUser);
+    const hasPaidPremium = !!paidPremium;
+    const paidExpiryDate = paidPremium?.expiresAt?.toISOString() || null;
+    
+    const combinedPremiumStatus = {
+      isActive: streakPremiumStatus.isActive || hasPaidPremium,
+      freeDaysRemaining: streakPremiumStatus.freeDaysRemaining,
+      paidExpiryDate: paidExpiryDate,
+      nextRewardAt: streakPremiumStatus.nextRewardAt
+    };
 
     return NextResponse.json({
       success: true,
       currentStreak: updatedUser.currentStreak,
       longestStreak: updatedUser.longestStreak,
-      premiumStatus,
+      premiumStatus: combinedPremiumStatus,
       rewardGranted
     });
 
