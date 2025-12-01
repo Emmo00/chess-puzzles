@@ -1,126 +1,278 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Chess } from "chess.js"
-import { Chessboard } from "react-chessboard"
-import { Puzzle } from "../lib/types"
+import { useEffect, useState } from "react";
+import { Chess, Square } from "chess.js";
+import { Chessboard, SquareDataType, SquareHandlerArgs } from "react-chessboard";
+import { Puzzle } from "../lib/types";
 
 interface ChessBoardProps {
-  puzzle?: Puzzle
-  onComplete?: () => void
-  onProgress?: (progress: number) => void
+  puzzle?: Puzzle;
+  onComplete?: () => void;
+  onProgress?: (progress: number) => void;
 }
 
 export default function ChessBoard({ puzzle, onComplete, onProgress }: ChessBoardProps) {
-  const [mounted, setMounted] = useState(false)
-  const [game, setGame] = useState<Chess | null>(null)
-  const [currentMoveIndex, setCurrentMoveIndex] = useState(0)
-  const [boardPosition, setBoardPosition] = useState<string>("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-  const [isPlayerTurn, setIsPlayerTurn] = useState(false)
+  const [mounted, setMounted] = useState(false);
+  const [game, setGame] = useState<Chess | null>(null);
+  const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
+  const [boardPosition, setBoardPosition] = useState<string>("");
+  const [isPlayerTurn, setIsPlayerTurn] = useState(false);
+  const [optionSquares, setOptionSquares] = useState<Record<string, React.CSSProperties>>({});
+  const [moveFrom, setMoveFrom] = useState<string>("");
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (puzzle) {
-      const chess = new Chess()
-      
+      const chess = new Chess();
+
       // Load the FEN position (before opponent's move)
-      chess.load(puzzle.fen)
-      
+      chess.load(puzzle.fen);
+
       // Set initial position to show the FEN state
-      setBoardPosition(chess.fen())
-      setGame(chess)
-      setCurrentMoveIndex(-1) // -1 means we haven't applied the first move yet
-      setIsPlayerTurn(false)
-      onProgress?.(0)
-      
+      setBoardPosition(chess.fen());
+      setGame(chess);
+      setCurrentMoveIndex(-1); // -1 means we haven't applied the first move yet
+      setIsPlayerTurn(false);
+      onProgress?.(0);
+
       // After a timeout, apply the first move (opponent's move) to show the puzzle position
       setTimeout(() => {
         if (puzzle.moves.length > 0) {
-          chess.move(puzzle.moves[0])
-          setBoardPosition(chess.fen())
-          setCurrentMoveIndex(0)
-          setIsPlayerTurn(true) // Now it's player's turn
+          chess.move(puzzle.moves[0]);
+          setBoardPosition(chess.fen());
+          setCurrentMoveIndex(0);
+          setIsPlayerTurn(true); // Now it's player's turn
         }
-      }, 1000) // 1 second delay to show animation
+      }, 1000); // 1 second delay to show animation
     }
-  }, [puzzle, onProgress])
+  }, [puzzle, onProgress]);
 
-  const onPieceDrop = ({ piece, sourceSquare, targetSquare }: { piece: any, sourceSquare: string, targetSquare: string | null }) => {
-    if (!game || !puzzle || !isPlayerTurn || !targetSquare) return false
+  const onPieceDrop = ({
+    piece,
+    sourceSquare,
+    targetSquare,
+  }: {
+    piece: any;
+    sourceSquare: string;
+    targetSquare: string | null;
+  }) => {
+    if (!game || !puzzle || !isPlayerTurn || !targetSquare) return false;
 
-    const gameCopy = new Chess(game.fen())
-    
+    const gameCopy = new Chess(game.fen());
+
     try {
       const move = gameCopy.move({
         from: sourceSquare,
         to: targetSquare,
-        promotion: 'q' // Default to queen promotion
-      })
-      
+        promotion: "q", // Default to queen promotion
+      });
+
       if (move) {
         // Check if this is the correct next move
-        const expectedMoveIndex = currentMoveIndex + 1
-        
+        const expectedMoveIndex = currentMoveIndex + 1;
+
         if (expectedMoveIndex < puzzle.moves.length) {
-          const expectedMove = puzzle.moves[expectedMoveIndex]
-          const madeMove = move.from + move.to + (move.promotion || '')
-          
+          const expectedMove = puzzle.moves[expectedMoveIndex];
+          const madeMove = move.from + move.to + (move.promotion || "");
+
           if (madeMove === expectedMove) {
             // Correct move!
-            setGame(gameCopy)
-            setBoardPosition(gameCopy.fen())
-            const newMoveIndex = currentMoveIndex + 1
-            setCurrentMoveIndex(newMoveIndex)
-            setIsPlayerTurn(false)
-            
+            setGame(gameCopy);
+            setBoardPosition(gameCopy.fen());
+            const newMoveIndex = currentMoveIndex + 1;
+            setCurrentMoveIndex(newMoveIndex);
+            setIsPlayerTurn(false);
+
             // Update progress - count only player moves (odd indices after the first move)
-            const totalPlayerMoves = Math.ceil((puzzle.moves.length - 1) / 2)
-            const playerMovesCompleted = Math.floor((newMoveIndex) / 2)
-            onProgress?.(Math.min(playerMovesCompleted, totalPlayerMoves))
-            
+            const totalPlayerMoves = Math.ceil((puzzle.moves.length - 1) / 2);
+            const playerMovesCompleted = Math.floor(newMoveIndex / 2);
+            onProgress?.(Math.min(playerMovesCompleted, totalPlayerMoves));
+
             // Check if puzzle is complete
             if (newMoveIndex >= puzzle.moves.length - 1) {
               setTimeout(() => {
-                onComplete?.()
-              }, 500)
+                onComplete?.();
+              }, 500);
             } else {
               // Apply opponent's response after a delay
               setTimeout(() => {
                 if (newMoveIndex + 1 < puzzle.moves.length) {
-                  const nextMove = puzzle.moves[newMoveIndex + 1]
-                  gameCopy.move(nextMove)
-                  setGame(gameCopy)
-                  setBoardPosition(gameCopy.fen())
-                  setCurrentMoveIndex(newMoveIndex + 1)
-                  setIsPlayerTurn(true)
+                  const nextMove = puzzle.moves[newMoveIndex + 1];
+                  gameCopy.move(nextMove);
+                  setGame(gameCopy);
+                  setBoardPosition(gameCopy.fen());
+                  setCurrentMoveIndex(newMoveIndex + 1);
+                  setIsPlayerTurn(true);
                 }
-              }, 1000)
+              }, 1000);
             }
-            
-            return true
+
+            return true;
           }
         }
       }
     } catch (error) {
       // Invalid move
-      return false
+      return false;
     }
-    
-    return false
+
+    return false;
+  };
+
+  // get the move options for a square to show valid moves
+  function getMoveOptions(square: Square) {
+    if (!game) return false;
+
+    // get the moves for the square
+    const moves = game.moves({
+      square,
+      verbose: true,
+    });
+
+    // if no moves, clear the option squares
+    if (moves.length === 0) {
+      setOptionSquares({});
+      return false;
+    }
+
+    // create a new object to store the option squares
+    const newSquares: Record<string, React.CSSProperties> = {};
+
+    // loop through the moves and set the option squares
+    for (const move of moves) {
+      newSquares[move.to] = {
+        background:
+          game.get(move.to) && game.get(move.to)?.color !== game.get(square)?.color
+            ? "radial-gradient(circle, rgba(0,0,0,.1) 85%, transparent 85%)" // larger circle for capturing
+            : "radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)",
+        // smaller circle for moving
+        borderRadius: "50%",
+      };
+    }
+
+    // set the square clicked to move from to yellow
+    newSquares[square] = {
+      background: "rgba(255, 255, 0, 0.4)",
+    };
+
+    // set the option squares
+    setOptionSquares(newSquares);
+
+    // return true to indicate that there are move options
+    return true;
   }
 
-  const canDragPiece = ({ piece, square }: { piece: any, isSparePiece: boolean, square: string | null }) => {
-    if (!isPlayerTurn || !game || !square) return false
+  function onSquareClick({ square, piece }: SquareHandlerArgs) {
+    if (!game || !puzzle) return;
+
+    // piece clicked to move
+    if (!moveFrom && piece) {
+      // get the move options for the square
+      const hasMoveOptions = getMoveOptions(square as Square);
+
+      // if move options, set the moveFrom to the square
+      if (hasMoveOptions) {
+        setMoveFrom(square);
+      }
+
+      // return early
+      return;
+    }
+
+    // square clicked to move to, check if valid move
+    const moves = game.moves({
+      square: moveFrom as Square,
+      verbose: true,
+    });
+    const foundMove = moves.find((m) => m.from === moveFrom && m.to === square);
+
+    // not a valid move
+    if (!foundMove) {
+      // check if clicked on new piece
+      const hasMoveOptions = getMoveOptions(square as Square);
+
+      // if new piece, setMoveFrom, otherwise clear moveFrom
+      setMoveFrom(hasMoveOptions ? square : "");
+
+      // return early
+      return;
+    }
+
+    // Check if it's a valid puzzle move first
+    if (!isPlayerTurn) {
+      setMoveFrom("");
+      setOptionSquares({});
+      return;
+    }
+
+    // Create a copy to test the move
+    const gameCopy = new Chess(game.fen());
     
-    // Get the piece from the game state to check its color
-    const pieceOnSquare = game.get(square as any)
-    return !!(pieceOnSquare && pieceOnSquare.color === 'w')
+    try {
+      const move = gameCopy.move({
+        from: moveFrom,
+        to: square,
+        promotion: "q",
+      });
+
+      if (move) {
+        // Check if this is the correct next move in the puzzle
+        const expectedMoveIndex = currentMoveIndex + 1;
+        
+        if (expectedMoveIndex < puzzle.moves.length) {
+          const expectedMove = puzzle.moves[expectedMoveIndex];
+          const madeMove = move.from + move.to + (move.promotion || "");
+          
+          if (madeMove === expectedMove) {
+            // Correct move!
+            setGame(gameCopy);
+            setBoardPosition(gameCopy.fen());
+            const newMoveIndex = currentMoveIndex + 1;
+            setCurrentMoveIndex(newMoveIndex);
+            setIsPlayerTurn(false);
+            
+            // Update progress
+            const totalPlayerMoves = Math.ceil((puzzle.moves.length - 1) / 2);
+            const playerMovesCompleted = Math.floor(newMoveIndex / 2);
+            onProgress?.(Math.min(playerMovesCompleted, totalPlayerMoves));
+            
+            // Check if puzzle is complete
+            if (newMoveIndex >= puzzle.moves.length - 1) {
+              setTimeout(() => {
+                onComplete?.();
+              }, 500);
+            } else {
+              // Apply opponent's response after a delay
+              setTimeout(() => {
+                if (newMoveIndex + 1 < puzzle.moves.length) {
+                  const nextMove = puzzle.moves[newMoveIndex + 1];
+                  gameCopy.move(nextMove);
+                  setGame(gameCopy);
+                  setBoardPosition(gameCopy.fen());
+                  setCurrentMoveIndex(newMoveIndex + 1);
+                  setIsPlayerTurn(true);
+                }
+              }, 1000);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      // Invalid move - check if clicked on new piece
+      const hasMoveOptions = getMoveOptions(square as Square);
+      setMoveFrom(hasMoveOptions ? square : "");
+      return;
+    }
+
+    // clear moveFrom and optionSquares
+    setMoveFrom("");
+    setOptionSquares({});
   }
 
-  if (!mounted) return null
+  if (!mounted) return null;
 
   return (
     <div className="inline-block border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
@@ -128,18 +280,20 @@ export default function ChessBoard({ puzzle, onComplete, onProgress }: ChessBoar
         <Chessboard
           options={{
             position: boardPosition,
-            onPieceDrop: onPieceDrop,
-            canDragPiece: canDragPiece,
+            onSquareClick,
+            allowDragging: false,
             boardOrientation: "white",
-            animationDurationInMs: 300,
+            animationDurationInMs: 500,
             boardStyle: {
               borderRadius: "0px",
             },
+            squareStyles: optionSquares,
             lightSquareStyle: { backgroundColor: "#EEEED2" },
             darkSquareStyle: { backgroundColor: "#739552" },
+            id: "click-to-move",
           }}
         />
       </div>
     </div>
-  )
+  );
 }
