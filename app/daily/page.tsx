@@ -231,7 +231,7 @@ export default function DailyPuzzlePage() {
   )
 
   return (
-    <div className="w-screen h-screen bg-white text-black flex flex-col overflow-hidden">
+    <div className="min-h-screen w-full bg-white text-black flex flex-col">
       {/* Header with Streak Badge and Back Button */}
       <header className="pt-4 px-4 flex justify-between items-center shrink-0">
         <Link href="/" className="bg-black text-white px-2 py-1 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all">
@@ -256,7 +256,7 @@ export default function DailyPuzzlePage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 overflow-hidden gap-3">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-6 gap-3 min-h-0">
         
         {/* Show completion stats if puzzle is completed */}
         {isCompleted && completionStats && (
