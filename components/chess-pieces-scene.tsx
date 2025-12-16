@@ -103,66 +103,40 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // 4. Lighting (Premium Studio Setup)
+    // 4. Lighting (Simple, flat neo-brutalism style)
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    directionalLight.position.set(5, 5, 5);
+    directionalLight.castShadow = false;
+    scene.add(directionalLight);
 
-    // Key Light (Warm, from top right)
-    const keyLight = new THREE.SpotLight(0xfff5ea, 300);
-    keyLight.position.set(8, 10, 8);
-    keyLight.angle = Math.PI / 6;
-    keyLight.penumbra = 0.5;
-    keyLight.castShadow = true;
-    keyLight.shadow.mapSize.set(2048, 2048);
-    keyLight.shadow.bias = -0.0001;
-    keyLight.shadow.radius = 4; // Softer shadows
-    scene.add(keyLight);
-
-    // Fill Light (Cool, from left)
-    const fillLight = new THREE.SpotLight(0xdbeafe, 60);
-    fillLight.position.set(-6, 2, 4);
-    fillLight.lookAt(0, 0, 0);
-    scene.add(fillLight);
-
-    // Rim Light (Sharp, from back)
-    const rimLight = new THREE.DirectionalLight(0xffffff, 40);
-    rimLight.position.set(0, 5, -8);
-    scene.add(rimLight);
-
-    // Ambient (Soft base)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    // Ambient (Strong, even lighting)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
     scene.add(ambientLight);
 
-    // 5. Materials
+    // 5. Materials (Flat, bold neo-brutalism)
 
     // Matte Black (The King)
-    const blackMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0x1a1a1a,
-      metalness: 0.1,
-      roughness: 0.4,
-      clearcoat: 0.3,
-      clearcoatRoughness: 0.2,
-      sheen: 0.2,
+    const blackMaterial = new THREE.MeshStandardMaterial({
+      color: 0x000000,
+      metalness: 0,
+      roughness: 1,
     });
 
-    // Glossy White (The Pawn) - Ceramic feel
-    const whiteMaterial = new THREE.MeshPhysicalMaterial({
+    // Flat White (The Pawn)
+    const whiteMaterial = new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      metalness: 0.0,
-      roughness: 0.1,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.1,
-      transmission: 0.1, // Slight translucency
-      thickness: 2,
-      ior: 1.5,
+      metalness: 0,
+      roughness: 1,
     });
 
     // 6. Geometry & Meshes
-    const kingGeometry = new THREE.LatheGeometry(KING_PROFILE, 128);
+    const kingGeometry = new THREE.LatheGeometry(KING_PROFILE, 32);
     // Scale down slightly and center pivot
     kingGeometry.computeBoundingBox();
     const kingHeight = kingGeometry.boundingBox!.max.y - kingGeometry.boundingBox!.min.y;
     kingGeometry.translate(0, -kingHeight / 2, 0);
 
-    const pawnGeometry = new THREE.LatheGeometry(PAWN_PROFILE, 128);
+    const pawnGeometry = new THREE.LatheGeometry(PAWN_PROFILE, 32);
     pawnGeometry.computeBoundingBox();
     const pawnHeight = pawnGeometry.boundingBox!.max.y - pawnGeometry.boundingBox!.min.y;
     pawnGeometry.translate(0, -pawnHeight / 2, 0);
@@ -174,8 +148,8 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
     const king = new THREE.Mesh(kingGeometry, blackMaterial);
     king.scale.multiplyScalar(2); // Scale up for visibility
     king.position.set(-2.5, 0, 0);
-    king.castShadow = true;
-    king.receiveShadow = true;
+    king.castShadow = false;
+    king.receiveShadow = false;
     // Slight tilt
     king.rotation.z = 0.1;
     king.rotation.x = 0.1;
@@ -186,22 +160,15 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
     const pawn = new THREE.Mesh(pawnGeometry, whiteMaterial);
     pawn.scale.multiplyScalar(2); // Scale up for visibility
     pawn.position.set(2.5, 0, 0);
-    pawn.castShadow = true;
-    pawn.receiveShadow = true;
+    pawn.castShadow = false;
+    pawn.receiveShadow = false;
     // Slight tilt opposite way
     pawn.rotation.z = -0.15;
     pawn.rotation.x = 0.1;
     group.add(pawn);
     console.log("Pawn created:", pawn);
 
-    // Shadow Plane (invisible but receives shadows)
-    const planeGeo = new THREE.PlaneGeometry(20, 20);
-    const planeMat = new THREE.ShadowMaterial({ opacity: 0.15, color: 0x000000 });
-    const plane = new THREE.Mesh(planeGeo, planeMat);
-    plane.rotation.x = -Math.PI / 2;
-    plane.position.y = -2.5;
-    plane.receiveShadow = true;
-    group.add(plane);
+    // No shadow plane for flat aesthetic
 
     // 7. Animation Loop
     const clock = new THREE.Clock();
@@ -209,13 +176,13 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
     const animate = () => {
       const time = clock.getElapsedTime();
 
-      // Float animation (increased amplitude for visibility)
-      king.position.y = -0.5 + Math.sin(time * 0.8) * 0.1;
-      pawn.position.y = -0.8 + Math.sin(time * 0.7 + 2) * 0.1;
+      // Subtle floating (reduced for flat aesthetic)
+      king.position.y = Math.sin(time * 0.5) * 0.1;
+      pawn.position.y = Math.sin(time * 0.4 + 2) * 0.09;
 
-      // Self-rotation (increased speed for visibility)
-      king.rotation.y += 0.003;
-      pawn.rotation.y -= 0.004;
+      // Slow rotation
+      king.rotation.y += 0.071;
+      pawn.rotation.y -= 0.08;
 
       renderer.render(scene, camera);
       // animationRef.current = requestAnimationFrame(animate);
