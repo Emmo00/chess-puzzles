@@ -77,7 +77,6 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
     // 1. Scene Setup
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    // Transparent background to blend with parent UI
     scene.background = null;
 
     const width = containerRef.current.clientWidth;
@@ -85,7 +84,7 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
 
     // 2. Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-    camera.position.set(0, 0, 10);
+    camera.position.set(0, 0, 20);
     cameraRef.current = camera;
 
     // 3. Renderer
@@ -107,8 +106,8 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
     // 4. Lighting (Premium Studio Setup)
 
     // Key Light (Warm, from top right)
-    const keyLight = new THREE.SpotLight(0xfff5ea, 120);
-    keyLight.position.set(6, 8, 6);
+    const keyLight = new THREE.SpotLight(0xfff5ea, 300);
+    keyLight.position.set(8, 10, 8);
     keyLight.angle = Math.PI / 6;
     keyLight.penumbra = 0.5;
     keyLight.castShadow = true;
@@ -173,23 +172,27 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
 
     // King Object
     const king = new THREE.Mesh(kingGeometry, blackMaterial);
-    king.position.set(-1.2, -0.5, 0);
+    king.scale.multiplyScalar(2); // Scale up for visibility
+    king.position.set(-2.5, 0, 0);
     king.castShadow = true;
     king.receiveShadow = true;
     // Slight tilt
     king.rotation.z = 0.1;
     king.rotation.x = 0.1;
     group.add(king);
+    console.log("King created:", king);
 
     // Pawn Object
     const pawn = new THREE.Mesh(pawnGeometry, whiteMaterial);
-    pawn.position.set(1.2, -0.8, 0.5);
+    pawn.scale.multiplyScalar(2); // Scale up for visibility
+    pawn.position.set(2.5, 0, 0);
     pawn.castShadow = true;
     pawn.receiveShadow = true;
     // Slight tilt opposite way
     pawn.rotation.z = -0.15;
     pawn.rotation.x = 0.1;
     group.add(pawn);
+    console.log("Pawn created:", pawn);
 
     // Shadow Plane (invisible but receives shadows)
     const planeGeo = new THREE.PlaneGeometry(20, 20);
@@ -206,20 +209,19 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
     const animate = () => {
       const time = clock.getElapsedTime();
 
-      // Continuous rotation animation
-      group.rotation.y += time * 0.005;
-      group.rotation.x = Math.sin(time * 0.3) * 0.3;
+      // Float animation (increased amplitude for visibility)
+      king.position.y = -0.5 + Math.sin(time * 0.8) * 0.1;
+      pawn.position.y = -0.8 + Math.sin(time * 0.7 + 2) * 0.1;
 
-      // Float animation
-      king.position.y = -0.5 + Math.sin(time * 0.8) * 0.8;
-      pawn.position.y = -0.8 + Math.sin(time * 0.7 + 2) * 0.7;
-
-      // Self-rotation
-      king.rotation.y += 0.015;
-      pawn.rotation.y -= 0.018;
+      // Self-rotation (increased speed for visibility)
+      king.rotation.y += 0.003;
+      pawn.rotation.y -= 0.004;
 
       renderer.render(scene, camera);
-      animationRef.current = requestAnimationFrame(animate);
+      // animationRef.current = requestAnimationFrame(animate);
+      setTimeout(() => {
+        animate()
+      }, 100);
     };
 
     animate();
