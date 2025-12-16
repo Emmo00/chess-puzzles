@@ -85,7 +85,7 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
 
     // 2. Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-    camera.position.set(0, 0, 8);
+    camera.position.set(0, 0, 10);
     cameraRef.current = camera;
 
     // 3. Renderer
@@ -206,23 +206,17 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
     const animate = () => {
       const time = clock.getElapsedTime();
 
-      // Smooth mouse follow
-      targetRotationRef.current.x +=
-        (mouseRef.current.x * 0.3 - targetRotationRef.current.x) * 0.05;
-      targetRotationRef.current.y +=
-        (mouseRef.current.y * 0.3 - targetRotationRef.current.y) * 0.05;
-
-      // Apply rotation to group
-      group.rotation.y = targetRotationRef.current.x + Math.sin(time * 0.2) * 0.1;
-      group.rotation.x = -targetRotationRef.current.y * 0.5;
+      // Continuous rotation animation
+      group.rotation.y += time * 0.005;
+      group.rotation.x = Math.sin(time * 0.3) * 0.3;
 
       // Float animation
-      king.position.y = -0.5 + Math.sin(time * 0.8) * 0.1;
-      pawn.position.y = -0.8 + Math.sin(time * 0.7 + 2) * 0.08;
+      king.position.y = -0.5 + Math.sin(time * 0.8) * 0.8;
+      pawn.position.y = -0.8 + Math.sin(time * 0.7 + 2) * 0.7;
 
-      // Subtle self-rotation
-      king.rotation.y += 0.002;
-      pawn.rotation.y -= 0.003;
+      // Self-rotation
+      king.rotation.y += 0.015;
+      pawn.rotation.y -= 0.018;
 
       renderer.render(scene, camera);
       animationRef.current = requestAnimationFrame(animate);
@@ -240,19 +234,12 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
       rendererRef.current.setSize(w, h);
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
-      // Normalize mouse position from -1 to 1
-      const x = (e.clientX / window.innerWidth) * 2 - 1;
-      const y = -(e.clientY / window.innerHeight) * 2 + 1;
-      mouseRef.current = { x, y };
-    };
+    handleResize();
 
     window.addEventListener("resize", handleResize);
-    window.addEventListener("mousemove", handleMouseMove);
 
     return () => {
       window.removeEventListener("resize", handleResize);
-      window.removeEventListener("mousemove", handleMouseMove);
       cancelAnimationFrame(animationRef.current);
       renderer.dispose();
       if (containerRef.current) {
@@ -264,8 +251,8 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
   return (
     <div
       ref={containerRef}
-      className={`w-full h-full cursor-move ${className}`}
-      style={{ touchAction: "none" }}
+      className={`w-screen h-screen ${className}`}
+      // style={{ touchAction: "none" }}
     />
   );
 };
