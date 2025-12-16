@@ -103,6 +103,20 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
             </>
           )}
         </div>
+
+        {/* Subtle footer */}
+        <div className="border-t-4 border-black bg-gray-50 px-4 py-3 text-xs text-gray-600 space-y-1 text-center shrink-0">
+          <div className="flex justify-center gap-4">
+            <Link href="/terms-of-service" className="hover:text-black transition-colors font-bold">
+              terms
+            </Link>
+            <span>·</span>
+            <Link href="/privacy-policy" className="hover:text-black transition-colors font-bold">
+              privacy
+            </Link>
+          </div>
+          <p className="text-xs">Not operated by Opera or MiniPay</p>
+        </div>
       </div>
     </div>
   );
