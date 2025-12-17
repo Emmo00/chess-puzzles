@@ -1,14 +1,4 @@
-import { UserStats, StreakRewardsConfig, PremiumStatus } from '../types';
-
-// Streak rewards configuration
-export const STREAK_REWARDS_CONFIG: StreakRewardsConfig = {
-  streakRewards: [
-    { days: 7, freePremiumDays: 1 },
-    { days: 21, freePremiumDays: 3 },
-    { days: 30, freePremiumDays: 5 },
-    // Every 30 days after that gives 5 more days
-  ]
-};
+import { UserStats, PremiumStatus } from '../types';
 
 /**
  * Calculate if user currently has active premium
@@ -31,39 +21,10 @@ export function calculateIsPremiumActive(user: UserStats): boolean {
 export function getPremiumStatus(user: UserStats): PremiumStatus {
   const isActive = calculateIsPremiumActive(user);
   
-  // Find next reward threshold
-  const nextReward = STREAK_REWARDS_CONFIG.streakRewards.find(
-    reward => reward.days > user.currentStreak
-  );
-  
   return {
     isActive,
     freeDaysRemaining: user.freePremiumDaysRemaining,
     paidExpiryDate: user.paidPremiumExpiry,
-    nextRewardAt: nextReward?.days
-  };
-}
-
-/**
- * Consume one free premium day (called at midnight)
- */
-export function consumeFreePremiumDay(user: UserStats): UserStats {
-  if (user.freePremiumDaysRemaining > 0) {
-    return {
-      ...user,
-      freePremiumDaysRemaining: user.freePremiumDaysRemaining - 1
-    };
-  }
-  return user;
-}
-
-/**
- * Grant free premium days to user
- */
-export function grantFreePremiumDays(user: UserStats, count: number): UserStats {
-  return {
-    ...user,
-    freePremiumDaysRemaining: user.freePremiumDaysRemaining + count
   };
 }
 
@@ -98,22 +59,6 @@ export function updateStreak(user: UserStats, currentDate: string): {
     longestStreak: Math.max(user.longestStreak, newStreak),
     lastPuzzleDate: currentDate
   };
-  
-  // Check for streak rewards
-  const rewardConfig = STREAK_REWARDS_CONFIG.streakRewards.find(
-    reward => reward.days === newStreak
-  );
-  
-  if (rewardConfig) {
-    updatedUser = grantFreePremiumDays(updatedUser, rewardConfig.freePremiumDays);
-    rewardGranted = rewardConfig;
-  }
-  
-  // Handle recurring 30-day rewards (every 30 days after the initial 30)
-  if (newStreak > 30 && (newStreak - 30) % 30 === 0) {
-    updatedUser = grantFreePremiumDays(updatedUser, 5);
-    rewardGranted = { days: newStreak, freePremiumDays: 5 };
-  }
   
   return { user: updatedUser, rewardGranted };
 }

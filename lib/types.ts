@@ -45,32 +45,11 @@ export interface Puzzle {
   themes: string[];
 }
 
-// Streak reward configuration
-export interface StreakReward {
-  days: number;
-  freePremiumDays: number;
-}
-
-export interface StreakRewardsConfig {
-  streakRewards: StreakReward[];
-}
-
 // Premium status for UI
 export interface PremiumStatus {
   isActive: boolean;
   freeDaysRemaining: number;
   paidExpiryDate: string | null;
-  nextRewardAt?: number;
-}
-
-// Streak reward configuration
-export interface StreakReward {
-  days: number;
-  freePremiumDays: number;
-}
-
-export interface StreakRewardsConfig {
-  streakRewards: StreakReward[];
 }
 
 // Premium status for UI

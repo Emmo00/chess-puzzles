@@ -50,7 +50,7 @@ npm install @celo/abis @celo/identity
 
 ### Environment Setup
 - Supports Celo Mainnet and Celo Sepolia testnet
-- Payment recipient: `0x7b054580aEA6B6cbdF30BbbE84777bae623F4d1e`
+- Payment recipient: `0xEA22ca862C3AFDA79Ef7Fb5Ae8f13D245354f05b`
 
 ## Testing in MiniPay
 

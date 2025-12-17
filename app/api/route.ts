@@ -7,14 +7,15 @@ export async function GET() {
     endpoints: {
       authentication: "/api/users/me",
       puzzles: {
-        daily: "/api/puzzles/daily",
-        solve: "/api/puzzles/solve",
-        todayCount: "/api/puzzles/today/me"
+        daily: { get: "/api/puzzles/daily", solve: "/api/puzzles/daily/solve" },
+        solve: {
+          new: "/api/puzzles/solve/new",
+          status: "/api/puzzles/solve/status",
+          solve: "/api/puzzles/solve",
+        },
+        todayCount: "/api/puzzles/today/me",
       },
-      leaderboard: {
-        points: "/api/leaderboard/points",
-        solved: "/api/leaderboard/solved"
-      }
-    }
+      leaderboard: "/api/leaderboard",
+    },
   });
 }
