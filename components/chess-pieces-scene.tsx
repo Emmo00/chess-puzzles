@@ -178,10 +178,13 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
 
       // Subtle floating (reduced for flat aesthetic)
       king.position.y = Math.sin(time * 0.5) * 0.1;
-      pawn.position.y = Math.sin(time * 0.4 + 2) * 0.09;
+      pawn.position.y = Math.sin(time * 0.5) * 0.1;
+
+      king.position.x += Math.sin(time) * 0.01;
+      pawn.position.x -= Math.sin(time) * 0.01;
 
       // Slow rotation
-      king.rotation.y += 0.071;
+      king.rotation.y += 0.08;
       pawn.rotation.y -= 0.08;
 
       renderer.render(scene, camera);

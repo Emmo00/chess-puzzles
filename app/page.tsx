@@ -46,23 +46,6 @@ export default function Home() {
     }
   };
 
-  const handleDailyPuzzleClick = () => {
-    if (!isConnected) {
-      alert("Please connect your wallet first");
-      return;
-    }
-
-    // Check if user has premium access (either paid or free premium days)
-    const hasPremiumAccess = streakData?.premiumStatus?.isActive || paymentStatus?.hasAccess;
-    
-    if (!hasPremiumAccess) {
-      setShowPaymentModal(true);
-    } else {
-      // Navigate to daily puzzle page
-      window.location.href = "/daily";
-    }
-  };
-
   const handlePaymentSuccess = () => {
     checkPaymentStatus(); // Refresh payment status
   };
@@ -79,23 +62,15 @@ export default function Home() {
 
   // Determine access status combining paid premium and free premium days
   const hasPremiumAccess = streakData?.premiumStatus?.isActive || paymentStatus?.hasAccess;
-  const accessText = hasPremiumAccess 
-    ? (streakData?.premiumStatus?.isActive && streakData?.freePremiumDaysRemaining > 0)
-      ? "Free Premium Active"
-      : paymentStatus?.hasPremium 
-        ? "Premium Access"
-        : "Daily Access"
-    : "0.1 USDC or $1 Premium";
 
   const ctaBlocks = [
     {
       id: 1,
-      title: "Daily Puzzle",
-      subtitle: "Solve & Earn " + accessText,
+      title: "Solve Puzzles",
+      subtitle: "Solve & Earn Points",
       accentColor: hasPremiumAccess ? "bg-green-400" : "bg-cyan-400",
       icon: hasPremiumAccess ? "✓" : "▲",
-      href: "/daily",
-      onClick: handleDailyPuzzleClick,
+      href: "/puzzles",
     },
     {
       id: 3,
@@ -156,7 +131,6 @@ export default function Home() {
                 accentColor={cta.accentColor}
                 icon={cta.icon}
                 href={cta.href}
-                onClick={cta.onClick}
               />
             ))}
           </div>
