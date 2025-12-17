@@ -114,6 +114,10 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
             <Link href="/privacy-policy" className="hover:text-black transition-colors font-bold">
               privacy
             </Link>
+            <span>·</span>
+            <a href="https://t.me/+qffqunjhX3c4OGVk" target="_blank" rel="noopener noreferrer" className="hover:text-black transition-colors font-bold">
+              support
+            </a>
           </div>
           <p className="text-xs">Not operated by Opera or MiniPay</p>
         </div>

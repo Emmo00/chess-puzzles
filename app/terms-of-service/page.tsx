@@ -1,9 +1,17 @@
 "use client";
 
+import Link from "next/link";
+
 export default function TermsOfService() {
   return (
     <div className="min-h-screen bg-slate-950 text-white p-8 md:p-16">
       <div className="max-w-4xl mx-auto">
+        <Link 
+          href="/" 
+          className="inline-block mb-6 text-gray-300 hover:text-white transition-colors"
+        >
+          ← Back
+        </Link>
         <h1 className="text-4xl md:text-5xl font-bold mb-4">Terms of Service</h1>
         
         <div className="prose prose-invert max-w-none space-y-8">
