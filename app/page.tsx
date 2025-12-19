@@ -69,8 +69,8 @@ export default function Home() {
       title: "Solve Puzzles",
       subtitle: "Solve & Earn Points",
       accentColor: hasPremiumAccess ? "bg-green-400" : "bg-cyan-400",
-      icon: hasPremiumAccess ? "✓" : "▲",
-      href: "/puzzles",
+      icon: "▲",
+      href: "/solve-puzzles",
     },
     {
       id: 3,

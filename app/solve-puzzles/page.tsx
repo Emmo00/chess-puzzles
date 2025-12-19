@@ -108,7 +108,7 @@ export default function SolvePuzzlesPage() {
     setPuzzleLoading(true);
     try {
       // Get today's puzzle and create user tracking in one call
-      const response = await fetch("/api/puzzles/solve/new", {
+      const response = await fetch("/api/puzzles/solve-puzzles/new", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -124,7 +124,7 @@ export default function SolvePuzzlesPage() {
       if (response.ok) {
         const data = await response.json();
         setCurrentPuzzle(data.puzzle);
-        setStartTime(Date.now());
+        setStartTime(Date.now());+=_-{[}]|\"'''":;;;``}
         setElapsedTime(0);
         // Update count from server response to ensure accuracy
         setSolvedPuzzlesCount(data.puzzleCount || solvedPuzzlesCount + 1);
@@ -145,7 +145,7 @@ export default function SolvePuzzlesPage() {
     setIsCompleted(true);
 
     try {
-      const response = await fetch("/api/puzzles/solve", {
+      const response = await fetch("/api/puzzles/solve-puzzles/solve", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

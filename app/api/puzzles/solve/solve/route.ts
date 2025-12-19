@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import dbConnect from "../../../../lib/db";
-import { authenticateWalletUser } from "../../../../lib/auth";
-import PuzzleService from "../../../../lib/services/puzzles.service";
-import UserService from "../../../../lib/services/users.service";
-import { calculatePoints } from "../../../../lib/utils/points";
-import { UserPuzzle } from "../../../../lib/types";
+import dbConnect from "../../../../../lib/db";
+import { authenticateWalletUser } from "../../../../../lib/auth";
+import PuzzleService from "../../../../../lib/services/puzzles.service";
+import UserService from "../../../../../lib/services/users.service";
+import { calculatePoints } from "../../../../../lib/utils/points";
+import { UserPuzzle } from "../../../../../lib/types";
 
 export async function POST(request: NextRequest) {
   try {
