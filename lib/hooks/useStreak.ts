@@ -9,7 +9,6 @@ interface StreakData {
   points: number;
   lastLogin: string;
   lastPuzzleDate: string | null;
-  freePremiumDaysRemaining: number;
   paidPremiumExpiry: string | null;
   premiumStatus: PremiumStatus;
 }

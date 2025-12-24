@@ -59,8 +59,6 @@ const PaymentSchema = new Schema<IPayment>({
 });
 
 // Index for efficient queries
-PaymentSchema.index({ walletAddress: 1, paymentType: 1 });
-PaymentSchema.index({ transactionHash: 1 });
-PaymentSchema.index({ expiresAt: 1 });
+PaymentSchema.index({ walletAddress: 1, paymentType: 1, expiresAt: 1, transactionHash: 1 });
 
 export const Payment = mongoose.models.Payment || mongoose.model<IPayment>('Payment', PaymentSchema);

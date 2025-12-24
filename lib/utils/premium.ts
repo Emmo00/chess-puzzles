@@ -10,9 +10,8 @@ export function calculateIsPremiumActive(user: UserStats): boolean {
   const hasPaidPremium = user.paidPremiumExpiry && user.paidPremiumExpiry > now;
   
   // Check free premium days
-  const hasFreePremium = user.freePremiumDaysRemaining > 0;
   
-  return hasPaidPremium || hasFreePremium;
+  return false; // TODO: Free premium days logic removed
 }
 
 /**
@@ -23,7 +22,6 @@ export function getPremiumStatus(user: UserStats): PremiumStatus {
   
   return {
     isActive,
-    freeDaysRemaining: user.freePremiumDaysRemaining,
     paidExpiryDate: user.paidPremiumExpiry,
   };
 }

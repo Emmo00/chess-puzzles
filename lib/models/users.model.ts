@@ -1,10 +1,11 @@
 import * as mongoose from "mongoose";
 import { QuickAuthUser, WalletUser, UserStats } from "../types";
+import { unique } from "next/dist/build/utils";
 
 const userSchema = new mongoose.Schema({
   // Support both legacy FID and new wallet address
-  fid: { type: Number, sparse: true },
-  walletAddress: { type: String, lowercase: true, sparse: true },
+  fid: { type: Number, sparse: true , unique: true},
+  walletAddress: { type: String, lowercase: true, unique: true, sparse: true },
   username: { type: String },
   displayName: { type: String, required: true },
   pfpUrl: { type: String },
@@ -21,13 +22,11 @@ const userSchema = new mongoose.Schema({
   totalPuzzlesSolved: { type: Number, default: 0 },
   // Premium and streak monetization fields
   lastPuzzleDate: { type: String, default: null },
-  freePremiumDaysRemaining: { type: Number, default: 0 },
   paidPremiumExpiry: { type: String, default: null },
 });
 
 // Create compound unique index to ensure either fid OR walletAddress is unique
-userSchema.index({ fid: 1 }, { unique: true, sparse: true });
-userSchema.index({ walletAddress: 1 }, { unique: true, sparse: true });
+userSchema.index({ fid: 1 , walletAddress: 1});
 
 const userModel = mongoose.models?.User || mongoose.model<(QuickAuthUser | WalletUser) & UserStats & mongoose.Document>("User", userSchema);
 
