@@ -72,6 +72,10 @@ class UserService {
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
 
+    console.log("Last login date:", lastLogin);
+    console.log("Yesterday date:", yesterday);
+    console.log("Today date:", today);
+
     // Normalize times to midnight for comparison
     today.setHours(0, 0, 0, 0);
     lastLogin.setHours(0, 0, 0, 0);

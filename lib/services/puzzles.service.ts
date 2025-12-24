@@ -2,40 +2,29 @@ import { UserPuzzle, Puzzle } from "../types";
 import { HttpException } from "./users.service";
 import userPuzzlesModel from "../models/userPuzzles.model";
 import { randomInt } from "crypto";
+import PuzzleAPIClient from "./puzzle-api.client";
 
 class PuzzleService {
   public userPuzzles = userPuzzlesModel;
+  private puzzleAPI: PuzzleAPIClient;
 
-  public async fetchPuzzle() {
-    const { PUZZLE_API_URL, PUZZLE_API_KEY } = process.env;
+  constructor() {
+    this.puzzleAPI = new PuzzleAPIClient();
+  }
 
-    if (!PUZZLE_API_URL || !PUZZLE_API_KEY) {
-      throw new HttpException(500, "Puzzle API not configured");
+  public async fetchNewSolvePuzzle() {
+    // return their last puzzle if they have not solved it yet
+    let uncompletedPuzzle = await userPuzzlesModel.findOne({ completed: false });
+
+    if (uncompletedPuzzle) {
+      const puzzle = await this.puzzleAPI.fetchPuzzleById(uncompletedPuzzle.puzzleId);
+      return {...puzzle, oldAttempt: true };
     }
 
+    // fetch a new puzzle
     const numberOfMoves = randomInt(2, 4);
-
-    const response = await fetch(
-      `https://${PUZZLE_API_URL}/?themesType=ALL&playerMoves=${numberOfMoves}&count=1`,
-      {
-        method: "GET",
-        headers: {
-          "X-RapidAPI-Host": PUZZLE_API_URL,
-          "X-RapidAPI-Key": PUZZLE_API_KEY,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new HttpException(500, "Failed to fetch puzzle");
-    }
-
-    const puzzles: Puzzle[] = (await response.json()).puzzles as Puzzle[];
-    console.log("Fetched puzzle:", puzzles);
-    if (puzzles.length === 0) {
-      throw new HttpException(500, "No puzzles available");
-    }
-    const puzzle = puzzles[0];
+    const puzzle = await this.puzzleAPI.fetchRandomPuzzle(numberOfMoves);
+    console.log("Fetched puzzle:", puzzle);
     return puzzle;
   }
 
@@ -49,17 +38,18 @@ class PuzzleService {
     puzzleId,
     completed,
     attempts,
+    type,
     points,
   }: Partial<UserPuzzle>) {
     const updatedUserPuzzle = await this.userPuzzles.findOneAndUpdate(
       { userfid, puzzleId },
-      { completed, attempts, points, solvedAt: completed ? new Date() : undefined },
+      { completed, attempts, type, points, solvedAt: completed ? new Date() : undefined },
       { new: true }
     );
     return updatedUserPuzzle;
   }
 
-  public async getNumberOfPuzzlesGivenToday(userfid: string | number, type = "free") {
+  public async getNumberOfPuzzlesGivenToday(userfid: string | number, type = "solve") {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -70,6 +60,7 @@ class PuzzleService {
       userfid,
       type,
       createdAt: { $gte: startOfDay, $lte: endOfDay },
+      completed: true,
     });
 
     return count;
