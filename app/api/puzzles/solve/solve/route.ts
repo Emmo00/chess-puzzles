@@ -10,8 +10,10 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     
+    // Authenticate user
     const user = await authenticateWalletUser(request);
     const body = await request.json();
+    // Extract puzzleId and attempts from request body
     const { puzzleId, attempts } = body;
 
     if (!puzzleId || typeof attempts !== "number") {
@@ -27,6 +29,7 @@ export async function POST(request: NextRequest) {
     const userPuzzleData: Partial<UserPuzzle> = {
       userfid: user.walletAddress,
       puzzleId,
+      type: "solve",
       completed: true,
       attempts,
       points: calculatePoints(attempts),

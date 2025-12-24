@@ -4,6 +4,7 @@ import { authenticateWalletUser } from "../../../../../lib/auth";
 import PuzzleService from "../../../../../lib/services/puzzles.service";
 import { Payment } from "../../../../../lib/models/payment.model";
 import { PaymentType } from "../../../../../lib/types/payment";
+import { Puzzle } from "@/lib/types";
 
 const MAX_DAILY_FREE_PUZZLES = 5;
 
@@ -13,27 +14,6 @@ export async function POST(request: NextRequest) {
 
     const user = await authenticateWalletUser(request);
     const puzzleService = new PuzzleService();
-
-    // Check user's payment status
-    const now = new Date();
-    // const activePayments = await Payment.find({
-    //   walletAddress: user.walletAddress.toLowerCase(),
-    //   verified: true,
-    //   $or: [
-    //     { expiresAt: { $gt: now } }, // Not expired
-    //     { expiresAt: null }, // No expiry (shouldn't happen but just in case)
-    //   ],
-    // }).sort({ createdAt: -1 });
-
-    // Check if user has premium access
-    // const hasPremium = activePayments.some(
-    //   (payment) => payment.paymentType === PaymentType.PREMIUM
-    // );
-
-    // Check if user has daily access
-    // const hasDailyAccess = activePayments.some(
-    //   (payment) => payment.paymentType === PaymentType.DAILY_ACCESS
-    // );
 
     // Get today's puzzle count
     const count = await puzzleService.getNumberOfPuzzlesGivenToday(user.walletAddress);
@@ -47,20 +27,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Get today's puzzle
-    const puzzle = await puzzleService.fetchPuzzle();
+    const puzzle: Puzzle & { oldAttempt?: boolean } = await puzzleService.fetchNewSolvePuzzle();
 
     // Store user puzzle attempt in database with appropriate type
-    const puzzleType = "free";
-    await puzzleService.createUserPuzzle({
-      userfid: user.walletAddress,
-      puzzleId: puzzle.puzzleid,
-      type: puzzleType,
-    });
+    if (!puzzle.oldAttempt) {
+      await puzzleService.createUserPuzzle({
+        userfid: user.walletAddress,
+        puzzleId: puzzle.puzzleid,
+        type: "solve",
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      message: "Puzzle attempt recorded",
-      userType: puzzleType,
+      message: "Puzzle Fetched",
+      userType: "solve",
       puzzleCount: count + 1,
       puzzle: puzzle, // Return the puzzle data
     });

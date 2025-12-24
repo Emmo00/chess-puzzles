@@ -20,7 +20,6 @@ export interface UserStats {
   totalPuzzlesSolved: number;
   // Premium and streak monetization fields
   lastPuzzleDate: string | null;
-  freePremiumDaysRemaining: number;
   paidPremiumExpiry: string | null;
   isPremiumActive?: boolean; // Derived field
 }
@@ -30,7 +29,7 @@ export interface UserPuzzle {
   puzzleId: string;
   completed: boolean;
   attempts: number;
-  type: "free" | "premium" | "daily";
+  type: "solve" | "daily";
   points: number;
   solvedAt?: Date;
   createdAt: Date;
@@ -48,14 +47,12 @@ export interface Puzzle {
 // Premium status for UI
 export interface PremiumStatus {
   isActive: boolean;
-  freeDaysRemaining: number;
   paidExpiryDate: string | null;
 }
 
 // Premium status for UI
 export interface PremiumStatus {
   isActive: boolean;
-  freeDaysRemaining: number;
   paidExpiryDate: string | null;
   nextRewardAt?: number;
 }
@@ -74,7 +71,6 @@ export interface StreakData {
   points: number;
   lastLogin: string;
   lastPuzzleDate: string | null;
-  freePremiumDaysRemaining: number;
   paidPremiumExpiry: string | null;
   premiumStatus: PremiumStatus;
 }

@@ -20,8 +20,7 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@/lib/*": ["./lib/*"]
+      "@/*": ["./*"]
     },
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
