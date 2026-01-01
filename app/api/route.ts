@@ -5,7 +5,6 @@ export async function GET() {
     message: "Chess-O-Clock API",
     version: "1.0.0",
     endpoints: {
-      authentication: "/api/users/me",
       puzzles: {
         daily: { get: "/api/puzzles/daily", solve: "/api/puzzles/daily/solve" },
         solve: {
