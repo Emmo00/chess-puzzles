@@ -21,7 +21,7 @@ export default function StreakBadge({ days, onClick, isPremium }: StreakBadgePro
     if (days >= 30) return "🔥"
     if (days >= 7) return "⚡"
     if (days >= 3) return "🎯"
-    return "📈"
+    return "🔥"
   }
 
   return (

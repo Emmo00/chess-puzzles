@@ -60,10 +60,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Get today's puzzle
-    const puzzle = await puzzleService.fetchPuzzle();
+    const puzzle = await puzzleService.fetchNewSolvePuzzle();
 
     // Store user puzzle attempt in database with appropriate type
-    const puzzleType = hasPremium ? "premium" : hasDailyAccess ? "daily" : "free";
+    const puzzleType = "daily";
     await puzzleService.createUserPuzzle({
       userfid: user.walletAddress,
       puzzleId: puzzle.puzzleid,
