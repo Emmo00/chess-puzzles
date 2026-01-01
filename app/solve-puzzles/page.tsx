@@ -108,7 +108,7 @@ export default function SolvePuzzlesPage() {
     setPuzzleLoading(true);
     try {
       // Get today's puzzle and create user tracking in one call
-      const response = await fetch("/api/puzzles/solve-puzzles/new", {
+      const response = await fetch("/api/puzzles/solve/new", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -124,7 +124,7 @@ export default function SolvePuzzlesPage() {
       if (response.ok) {
         const data = await response.json();
         setCurrentPuzzle(data.puzzle);
-        setStartTime(Date.now());+=_-{[}]|\"'''":;;;``}
+        setStartTime(Date.now());
         setElapsedTime(0);
         // Update count from server response to ensure accuracy
         setSolvedPuzzlesCount(data.puzzleCount || solvedPuzzlesCount + 1);
@@ -145,7 +145,7 @@ export default function SolvePuzzlesPage() {
     setIsCompleted(true);
 
     try {
-      const response = await fetch("/api/puzzles/solve-puzzles/solve", {
+      const response = await fetch("/api/puzzles/solve/solve", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -231,7 +231,7 @@ export default function SolvePuzzlesPage() {
       <header className="pt-4 px-4 flex justify-between items-center shrink-0">
         <Link
           href="/"
-          className="bg-black text-white px-2 py-1 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+          className="bg-black text-white px-2 py-1 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
         >
           ← BACK
         </Link>
@@ -273,7 +273,7 @@ export default function SolvePuzzlesPage() {
             </div>
             <button
               onClick={handleStartNewPuzzle}
-              className="mt-4 bg-black text-white px-6 py-3 font-black text-lg border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+              className="mt-4 bg-black text-white px-6 py-3 font-black text-lg border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
             >
               NEW PUZZLE
             </button>

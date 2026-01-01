@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
         points: 0,
         total_points: 0,
         lastPuzzleDate: null,
-        freePremiumDaysRemaining: 0,
         paidPremiumExpiry: null,
         lastLoggedIn: new Date(),
         last_login: new Date()
@@ -55,7 +54,6 @@ export async function GET(request: NextRequest) {
     // Combine paid premium with streak-based premium status
     const combinedPremiumStatus = {
       isActive: streakPremiumStatus.isActive || hasPaidPremium,
-      freeDaysRemaining: streakPremiumStatus.freeDaysRemaining,
       paidExpiryDate: paidExpiryDate,
       nextRewardAt: streakPremiumStatus.nextRewardAt
     };
@@ -67,7 +65,6 @@ export async function GET(request: NextRequest) {
       points: userData.total_points || userData.points || 0,
       lastLogin: userData.last_login || userData.lastLoggedIn,
       lastPuzzleDate: userData.lastPuzzleDate,
-      freePremiumDaysRemaining: userData.freePremiumDaysRemaining || 0,
       paidPremiumExpiry: paidExpiryDate,
       premiumStatus: combinedPremiumStatus
     });
@@ -103,7 +100,6 @@ export async function POST(request: NextRequest) {
       longestStreak: updatedUser.longestStreak,
       longest_streak: updatedUser.longestStreak,
       lastPuzzleDate: updatedUser.lastPuzzleDate,
-      freePremiumDaysRemaining: updatedUser.freePremiumDaysRemaining,
       totalPuzzlesSolved: (userData.totalPuzzlesSolved || 0) + 1,
       puzzles_solved: (userData.puzzles_solved || 0) + 1
     });
@@ -123,7 +119,6 @@ export async function POST(request: NextRequest) {
     
     const combinedPremiumStatus = {
       isActive: streakPremiumStatus.isActive || hasPaidPremium,
-      freeDaysRemaining: streakPremiumStatus.freeDaysRemaining,
       paidExpiryDate: paidExpiryDate,
       nextRewardAt: streakPremiumStatus.nextRewardAt
     };
