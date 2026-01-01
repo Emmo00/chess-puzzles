@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     
     // Fetch a new puzzle for today
     const puzzleService = new PuzzleService();
-    const puzzle = await puzzleService.fetchPuzzle();
+    const puzzle = await puzzleService.fetchNewSolvePuzzle();
     
     return NextResponse.json(puzzle);
   } catch (error: any) {
