@@ -87,6 +87,27 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
                   </div>
                 </div>
               </div>
+
+              {/* Points & Puzzles Summary */}
+              <div className="bg-cyan-300 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1">
+                <h3 className="font-black text-lg uppercase text-black mb-3">🏆 Progress</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-black">Total Points:</span>
+                    <span className="bg-black text-cyan-300 px-3 py-1 font-black text-xl">
+                      {"totalPoints" in (userStats || {})
+                        ? (userStats as UserStats)?.totalPoints || 0
+                        : (userStats as StreakData)?.points || 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-black">Puzzles Solved:</span>
+                    <span className="font-black text-black">
+                      {userStats?.totalPuzzlesSolved || 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </>
           )}
         </div>
