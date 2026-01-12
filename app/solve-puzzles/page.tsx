@@ -118,7 +118,8 @@ export default function SolvePuzzlesPage() {
       });
 
       if (response.status === 429) {
-        // Daily limit reached
+        // Daily limit reached - update count to show exhausted state
+        setSolvedPuzzlesCount(MAX_DAILY_PUZZLES);
         return;
       }
 
@@ -359,6 +360,24 @@ export default function SolvePuzzlesPage() {
             >
               {puzzleLoading ? "LOADING PUZZLE..." : "START"}
             </button>
+          </div>
+        )}
+
+        {/* Show daily limit reached message */}
+        {!currentPuzzle && !isCompleted && isAccessExhausted && (
+          <div className="w-full max-w-xs text-center space-y-6">
+            <div className="bg-red-400 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 transform rotate-1">
+              <h2 className="text-3xl font-black text-black mb-3">DAILY LIMIT REACHED! 🚫</h2>
+              <p className="text-lg font-bold text-black">You&apos;ve solved all {MAX_DAILY_PUZZLES} puzzles for today.</p>
+              <p className="text-md font-bold text-black mt-2">Come back tomorrow for more puzzles!</p>
+            </div>
+
+            <Link
+              href="/"
+              className="inline-block w-full bg-black text-white py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
+            >
+              GO HOME
+            </Link>
           </div>
         )}
       </main>
