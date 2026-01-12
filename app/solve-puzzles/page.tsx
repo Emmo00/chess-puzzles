@@ -217,6 +217,9 @@ export default function SolvePuzzlesPage() {
     setSolutionUsed(false);
     setHighlightedSquare(null);
     setCurrentMoveIndex(0);
+    
+    // Immediately fetch a new puzzle
+    fetchPuzzle();
   };
 
   const formatTime = (ms: number) => {
