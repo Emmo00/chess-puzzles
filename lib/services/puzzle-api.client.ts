@@ -10,7 +10,7 @@ export interface FetchPuzzleOptions {
   themesType?: string;
   playerMoves?: number;
   count?: number;
-  rating?: string; // Format: "min-max" e.g., "1200-1600"
+  rating?: number; // Single rating value - API uses puzzle's ratingDeviation to find matches
   themes?: string[]; // Array of theme IDs
 }
 
@@ -42,9 +42,6 @@ class PuzzleAPIClient {
     if (params.id) {
       queryParams.append("id", params.id);
     }
-    if (params.themesType) {
-      queryParams.append("themesType", params.themesType);
-    }
     if (params.playerMoves) {
       queryParams.append("playerMoves", params.playerMoves.toString());
     }
@@ -52,11 +49,15 @@ class PuzzleAPIClient {
       queryParams.append("count", params.count.toString());
     }
     if (params.rating) {
-      queryParams.append("rating", params.rating);
+      queryParams.append("rating", params.rating.toString());
     }
     if (params.themes && params.themes.length > 0) {
-      // Join themes with comma for API
-      queryParams.append("themes", params.themes.join(","));
+      // API expects JSON array format: ?themes=["theme1","theme2"]
+      queryParams.append("themes", JSON.stringify(params.themes));
+      // themesType is required when passing more than one theme
+      if (params.themes.length > 1 && params.themesType) {
+        queryParams.append("themesType", params.themesType);
+      }
     }
 
     const url = `https://${this.baseUrl}/?${queryParams.toString()}`;
@@ -66,12 +67,15 @@ class PuzzleAPIClient {
   public async fetchPuzzles(options: FetchPuzzleOptions): Promise<Puzzle[]> {
     const url = this.buildUrl(options);
 
+    console.log("Fetching puzzles from URL:", url, this.buildHeaders());
+
     const response = await fetch(url, {
       method: "GET",
       headers: this.buildHeaders(),
     });
 
     if (!response.ok) {
+      console.log("Puzzle API response not ok:", response.status, await response.text());
       throw new HttpException(500, "Failed to fetch puzzle from API");
     }
 
@@ -95,19 +99,21 @@ class PuzzleAPIClient {
     themes?: string[]
   ): Promise<Puzzle> {
     const options: FetchPuzzleOptions = {
-      themesType: "ALL",
       playerMoves: moves,
       count: 1,
     };
 
-    // Add rating filter if provided
+    // Add rating filter if provided - use midpoint of range
+    // API uses puzzle's ratingDeviation to find matches around this value
     if (ratingRange) {
-      options.rating = `${ratingRange.min}-${ratingRange.max}`;
+      options.rating = Math.round((ratingRange.min + ratingRange.max) / 2);
     }
 
-    // Add themes filter if provided (and not all themes)
+    // Add themes filter if provided
     if (themes && themes.length > 0) {
       options.themes = themes;
+      // Use ONE so puzzle matches at least one of the enabled themes
+      options.themesType = "ONE";
     }
 
     const puzzles = await this.fetchPuzzles(options);
