@@ -1,5 +1,5 @@
 import * as mongoose from "mongoose";
-import { WalletUser, UserStats } from "../types";
+import { WalletUser, UserStats, UserSettings } from "../types";
 import { unique } from "next/dist/build/utils";
 
 const userSchema = new mongoose.Schema({
@@ -14,11 +14,19 @@ const userSchema = new mongoose.Schema({
   longestStreak: { type: Number, default: 1 },
   totalPuzzlesSolved: { type: Number, default: 0 },
   lastPuzzleDate: { type: String, default: null },
+  // User settings
+  settings: {
+    ratingRange: {
+      min: { type: Number, default: 800 },
+      max: { type: Number, default: 2000 },
+    },
+    disabledThemes: { type: [String], default: [] },
+  },
 });
 
 userSchema.index({ walletAddress: 1 });
 
 const userModel =
-  mongoose.models?.User || mongoose.model<WalletUser & UserStats & mongoose.Document>("User", userSchema);
+  mongoose.models?.User || mongoose.model<WalletUser & UserStats & { settings: UserSettings } & mongoose.Document>("User", userSchema);
 
 export default userModel;

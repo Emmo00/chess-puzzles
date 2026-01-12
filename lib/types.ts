@@ -5,6 +5,14 @@ export interface WalletUser {
   username?: string;
 }
 
+export interface UserSettings {
+  ratingRange: {
+    min: number;
+    max: number;
+  };
+  disabledThemes: string[];
+}
+
 export interface UserStats {
   totalPoints: number;
   currentStreak: number;

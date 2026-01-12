@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "../../../../../lib/db";
 import { authenticateWalletUser } from "../../../../../lib/auth";
 import PuzzleService from "../../../../../lib/services/puzzles.service";
+import UserService from "../../../../../lib/services/users.service";
 import { Puzzle } from "@/lib/types";
 
 const MAX_DAILY_FREE_PUZZLES = 5;
@@ -12,6 +13,7 @@ export async function POST(request: NextRequest) {
 
     const user = await authenticateWalletUser(request);
     const puzzleService = new PuzzleService();
+    const userService = new UserService();
 
     // Get today's puzzle count
     const count = await puzzleService.getNumberOfPuzzlesGivenToday(user.walletAddress);
@@ -24,8 +26,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get today's puzzle
-    const puzzle: Puzzle & { oldAttempt?: boolean } = await puzzleService.fetchNewSolvePuzzle();
+    // Get user settings for filtering puzzles
+    const userSettings = await userService.getUserSettings(user.walletAddress);
+
+    // Get puzzle with user's settings applied
+    const puzzle: Puzzle & { oldAttempt?: boolean } = await puzzleService.fetchNewSolvePuzzle(userSettings);
 
     // Store user puzzle attempt in database with appropriate type
     if (!puzzle.oldAttempt) {

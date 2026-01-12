@@ -1,4 +1,4 @@
-import { WalletUser, UserStats } from "../types";
+import { WalletUser, UserStats, UserSettings } from "../types";
 import userModel from "../models/users.model";
 
 export class HttpException extends Error {
@@ -11,6 +11,12 @@ export class HttpException extends Error {
     this.message = message;
   }
 }
+
+// Default settings for new users (empty disabledThemes = all themes enabled)
+const DEFAULT_SETTINGS: UserSettings = {
+  ratingRange: { min: 800, max: 2000 },
+  disabledThemes: [],
+};
 
 class UserService {
   public users = userModel;
@@ -99,6 +105,51 @@ class UserService {
       walletAddress: updatedUser.walletAddress || "",
       displayName: updatedUser.displayName || "",
       username: updatedUser.username,
+    };
+  }
+
+  public async getUserSettings(walletAddress: string): Promise<UserSettings> {
+    const user = await this.users.findOne({ walletAddress: walletAddress.toLowerCase() });
+    
+    if (!user) {
+      // Return default settings for non-existent users
+      return DEFAULT_SETTINGS;
+    }
+
+    // Return user settings or defaults if not set
+    return {
+      ratingRange: user.settings?.ratingRange || DEFAULT_SETTINGS.ratingRange,
+      disabledThemes: user.settings?.disabledThemes || DEFAULT_SETTINGS.disabledThemes,
+    };
+  }
+
+  public async updateUserSettings(walletAddress: string, settings: Partial<UserSettings>): Promise<UserSettings> {
+    const updateData: any = {};
+
+    if (settings.ratingRange) {
+      updateData["settings.ratingRange"] = {
+        min: Math.max(400, Math.min(3000, settings.ratingRange.min)),
+        max: Math.max(400, Math.min(3000, settings.ratingRange.max)),
+      };
+    }
+
+    if (settings.disabledThemes !== undefined) {
+      updateData["settings.disabledThemes"] = settings.disabledThemes;
+    }
+
+    const updatedUser = await this.users.findOneAndUpdate(
+      { walletAddress: walletAddress.toLowerCase() },
+      { $set: updateData },
+      { new: true, upsert: false }
+    );
+
+    if (!updatedUser) {
+      throw new HttpException(404, "User not found");
+    }
+
+    return {
+      ratingRange: updatedUser.settings?.ratingRange || DEFAULT_SETTINGS.ratingRange,
+      disabledThemes: updatedUser.settings?.disabledThemes || DEFAULT_SETTINGS.disabledThemes,
     };
   }
 }

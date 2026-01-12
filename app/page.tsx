@@ -86,7 +86,7 @@ export default function Home() {
       subtitle: "Rating Range, Themes",
       accentColor: "bg-lime-400",
       icon: "⚙",
-      href: "/coming-soon",
+      href: "/settings",
     },
   ];
 

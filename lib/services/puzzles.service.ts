@@ -1,8 +1,9 @@
-import { UserPuzzle, Puzzle } from "../types";
+import { UserPuzzle, Puzzle, UserSettings } from "../types";
 import { HttpException } from "./users.service";
 import userPuzzlesModel from "../models/userPuzzles.model";
 import { randomInt } from "crypto";
 import PuzzleAPIClient from "./puzzle-api.client";
+import { DEFAULT_THEMES } from "../config/puzzleThemes";
 
 class PuzzleService {
   public userPuzzles = userPuzzlesModel;
@@ -12,7 +13,7 @@ class PuzzleService {
     this.puzzleAPI = new PuzzleAPIClient();
   }
 
-  public async fetchNewSolvePuzzle() {
+  public async fetchNewSolvePuzzle(settings?: UserSettings) {
     // return their last puzzle if they have not solved it yet
     let uncompletedPuzzle = await userPuzzlesModel.findOne({ completed: false });
 
@@ -21,9 +22,20 @@ class PuzzleService {
       return {...puzzle, oldAttempt: true };
     }
 
-    // fetch a new puzzle
+    // Calculate enabled themes from disabled themes
+    // Only pass themes to API if user has disabled some
+    let enabledThemes: string[] | undefined = undefined;
+    if (settings?.disabledThemes && settings.disabledThemes.length > 0) {
+      enabledThemes = DEFAULT_THEMES.filter(id => !settings.disabledThemes.includes(id));
+    }
+
+    // fetch a new puzzle with user settings
     const numberOfMoves = randomInt(2, 4);
-    const puzzle = await this.puzzleAPI.fetchRandomPuzzle(numberOfMoves);
+    const puzzle = await this.puzzleAPI.fetchRandomPuzzle(
+      numberOfMoves,
+      settings?.ratingRange,
+      enabledThemes
+    );
     console.log("Fetched puzzle:", puzzle);
     return puzzle;
   }
