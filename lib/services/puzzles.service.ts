@@ -34,7 +34,7 @@ class PuzzleService {
   }
 
   public async updateUserPuzzle({
-    userfid,
+    userWalletAddress,
     puzzleId,
     completed,
     attempts,
@@ -42,14 +42,14 @@ class PuzzleService {
     points,
   }: Partial<UserPuzzle>) {
     const updatedUserPuzzle = await this.userPuzzles.findOneAndUpdate(
-      { userfid, puzzleId },
+      { userWalletAddress, puzzleId },
       { completed, attempts, type, points, solvedAt: completed ? new Date() : undefined },
       { new: true }
     );
     return updatedUserPuzzle;
   }
 
-  public async getNumberOfPuzzlesGivenToday(userfid: string | number, type = "solve") {
+  public async getNumberOfPuzzlesGivenToday(userWalletAddress: string, type = "solve") {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -57,7 +57,7 @@ class PuzzleService {
     endOfDay.setHours(23, 59, 59, 999);
 
     const count = await this.userPuzzles.countDocuments({
-      userfid,
+      userWalletAddress,
       type,
       createdAt: { $gte: startOfDay, $lte: endOfDay },
       completed: true,

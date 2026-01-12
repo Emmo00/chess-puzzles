@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     // Store user puzzle attempt in database with appropriate type
     const puzzleType = "daily";
     await puzzleService.createUserPuzzle({
-      userfid: user.walletAddress,
+      userWalletAddress: user.walletAddress,
       puzzleId: puzzle.puzzleid,
       type: puzzleType
     });

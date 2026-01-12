@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     // Store user puzzle attempt in database with appropriate type
     if (!puzzle.oldAttempt) {
       await puzzleService.createUserPuzzle({
-        userfid: user.walletAddress,
+        userWalletAddress: user.walletAddress,
         puzzleId: puzzle.puzzleid,
         type: "solve",
       });

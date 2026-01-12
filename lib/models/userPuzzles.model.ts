@@ -2,7 +2,7 @@ import * as mongoose from "mongoose";
 import { UserPuzzle } from "../types";
 
 const UserPuzzleSchema = new mongoose.Schema({
-  userfid: { type: String, required: true },
+  userWalletAddress: { type: String, required: true },
   puzzleId: { type: String, required: true },
   completed: { type: Boolean, default: false },
   attempts: { type: Number, default: 0 },

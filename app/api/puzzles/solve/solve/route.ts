@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const userService = new UserService();
 
     const userPuzzleData: Partial<UserPuzzle> = {
-      userfid: user.walletAddress,
+      userWalletAddress: user.walletAddress,
       puzzleId,
       type: "solve",
       completed: true,

@@ -15,7 +15,7 @@ export interface UserStats {
 }
 
 export interface UserPuzzle {
-  userfid: string; // Changed to string to support wallet addresses
+  userWalletAddress: string;
   puzzleId: string;
   completed: boolean;
   attempts: number;
