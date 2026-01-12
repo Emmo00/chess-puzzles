@@ -1,5 +1,6 @@
 import type React from "react";
 import type { Metadata } from "next";
+import Script from "next/script";
 
 import "./globals.css";
 import { WalletProvider } from "../lib/providers/WalletProvider";
@@ -62,6 +63,18 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-TPBVDV2BQ9"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-TPBVDV2BQ9');
+          `}
+        </Script>
       </head>
       <body className={`${inter.className} antialiased`}>
         <WalletProvider>
