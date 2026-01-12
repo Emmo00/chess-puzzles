@@ -5,8 +5,6 @@ import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ChessBoard from "../../components/chess-board";
-import PuzzleActions from "../../components/puzzle-actions";
-import PaywallCard from "../../components/paywall-card";
 import { useUserStats } from "../../lib/hooks/useUserStats";
 import { Puzzle } from "../../lib/types";
 
@@ -17,7 +15,7 @@ export default function SolvePuzzlesPage() {
     hasDailyAccess?: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [attemptCount, setAttemptCount] = useState(1);
+  const [mistakeCount, setMistakeCount] = useState(0);
   const [puzzleProgress, setPuzzleProgress] = useState(0);
   const [currentPuzzle, setCurrentPuzzle] = useState<Puzzle | null>(null);
   const [puzzleLoading, setPuzzleLoading] = useState(false);
@@ -27,10 +25,12 @@ export default function SolvePuzzlesPage() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [completionStats, setCompletionStats] = useState<{
     timeElapsed: number;
-    attempts: number;
+    mistakes: number;
     points: number;
+    usedHint: boolean;
   } | null>(null);
   const [showHint, setShowHint] = useState(false);
+  const [hintUsed, setHintUsed] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [currentTurn, setCurrentTurn] = useState<"w" | "b">("w");
@@ -151,7 +151,9 @@ export default function SolvePuzzlesPage() {
         },
         body: JSON.stringify({
           puzzleId: currentPuzzle.puzzleid,
-          attempts: attemptCount,
+          mistakes: mistakeCount,
+          usedHint: hintUsed,
+          rating: currentPuzzle.rating,
         }),
       });
 
@@ -159,8 +161,9 @@ export default function SolvePuzzlesPage() {
         const result = await response.json();
         setCompletionStats({
           timeElapsed: finalElapsedTime,
-          attempts: attemptCount,
+          mistakes: mistakeCount,
           points: result.points,
+          usedHint: hintUsed,
         });
       }
     } catch (error) {
@@ -168,33 +171,23 @@ export default function SolvePuzzlesPage() {
     }
   };
 
-  const handleRetry = () => {
-    setAttemptCount((prev) => prev + 1);
-    setPuzzleProgress(0);
-    setShowHint(false);
-    setShowSolution(false);
-    setCurrentMoveIndex(0);
-    // Reset the puzzle by refetching it
-    if (currentPuzzle) {
-      const tempPuzzle = currentPuzzle;
-      setCurrentPuzzle(null);
-      setTimeout(() => {
-        setCurrentPuzzle(tempPuzzle);
-        setStartTime(Date.now());
-        setElapsedTime(0);
-      }, 100);
+  const handleShowHint = () => {
+    if (!hintUsed && !showHint) {
+      setHintUsed(true);
     }
+    setShowHint(!showHint);
   };
 
   const handleStartNewPuzzle = () => {
     setCurrentPuzzle(null);
     setIsCompleted(false);
     setCompletionStats(null);
-    setAttemptCount(1);
+    setMistakeCount(0);
     setPuzzleProgress(0);
     setStartTime(null);
     setElapsedTime(0);
     setShowHint(false);
+    setHintUsed(false);
     setShowSolution(false);
     setCurrentMoveIndex(0);
   };
@@ -235,9 +228,7 @@ export default function SolvePuzzlesPage() {
         <div className="flex items-center gap-3">
           <div
             className={`px-4 py-2 font-black text-sm border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${
-              paymentStatus?.hasDailyAccess
-                ? "bg-yellow-400 text-black"
-                : "bg-cyan-400 text-black"
+              paymentStatus?.hasDailyAccess ? "bg-yellow-400 text-black" : "bg-cyan-400 text-black"
             }`}
           >
             ⚡ PUZZLES ({solvedPuzzlesCount}/{MAX_DAILY_PUZZLES})
@@ -250,19 +241,12 @@ export default function SolvePuzzlesPage() {
         {/* Show completion stats if puzzle is completed */}
         {isCompleted && completionStats && (
           <div className="w-full max-w-xs bg-green-400 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 text-center mb-4">
-            <div className="text-3xl font-black text-black mb-4 transform -rotate-2">
-              PUZZLE SOLVED! 🎉
-            </div>
+            <div className="text-3xl font-black text-black mb-4 transform -rotate-2">PUZZLE SOLVED! 🎉</div>
             <div className="space-y-2 text-lg font-black text-black">
-              <div className="bg-white border-2 border-black p-2">
-                TIME: {formatTime(completionStats.timeElapsed)}
-              </div>
-              <div className="bg-white border-2 border-black p-2">
-                TRIES: {completionStats.attempts}
-              </div>
-              <div className="bg-white border-2 border-black p-2">
-                POINTS: {completionStats.points}
-              </div>
+              <div className="bg-white border-2 border-black p-2">TIME: {formatTime(completionStats.timeElapsed)}</div>
+              <div className="bg-white border-2 border-black p-2">MISTAKES: {completionStats.mistakes}</div>
+              {completionStats.usedHint && <div className="bg-yellow-200 border-2 border-black p-2">HINT USED 💡</div>}
+              <div className="bg-white border-2 border-black p-2">POINTS: +{completionStats.points}</div>
             </div>
             <button
               onClick={handleStartNewPuzzle}
@@ -276,15 +260,7 @@ export default function SolvePuzzlesPage() {
         {/* Show puzzle interface if puzzle is loaded and not completed */}
         {currentPuzzle && !isCompleted && (
           <>
-            <div className="flex gap-2 mb-3 justify-center">
-              <div className="bg-orange-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] px-3 py-1 font-black text-sm">
-                {Math.floor(elapsedTime / 1000)}s
-              </div>
-              <div className="bg-magenta-500 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] px-3 py-1 font-black text-sm">
-                TRY {attemptCount}
-              </div>
-            </div>
-
+            {" "}
             <div className="w-full max-w-xs shrink-0">
               {/* Turn Indicator */}
               <div className="mb-3 text-center">
@@ -301,22 +277,21 @@ export default function SolvePuzzlesPage() {
                 puzzle={currentPuzzle}
                 onComplete={handlePuzzleComplete}
                 onProgress={setPuzzleProgress}
-                onWrongMove={() => setAttemptCount((prev) => prev + 1)}
+                onWrongMove={() => setMistakeCount((prev) => prev + 1)}
                 onMoveIndexChange={setCurrentMoveIndex}
                 onTurnChange={setCurrentTurn}
               />
             </div>
-
             <div className="w-full max-w-xs shrink-0 space-y-3">
-              <PuzzleActions onRetry={handleRetry} />
-
               {/* Hint Section */}
               <div className="flex gap-2">
                 <button
-                  onClick={() => setShowHint(!showHint)}
-                  className="flex-1 bg-yellow-400 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
+                  onClick={handleShowHint}
+                  className={`flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all ${
+                    hintUsed ? "bg-yellow-200" : "bg-yellow-400"
+                  }`}
                 >
-                  {showHint ? "HIDE HINT" : "SHOW HINT"}
+                  {showHint ? "HIDE HINT" : hintUsed ? "SHOW HINT (USED)" : "SHOW HINT"}
                 </button>
                 <button
                   onClick={() => setShowSolution(!showSolution)}
@@ -331,17 +306,12 @@ export default function SolvePuzzlesPage() {
                   <div className="font-black text-sm text-black mb-2">PUZZLE THEMES:</div>
                   <div className="flex flex-wrap gap-1">
                     {currentPuzzle.themes.map((theme, index) => (
-                      <span
-                        key={index}
-                        className="bg-white border border-black px-2 py-1 text-xs font-bold text-black"
-                      >
+                      <span key={index} className="bg-white border border-black px-2 py-1 text-xs font-bold text-black">
                         {theme.toUpperCase()}
                       </span>
                     ))}
                   </div>
-                  <div className="mt-2 text-xs font-bold text-black">
-                    RATING: {currentPuzzle.rating}
-                  </div>
+                  <div className="mt-2 text-xs font-bold text-black">RATING: {currentPuzzle.rating}</div>
                 </div>
               )}
 
@@ -372,9 +342,7 @@ export default function SolvePuzzlesPage() {
                       );
                     })}
                   </div>
-                  <div className="mt-2 text-xs font-bold text-black">
-                    🟠 CURRENT MOVE • 🟢 COMPLETED • ⚪ REMAINING
-                  </div>
+                  <div className="mt-2 text-xs font-bold text-black">🟠 CURRENT MOVE • 🟢 COMPLETED • ⚪ REMAINING</div>
                 </div>
               )}
             </div>

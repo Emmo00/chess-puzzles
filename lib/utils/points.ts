@@ -1,6 +1,43 @@
-export function calculatePoints(attempts: number): number {
-  if (attempts === 1) return 100;
-  if (attempts === 2) return 66;
-  if (attempts === 3) return 33;
-  return 10;
+export interface PointsCalculationParams {
+  rating: number;
+  mistakes: number;
+  usedHint: boolean;
+}
+
+/**
+ * Get base points based on puzzle rating
+ * Easy (800–1000): 10 pts
+ * Medium (1000–1400): 25 pts
+ * Hard (1400–1800): 50 pts
+ * Expert (1800+): 100 pts
+ */
+export function getBasePoints(rating: number): number {
+  if (rating < 1000) return 10;
+  if (rating < 1400) return 25;
+  if (rating < 1800) return 50;
+  return 100;
+}
+
+/**
+ * Get accuracy multiplier based on mistakes and hint usage
+ * 1.0 (first attempt, no hints)
+ * 0.8 (one mistake)
+ * 0.6 (multiple mistakes)
+ * 0.5 (used hint)
+ */
+export function getAccuracyMultiplier(mistakes: number, usedHint: boolean): number {
+  if (usedHint) return 0.5;
+  if (mistakes === 0) return 1.0;
+  if (mistakes === 1) return 0.8;
+  return 0.6;
+}
+
+/**
+ * Calculate points awarded for solving a puzzle
+ * PointsAwarded = BasePoints × AccuracyMultiplier
+ */
+export function calculatePoints({ rating, mistakes, usedHint }: PointsCalculationParams): number {
+  const basePoints = getBasePoints(rating);
+  const multiplier = getAccuracyMultiplier(mistakes, usedHint);
+  return Math.round(basePoints * multiplier);
 }

@@ -13,12 +13,12 @@ export async function POST(request: NextRequest) {
     // Authenticate user
     const user = await authenticateWalletUser(request);
     const body = await request.json();
-    // Extract puzzleId and attempts from request body
-    const { puzzleId, attempts } = body;
+    // Extract puzzleId, mistakes, usedHint, and rating from request body
+    const { puzzleId, mistakes, usedHint, rating } = body;
 
-    if (!puzzleId || typeof attempts !== "number") {
+    if (!puzzleId || typeof mistakes !== "number" || typeof rating !== "number") {
       return NextResponse.json(
-        { message: "Invalid request body" },
+        { message: "Invalid request body. Required: puzzleId, mistakes, rating" },
         { status: 400 }
       );
     }
@@ -26,13 +26,15 @@ export async function POST(request: NextRequest) {
     const puzzleService = new PuzzleService();
     const userService = new UserService();
 
+    const points = calculatePoints({ rating, mistakes, usedHint: !!usedHint });
+
     const userPuzzleData: Partial<UserPuzzle> = {
       userWalletAddress: user.walletAddress,
       puzzleId,
       type: "solve",
       completed: true,
-      attempts,
-      points: calculatePoints(attempts),
+      attempts: mistakes + 1, // Keep track of total attempts (mistakes + successful attempt)
+      points,
       solvedAt: new Date(),
     };
 
