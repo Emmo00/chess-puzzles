@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "../../../../../lib/db";
 import { authenticateWalletUser } from "../../../../../lib/auth";
 import PuzzleService from "../../../../../lib/services/puzzles.service";
-import { Payment } from "../../../../../lib/models/payment.model";
-import { PaymentType } from "../../../../../lib/types/payment";
 import { Puzzle } from "@/lib/types";
 
 const MAX_DAILY_FREE_PUZZLES = 5;
