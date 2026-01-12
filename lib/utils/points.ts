@@ -2,6 +2,7 @@ export interface PointsCalculationParams {
   rating: number;
   mistakes: number;
   usedHint: boolean;
+  usedSolution: boolean;
 }
 
 /**
@@ -19,13 +20,15 @@ export function getBasePoints(rating: number): number {
 }
 
 /**
- * Get accuracy multiplier based on mistakes and hint usage
+ * Get accuracy multiplier based on mistakes, hint usage, and solution usage
+ * 0.0 (used solution - no points)
+ * 0.5 (used hint)
  * 1.0 (first attempt, no hints)
  * 0.8 (one mistake)
  * 0.6 (multiple mistakes)
- * 0.5 (used hint)
  */
-export function getAccuracyMultiplier(mistakes: number, usedHint: boolean): number {
+export function getAccuracyMultiplier(mistakes: number, usedHint: boolean, usedSolution: boolean): number {
+  if (usedSolution) return 0.0;
   if (usedHint) return 0.5;
   if (mistakes === 0) return 1.0;
   if (mistakes === 1) return 0.8;
@@ -36,8 +39,8 @@ export function getAccuracyMultiplier(mistakes: number, usedHint: boolean): numb
  * Calculate points awarded for solving a puzzle
  * PointsAwarded = BasePoints × AccuracyMultiplier
  */
-export function calculatePoints({ rating, mistakes, usedHint }: PointsCalculationParams): number {
+export function calculatePoints({ rating, mistakes, usedHint, usedSolution }: PointsCalculationParams): number {
   const basePoints = getBasePoints(rating);
-  const multiplier = getAccuracyMultiplier(mistakes, usedHint);
+  const multiplier = getAccuracyMultiplier(mistakes, usedHint, usedSolution);
   return Math.round(basePoints * multiplier);
 }

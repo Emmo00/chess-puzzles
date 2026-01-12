@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import ChessBoard from "../../components/chess-board";
+import ChessBoard, { ChessBoardRef } from "../../components/chess-board";
 import { useUserStats } from "../../lib/hooks/useUserStats";
 import { Puzzle } from "../../lib/types";
 
@@ -28,13 +28,16 @@ export default function SolvePuzzlesPage() {
     mistakes: number;
     points: number;
     usedHint: boolean;
+    usedSolution: boolean;
   } | null>(null);
   const [showHint, setShowHint] = useState(false);
   const [hintUsed, setHintUsed] = useState(false);
-  const [showSolution, setShowSolution] = useState(false);
+  const [solutionUsed, setSolutionUsed] = useState(false);
+  const [highlightedSquare, setHighlightedSquare] = useState<string | null>(null);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [currentTurn, setCurrentTurn] = useState<"w" | "b">("w");
 
+  const chessBoardRef = useRef<ChessBoardRef>(null);
   const { address, isConnected } = useAccount();
   const router = useRouter();
   const { userStats } = useUserStats();
@@ -153,6 +156,7 @@ export default function SolvePuzzlesPage() {
           puzzleId: currentPuzzle.puzzleid,
           mistakes: mistakeCount,
           usedHint: hintUsed,
+          usedSolution: solutionUsed,
           rating: currentPuzzle.rating,
         }),
       });
@@ -164,6 +168,7 @@ export default function SolvePuzzlesPage() {
           mistakes: mistakeCount,
           points: result.points,
           usedHint: hintUsed,
+          usedSolution: solutionUsed,
         });
       }
     } catch (error) {
@@ -172,10 +177,31 @@ export default function SolvePuzzlesPage() {
   };
 
   const handleShowHint = () => {
-    if (!hintUsed && !showHint) {
+    if (!hintUsed) {
       setHintUsed(true);
     }
-    setShowHint(!showHint);
+    
+    if (showHint) {
+      // Hide hint - remove highlight
+      setShowHint(false);
+      setHighlightedSquare(null);
+    } else {
+      // Show hint - highlight the next piece to move
+      setShowHint(true);
+      const fromSquare = chessBoardRef.current?.getNextMoveFromSquare();
+      setHighlightedSquare(fromSquare || null);
+    }
+  };
+
+  const handleShowSolution = () => {
+    if (solutionUsed) return; // Already used, don't allow again
+    
+    setSolutionUsed(true);
+    setShowHint(false);
+    setHighlightedSquare(null);
+    
+    // Auto-play all remaining moves
+    chessBoardRef.current?.playSolution();
   };
 
   const handleStartNewPuzzle = () => {
@@ -188,7 +214,8 @@ export default function SolvePuzzlesPage() {
     setElapsedTime(0);
     setShowHint(false);
     setHintUsed(false);
-    setShowSolution(false);
+    setSolutionUsed(false);
+    setHighlightedSquare(null);
     setCurrentMoveIndex(0);
   };
 
@@ -245,7 +272,8 @@ export default function SolvePuzzlesPage() {
             <div className="space-y-2 text-lg font-black text-black">
               <div className="bg-white border-2 border-black p-2">TIME: {formatTime(completionStats.timeElapsed)}</div>
               <div className="bg-white border-2 border-black p-2">MISTAKES: {completionStats.mistakes}</div>
-              {completionStats.usedHint && <div className="bg-yellow-200 border-2 border-black p-2">HINT USED 💡</div>}
+              {completionStats.usedHint && !completionStats.usedSolution && <div className="bg-yellow-200 border-2 border-black p-2">HINT USED 💡</div>}
+              {completionStats.usedSolution && <div className="bg-purple-200 border-2 border-black p-2">SOLUTION USED 🔮</div>}
               <div className="bg-white border-2 border-black p-2">POINTS: +{completionStats.points}</div>
             </div>
             <button
@@ -274,12 +302,14 @@ export default function SolvePuzzlesPage() {
               </div>
 
               <ChessBoard
+                ref={chessBoardRef}
                 puzzle={currentPuzzle}
                 onComplete={handlePuzzleComplete}
                 onProgress={setPuzzleProgress}
                 onWrongMove={() => setMistakeCount((prev) => prev + 1)}
                 onMoveIndexChange={setCurrentMoveIndex}
                 onTurnChange={setCurrentTurn}
+                highlightedSquare={highlightedSquare}
               />
             </div>
             <div className="w-full max-w-xs shrink-0 space-y-3">
@@ -294,55 +324,17 @@ export default function SolvePuzzlesPage() {
                   {showHint ? "HIDE HINT" : hintUsed ? "SHOW HINT (USED)" : "SHOW HINT"}
                 </button>
                 <button
-                  onClick={() => setShowSolution(!showSolution)}
-                  className="flex-1 bg-purple-400 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
+                  onClick={handleShowSolution}
+                  disabled={solutionUsed}
+                  className={`flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all ${solutionUsed ? "bg-purple-200 opacity-50 cursor-not-allowed" : "bg-purple-400"}`}
                 >
-                  {showSolution ? "HIDE SOLUTION" : "SHOW SOLUTION"}
+                  {solutionUsed ? "SOLUTION USED" : "SHOW SOLUTION"}
                 </button>
               </div>
 
-              {showHint && currentPuzzle && (
-                <div className="bg-blue-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] p-3">
-                  <div className="font-black text-sm text-black mb-2">PUZZLE THEMES:</div>
-                  <div className="flex flex-wrap gap-1">
-                    {currentPuzzle.themes.map((theme, index) => (
-                      <span key={index} className="bg-white border border-black px-2 py-1 text-xs font-bold text-black">
-                        {theme.toUpperCase()}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-2 text-xs font-bold text-black">RATING: {currentPuzzle.rating}</div>
-                </div>
-              )}
-
-              {showSolution && currentPuzzle && (
-                <div className="bg-purple-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] p-3">
-                  <div className="font-black text-sm text-black mb-2">SOLUTION MOVES:</div>
-                  <div className="grid grid-cols-2 gap-1 text-xs">
-                    {currentPuzzle.moves.map((move, index) => {
-                      const isCurrentMove = index === currentMoveIndex;
-                      const isCompletedMove = index < currentMoveIndex;
-                      const moveNumber = Math.floor(index / 2) + 1;
-                      const isWhiteMove = index % 2 === 0;
-
-                      return (
-                        <div
-                          key={index}
-                          className={`px-2 py-1 border border-black font-bold ${
-                            isCurrentMove
-                              ? "bg-orange-300 text-black"
-                              : isCompletedMove
-                              ? "bg-green-300 text-black"
-                              : "bg-white text-black"
-                          }`}
-                        >
-                          {moveNumber}
-                          {isWhiteMove ? "." : "..."} {move.toUpperCase()}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-2 text-xs font-bold text-black">🟠 CURRENT MOVE • 🟢 COMPLETED • ⚪ REMAINING</div>
+              {showHint && !solutionUsed && (
+                <div className="bg-yellow-200 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] p-3 text-center">
+                  <div className="font-black text-sm text-black">💡 PIECE TO MOVE IS HIGHLIGHTED</div>
                 </div>
               )}
             </div>

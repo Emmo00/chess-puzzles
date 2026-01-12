@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useImperativeHandle, forwardRef } from "react";
 import { Chess, Square } from "chess.js";
 import { Chessboard, SquareDataType, SquareHandlerArgs } from "react-chessboard";
 import { Puzzle } from "../lib/types";
@@ -12,9 +12,15 @@ interface ChessBoardProps {
   onWrongMove?: () => void;
   onMoveIndexChange?: (moveIndex: number) => void;
   onTurnChange?: (turn: 'w' | 'b') => void;
+  highlightedSquare?: string | null;
 }
 
-export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove, onMoveIndexChange, onTurnChange }: ChessBoardProps) {
+export interface ChessBoardRef {
+  playSolution: () => void;
+  getNextMoveFromSquare: () => string | null;
+}
+
+const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onComplete, onProgress, onWrongMove, onMoveIndexChange, onTurnChange, highlightedSquare }, ref) => {
   const [mounted, setMounted] = useState(false);
   const [game, setGame] = useState<Chess | null>(null);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
@@ -132,6 +138,60 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
       }, 1000); // 1 second delay to show animation
     }
   }, [puzzle, onProgress]);
+
+  // Expose methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    // Get the "from" square of the next expected move (for hint highlighting)
+    getNextMoveFromSquare: () => {
+      if (!puzzle || currentMoveIndex < 0) return null;
+      const nextMoveIndex = currentMoveIndex + 1;
+      if (nextMoveIndex >= puzzle.moves.length) return null;
+      const nextMove = puzzle.moves[nextMoveIndex];
+      // Move format is like "d1d3" - first 2 chars are the "from" square
+      return nextMove.substring(0, 2);
+    },
+    // Auto-play all remaining solution moves
+    playSolution: () => {
+      if (!game || !puzzle) return;
+      
+      let gameCopy = new Chess(game.fen());
+      let moveIdx = currentMoveIndex + 1;
+      
+      const playNextMove = () => {
+        if (moveIdx >= puzzle.moves.length) {
+          // All moves played, trigger completion
+          setTimeout(() => {
+            onComplete?.();
+          }, 500);
+          return;
+        }
+        
+        const move = puzzle.moves[moveIdx];
+        try {
+          gameCopy.move(move);
+          playMoveSound(true);
+          setBoardPosition(gameCopy.fen());
+          setCurrentMoveIndex(moveIdx);
+          onMoveIndexChange?.(moveIdx);
+          setGame(new Chess(gameCopy.fen()));
+          
+          // Update progress
+          const totalPlayerMoves = Math.ceil((puzzle.moves.length - 1) / 2);
+          const playerMovesCompleted = Math.floor(moveIdx / 2);
+          onProgress?.(Math.min(playerMovesCompleted, totalPlayerMoves));
+          
+          moveIdx++;
+          // Continue to next move after delay
+          setTimeout(playNextMove, 600);
+        } catch (error) {
+          console.error('Error playing solution move:', error);
+        }
+      };
+      
+      // Start playing moves
+      playNextMove();
+    },
+  }), [game, puzzle, currentMoveIndex, onComplete, onProgress, onMoveIndexChange, playMoveSound]);
 
   const onPieceDrop = ({
     piece,
@@ -426,6 +486,15 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
 
   if (!mounted) return null;
 
+  // Build highlight styles for hint
+  const hintSquareStyles: Record<string, React.CSSProperties> = {};
+  if (highlightedSquare) {
+    hintSquareStyles[highlightedSquare] = {
+      background: "rgba(255, 200, 0, 0.7)",
+      boxShadow: "inset 0 0 0 4px rgba(255, 150, 0, 1)",
+    };
+  }
+
   return (
     <div className={`inline-block border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] ${isAnimatingWrongMove ? 'animate-pulse' : ''}`}>
       <div 
@@ -442,7 +511,7 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
             boardStyle: {
               borderRadius: "0px",
             },
-            squareStyles: { ...optionSquares, ...wrongMoveSquares },
+            squareStyles: { ...optionSquares, ...wrongMoveSquares, ...hintSquareStyles },
             lightSquareStyle: { backgroundColor: "#EEEED2" },
             darkSquareStyle: { backgroundColor: "#739552" },
             id: "click-to-move",
@@ -451,4 +520,8 @@ export default function ChessBoard({ puzzle, onComplete, onProgress, onWrongMove
       </div>
     </div>
   );
-}
+});
+
+ChessBoard.displayName = "ChessBoard";
+
+export default ChessBoard;
