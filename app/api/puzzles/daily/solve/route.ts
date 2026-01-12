@@ -12,9 +12,9 @@ export async function POST(request: NextRequest) {
     
     const user = await authenticateWalletUser(request);
     const body = await request.json();
-    const { puzzleId, attempts } = body;
+    const { puzzleId, mistakes = 0, usedHint = false, usedSolution = false, rating = 1200 } = body;
 
-    if (!puzzleId || typeof attempts !== "number") {
+    if (!puzzleId) {
       return NextResponse.json(
         { message: "Invalid request body" },
         { status: 400 }
@@ -24,12 +24,14 @@ export async function POST(request: NextRequest) {
     const puzzleService = new PuzzleService();
     const userService = new UserService();
 
+    const points = calculatePoints({ rating, mistakes, usedHint, usedSolution });
+
     const userPuzzleData: Partial<UserPuzzle> = {
       userWalletAddress: user.walletAddress,
       puzzleId,
       completed: true,
-      attempts,
-      points: calculatePoints(attempts),
+      attempts: mistakes + 1,
+      points,
       solvedAt: new Date(),
     };
 
