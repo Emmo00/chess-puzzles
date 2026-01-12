@@ -335,12 +335,6 @@ export default function SolvePuzzlesPage() {
                   {solutionUsed ? "SOLUTION USED" : "SHOW SOLUTION"}
                 </button>
               </div>
-
-              {showHint && !solutionUsed && (
-                <div className="bg-yellow-200 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] p-3 text-center">
-                  <div className="font-black text-sm text-black">💡 PIECE TO MOVE IS HIGHLIGHTED</div>
-                </div>
-              )}
             </div>
           </>
         )}
