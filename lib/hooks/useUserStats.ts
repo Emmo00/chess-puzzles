@@ -31,7 +31,7 @@ export function useUserStats() {
     setError(null)
 
     try {
-      const response = await fetch(`/api/users/me?walletAddress=${address}`, {
+      const response = await fetch(`/api/users/streak?walletAddress=${address}`, {
         headers: {
           'x-wallet-address': address,
         },

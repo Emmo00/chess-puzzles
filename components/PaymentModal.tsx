@@ -137,28 +137,6 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                 </button>
               </div>
 
-              {/* Premium Option */}
-              <div className="bg-green-400 border-4 border-black p-4 shadow-[6px_6px_0px_rgba(0,0,0,1)] transform -rotate-1">
-                <div className="bg-yellow-300 border-2 border-black px-2 py-1 inline-block mb-2 transform rotate-2">
-                  <span className="font-black text-xs uppercase">👑 Best Value!</span>
-                </div>
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-black text-lg uppercase text-black">💎 Premium</h3>
-                  <span className="bg-black text-green-400 px-3 py-1 font-black text-xl border-2 border-green-400">
-                    $1.00
-                  </span>
-                </div>
-                <p className="text-black font-bold text-sm mb-4 uppercase tracking-wide">
-                  🚀 Unlimited for 1 Month!
-                </p>
-                <button
-                  onClick={() => handlePayment(PaymentType.PREMIUM)}
-                  className="w-full bg-black text-green-400 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-green-400 hover:bg-gray-800 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1"
-                >
-                  📱 PAY $1.00 cUSD
-                </button>
-              </div>
-
               {/* Footer Info */}
               <div className="bg-yellow-200 border-2 border-black p-3 transform rotate-1 mt-4">
                 <p className="text-xs font-bold text-black uppercase tracking-wide text-center">
@@ -179,9 +157,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                   {isPaymentPending ? '⚡ Processing...' : '🔄 Confirming...'}
                 </h3>
                 <p className="font-bold text-black text-sm uppercase tracking-wide">
-                  {selectedPayment === PaymentType.DAILY_ACCESS 
-                    ? '💰 Paying $0.10 cUSD' 
-                    : '💰 Paying $1.00 cUSD'}
+                  💰 Paying $0.10 cUSD
                 </p>
                 {transactionHash && (
                   <div className="bg-black text-purple-400 p-2 mt-4 border-2 border-purple-400 text-xs font-mono break-all">

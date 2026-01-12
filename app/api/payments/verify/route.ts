@@ -130,11 +130,8 @@ export async function POST(request: NextRequest) {
 
     console.log("Using cUSD address:", cusdAddress);
 
-    // Expected amounts for cUSD (18 decimals)
-    const expectedAmount =
-      paymentType === PaymentType.DAILY_ACCESS
-        ? "100000000000000000" // 0.1 cUSD
-        : "1000000000000000000"; // 1.0 cUSD
+    // Expected amount for cUSD (18 decimals)
+    const expectedAmount = "100000000000000000"; // 0.1 cUSD for daily access
 
     // For ERC20 transfers, we need to check the logs
     // Transfer event signature: keccak256("Transfer(address,address,uint256)") = 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
@@ -204,13 +201,8 @@ export async function POST(request: NextRequest) {
 
     console.log("Transaction verification successful!");
 
-    // Calculate expiry for premium payments
-    const expiresAt =
-      paymentType === PaymentType.PREMIUM
-        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-        : paymentType === PaymentType.DAILY_ACCESS
-        ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
-        : undefined;
+    // Calculate expiry for daily access payments
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     // Save payment to database
     const payment = new Payment({

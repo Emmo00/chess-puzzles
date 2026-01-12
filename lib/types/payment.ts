@@ -1,6 +1,4 @@
 export interface PaymentStatus {
-  hasPremium: boolean;
-  premiumExpiresAt?: string;
   hasDailyAccess: boolean;
   dailyAccessDate?: string;
 }
@@ -15,8 +13,7 @@ export interface PaymentVerification {
 }
 
 export enum PaymentType {
-  DAILY_ACCESS = "daily_access",
-  PREMIUM = "premium"
+  DAILY_ACCESS = "daily_access"
 }
 
 export interface UserPaymentData {
@@ -26,5 +23,5 @@ export interface UserPaymentData {
   amount: string;
   chainId: number;
   createdAt: string;
-  expiresAt?: string; // For premium subscriptions
+  expiresAt?: string;
 }

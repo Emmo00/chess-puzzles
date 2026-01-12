@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { UserStats, PremiumStatus } from '@/lib/types';
 
 interface StreakData {
   currentStreak: number;
@@ -9,8 +8,6 @@ interface StreakData {
   points: number;
   lastLogin: string;
   lastPuzzleDate: string | null;
-  paidPremiumExpiry: string | null;
-  premiumStatus: PremiumStatus;
 }
 
 interface UseStreakReturn {

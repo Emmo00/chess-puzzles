@@ -5,7 +5,6 @@ import { stableTokenABI } from "@celo/abis";
 // Payment amounts in cUSD (18 decimals)
 export const PAYMENT_AMOUNTS = {
   DAILY_ACCESS: parseUnits("0.1", 18), // 0.1 cUSD
-  PREMIUM: parseUnits("1", 18), // 1 cUSD
 } as const;
 
 // Use Celo's stable token ABI for cUSD

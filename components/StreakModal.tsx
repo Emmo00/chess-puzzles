@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PremiumStatus, UserStats, StreakData } from "@/lib/types";
-import { getPremiumStatus } from "@/lib/utils/premium";
+import { UserStats, StreakData } from "@/lib/types";
 import Link from "next/link";
 
 interface StreakModalProps {
@@ -16,18 +15,6 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
 
   useEffect(() => {
     if (isOpen && userStats) {
-      setIsLoading(true);
-
-      // Handle both UserStats and StreakData types
-      let status: PremiumStatus;
-      if ("premiumStatus" in userStats) {
-        // StreakData already has premiumStatus
-        status = userStats.premiumStatus;
-      } else {
-        // UserStats needs to be converted
-        status = getPremiumStatus(userStats);
-      }
-
       setIsLoading(false);
     }
   }, [isOpen, userStats]);

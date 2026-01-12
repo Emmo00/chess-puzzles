@@ -28,8 +28,7 @@ export function usePayment() {
     try {
       setPaymentType(type);
       const cusdAddress = getCUSDAddress(chainId);
-      const amount =
-        type === PaymentType.DAILY_ACCESS ? PAYMENT_AMOUNTS.DAILY_ACCESS : PAYMENT_AMOUNTS.PREMIUM;
+      const amount = PAYMENT_AMOUNTS.DAILY_ACCESS;
 
       const data = encodeFunctionData({
         abi: CUSD_ABI,

@@ -5,7 +5,7 @@ import PuzzleService from "../../../../lib/services/puzzles.service";
 import { Payment } from "../../../../lib/models/payment.model";
 import { PaymentType } from "../../../../lib/types/payment";
 
-const MAX_DAILY_FREE_PUZZLES = 3;
+const MAX_DAILY_PUZZLES = 3;
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,11 +25,6 @@ export async function POST(request: NextRequest) {
       ]
     }).sort({ createdAt: -1 });
 
-    // Check if user has premium access
-    const hasPremium = activePayments.some(payment => 
-      payment.paymentType === PaymentType.PREMIUM
-    );
-
     // Check if user has daily access
     const hasDailyAccess = activePayments.some(payment => 
       payment.paymentType === PaymentType.DAILY_ACCESS
@@ -39,12 +34,9 @@ export async function POST(request: NextRequest) {
     const count = await puzzleService.getNumberOfPuzzlesGivenToday(user.walletAddress);
     
     // Determine access limits based on payment status
-    if (hasPremium) {
-      // Premium users get unlimited puzzles
-      console.log(`Premium user ${user.walletAddress} accessing puzzle ${count + 1}`);
-    } else if (hasDailyAccess) {
+    if (hasDailyAccess) {
       // Daily access users get 3 puzzles
-      if (count >= MAX_DAILY_FREE_PUZZLES) {
+      if (count >= MAX_DAILY_PUZZLES) {
         return NextResponse.json(
           { message: "Daily access limit reached (3 puzzles total)" },
           { status: 429 }
@@ -54,7 +46,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Free users get no access
       return NextResponse.json(
-        { message: "Payment required. Purchase daily access or premium to solve puzzles." },
+        { message: "Payment required. Purchase daily access to solve puzzles." },
         { status: 403 }
       );
     }

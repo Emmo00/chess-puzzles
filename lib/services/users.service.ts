@@ -29,13 +29,13 @@ class UserService {
       walletAddress: userData.walletAddress.toLowerCase(),
       displayName: userData.displayName,
       username: userData.username,
-      total_points: 0,
-      puzzles_solved: 0,
-      current_streak: 0,
-      longest_streak: 0,
-      last_login: new Date(),
+      totalPoints: 0,
+      puzzlesSolved: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      lastLogin: new Date(),
     });
-    
+
     return {
       walletAddress: newUser.walletAddress,
       displayName: newUser.displayName,
@@ -44,16 +44,16 @@ class UserService {
   }
 
   // Backward compatibility method for FID-based queries
-  public async getUser(identifier: string | number) {
+  public async getUser(identifier: string | number): Promise<(QuickAuthUser | WalletUser) & UserStats> {
     let user;
-    if (typeof identifier === 'string') {
+    if (typeof identifier === "string") {
       // Wallet address
       user = await this.users.findOne({ walletAddress: identifier.toLowerCase() });
     } else {
       // Legacy FID
       user = await this.users.findOne({ fid: identifier });
     }
-    
+
     if (!user) {
       throw new HttpException(404, "User not found");
     }
@@ -61,14 +61,21 @@ class UserService {
   }
 
   public async updateUserStreak(identifier: string | number) {
-    const user = await this.getUser(identifier);
+    let query;
+    if (typeof identifier === "string") {
+      query = { walletAddress: identifier.toLowerCase() };
+    } else {
+      query = { fid: identifier };
+    }
+
+    const user = await this.users.findOne(query);
     if (!user) {
       throw new HttpException(404, "User not found");
     }
 
     // Update the user's streak
     const today = new Date();
-    const lastLogin = new Date(user.lastLoggedIn);
+    const lastLogin = new Date(user.lastLogin);
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
 
@@ -92,25 +99,22 @@ class UserService {
     return user;
   }
 
-  public async updateUserStats(
-    identifier: string | number,
-    stats: Partial<UserStats>
-  ): Promise<WalletUser | null> {
+  public async updateUserStats(identifier: string | number, stats: Partial<UserStats>): Promise<WalletUser | null> {
     let query;
-    if (typeof identifier === 'string') {
+    if (typeof identifier === "string") {
       query = { walletAddress: identifier.toLowerCase() };
     } else {
       query = { fid: identifier };
     }
-    
+
     const updatedUser = await this.users.findOneAndUpdate(query, stats, { new: true });
     if (!updatedUser) {
       throw new HttpException(404, "User not found");
     }
 
     return {
-      walletAddress: updatedUser.walletAddress || '',
-      displayName: updatedUser.displayName || '',
+      walletAddress: updatedUser.walletAddress || "",
+      displayName: updatedUser.displayName || "",
       username: updatedUser.username,
     };
   }

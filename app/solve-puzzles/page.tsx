@@ -14,9 +14,7 @@ export default function SolvePuzzlesPage() {
   const [mounted, setMounted] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<{
     hasAccess: boolean;
-    hasPremium: boolean;
     hasDailyAccess?: boolean;
-    hasStreakPremium?: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [attemptCount, setAttemptCount] = useState(1);
@@ -218,12 +216,11 @@ export default function SolvePuzzlesPage() {
 
   // Calculate limits based on payment status
   const getMaxDailyPuzzles = () => {
-    if (paymentStatus?.hasPremium) return Infinity;
     return 5;
   };
 
   const MAX_DAILY_PUZZLES = getMaxDailyPuzzles();
-  const isAccessExhausted = solvedPuzzlesCount >= MAX_DAILY_PUZZLES && MAX_DAILY_PUZZLES !== Infinity;
+  const isAccessExhausted = solvedPuzzlesCount >= MAX_DAILY_PUZZLES;
 
   return (
     <div className="min-h-screen w-full bg-white text-black flex flex-col">
@@ -238,16 +235,12 @@ export default function SolvePuzzlesPage() {
         <div className="flex items-center gap-3">
           <div
             className={`px-4 py-2 font-black text-sm border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${
-              paymentStatus?.hasPremium || paymentStatus?.hasStreakPremium
-                ? "bg-green-400 text-black"
-                : paymentStatus?.hasDailyAccess
+              paymentStatus?.hasDailyAccess
                 ? "bg-yellow-400 text-black"
                 : "bg-cyan-400 text-black"
             }`}
           >
-            {paymentStatus?.hasPremium || paymentStatus?.hasStreakPremium
-              ? "🏆 PREMIUM"
-              : `⚡ PUZZLES (${solvedPuzzlesCount}/${MAX_DAILY_PUZZLES})`}
+            ⚡ PUZZLES ({solvedPuzzlesCount}/{MAX_DAILY_PUZZLES})
           </div>
         </div>
       </header>

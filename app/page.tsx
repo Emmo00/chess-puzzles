@@ -17,7 +17,7 @@ export default function Home() {
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<{
     hasAccess: boolean;
-    hasPremium: boolean;
+    hasDailyAccess: boolean;
   } | null>(null);
   const { address, isConnected } = useAccount();
   const { userStats } = useUserStats();
@@ -60,15 +60,15 @@ export default function Home() {
 
   if (!mounted) return null;
 
-  // Determine access status combining paid premium and free premium days
-  const hasPremiumAccess = streakData?.premiumStatus?.isActive || paymentStatus?.hasAccess;
+  // Determine access status
+  const hasAccess = paymentStatus?.hasAccess;
 
   const ctaBlocks = [
     {
       id: 1,
       title: "Solve Puzzles",
       subtitle: "Solve & Earn Points",
-      accentColor: hasPremiumAccess ? "bg-green-400" : "bg-cyan-400",
+      accentColor: hasAccess ? "bg-green-400" : "bg-cyan-400",
       icon: "▲",
       href: "/solve-puzzles",
     },
@@ -105,7 +105,6 @@ export default function Home() {
           <StreakBadge 
             days={streakData?.currentStreak || userStats?.currentStreak || 0} 
             onClick={handleStreakClick}
-            isPremium={streakData?.premiumStatus?.isActive || false}
           />
         </header>
 

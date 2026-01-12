@@ -13,15 +13,12 @@ export interface WalletUser {
 }
 
 export interface UserStats {
-  points: number;
+  totalPoints: number;
   currentStreak: number;
-  lastLoggedIn: Date;
+  lastLogin: Date;
   longestStreak: number;
   totalPuzzlesSolved: number;
-  // Premium and streak monetization fields
   lastPuzzleDate: string | null;
-  paidPremiumExpiry: string | null;
-  isPremiumActive?: boolean; // Derived field
 }
 
 export interface UserPuzzle {
@@ -44,19 +41,6 @@ export interface Puzzle {
   themes: string[];
 }
 
-// Premium status for UI
-export interface PremiumStatus {
-  isActive: boolean;
-  paidExpiryDate: string | null;
-}
-
-// Premium status for UI
-export interface PremiumStatus {
-  isActive: boolean;
-  paidExpiryDate: string | null;
-  nextRewardAt?: number;
-}
-
 export interface StreakModalState {
   isOpen: boolean;
   isLoading: boolean;
@@ -71,8 +55,6 @@ export interface StreakData {
   points: number;
   lastLogin: string;
   lastPuzzleDate: string | null;
-  paidPremiumExpiry: string | null;
-  premiumStatus: PremiumStatus;
 }
 
 // Extended NextRequest interface

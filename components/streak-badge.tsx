@@ -5,10 +5,9 @@ import { useEffect, useState } from "react"
 interface StreakBadgeProps {
   days: number
   onClick?: () => void
-  isPremium?: boolean
 }
 
-export default function StreakBadge({ days, onClick, isPremium }: StreakBadgeProps) {
+export default function StreakBadge({ days, onClick }: StreakBadgeProps) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -33,9 +32,7 @@ export default function StreakBadge({ days, onClick, isPremium }: StreakBadgePro
     >
       <button
         onClick={onClick}
-        className={`border-4 border-black px-4 py-2 font-black text-sm tracking-wider uppercase transition-all duration-200 transform hover:scale-105 hover:rotate-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] ${
-          isPremium ? 'bg-yellow-400 text-black' : 'bg-white text-black'
-        }`}
+        className="border-4 border-black px-4 py-2 font-black text-sm tracking-wider uppercase transition-all duration-200 transform hover:scale-105 hover:rotate-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] bg-white text-black"
       >
         <div className="flex items-center gap-2">
           <span className="text-lg">{getStreakEmoji()}</span>
@@ -43,9 +40,6 @@ export default function StreakBadge({ days, onClick, isPremium }: StreakBadgePro
             <span className="text-xs leading-none">STREAK:</span>
             <span className="text-lg font-black leading-none">{days}</span>
           </div>
-          {isPremium && (
-            <span className="text-xs">👑</span>
-          )}
         </div>
       </button>
       <style jsx>{`

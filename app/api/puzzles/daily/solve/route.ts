@@ -38,13 +38,13 @@ export async function POST(request: NextRequest) {
     if (updatedUserPuzzle) {
       // Update user stats
       const currentUser = await userService.getUser(user.walletAddress);
-      const newPoints = currentUser.points + userPuzzleData.points!;
+      const newPoints = currentUser.totalPoints + userPuzzleData.points!;
       const newTotalSolved = currentUser.totalPuzzlesSolved + 1;
 
       await userService.updateUserStats(user.walletAddress, {
-        points: newPoints,
+        totalPoints: newPoints,
         totalPuzzlesSolved: newTotalSolved,
-        lastLoggedIn: new Date(),
+        lastLogin: new Date(),
         lastPuzzleDate: new Date().toISOString(),
       });
 
