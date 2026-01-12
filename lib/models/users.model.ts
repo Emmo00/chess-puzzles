@@ -1,9 +1,8 @@
 import * as mongoose from "mongoose";
-import { QuickAuthUser, WalletUser, UserStats } from "../types";
+import { WalletUser, UserStats } from "../types";
 import { unique } from "next/dist/build/utils";
 
 const userSchema = new mongoose.Schema({
-  fid: { type: Number, sparse: true , unique: true},
   walletAddress: { type: String, lowercase: true, unique: true, sparse: true },
   username: { type: String },
   displayName: { type: String, required: true },
@@ -17,9 +16,9 @@ const userSchema = new mongoose.Schema({
   lastPuzzleDate: { type: String, default: null },
 });
 
-// Create compound unique index to ensure either fid OR walletAddress is unique
-userSchema.index({ fid: 1 , walletAddress: 1});
+userSchema.index({ walletAddress: 1 });
 
-const userModel = mongoose.models?.User || mongoose.model<(QuickAuthUser | WalletUser) & UserStats & mongoose.Document>("User", userSchema);
+const userModel =
+  mongoose.models?.User || mongoose.model<WalletUser & UserStats & mongoose.Document>("User", userSchema);
 
 export default userModel;

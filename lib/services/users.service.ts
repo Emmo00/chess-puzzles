@@ -1,4 +1,4 @@
-import { QuickAuthUser, WalletUser, UserStats } from "../types";
+import { WalletUser, UserStats } from "../types";
 import userModel from "../models/users.model";
 
 export class HttpException extends Error {
@@ -44,15 +44,8 @@ class UserService {
   }
 
   // Backward compatibility method for FID-based queries
-  public async getUser(identifier: string | number): Promise<(QuickAuthUser | WalletUser) & UserStats> {
-    let user;
-    if (typeof identifier === "string") {
-      // Wallet address
-      user = await this.users.findOne({ walletAddress: identifier.toLowerCase() });
-    } else {
-      // Legacy FID
-      user = await this.users.findOne({ fid: identifier });
-    }
+  public async getUser(identifier: string): Promise<WalletUser & UserStats> {
+    let user = await this.users.findOne({ walletAddress: identifier.toLowerCase() });
 
     if (!user) {
       throw new HttpException(404, "User not found");
@@ -60,13 +53,8 @@ class UserService {
     return user;
   }
 
-  public async updateUserStreak(identifier: string | number) {
-    let query;
-    if (typeof identifier === "string") {
-      query = { walletAddress: identifier.toLowerCase() };
-    } else {
-      query = { fid: identifier };
-    }
+  public async updateUserStreak(identifier: string) {
+    let query = { walletAddress: identifier.toLowerCase() };
 
     const user = await this.users.findOne(query);
     if (!user) {
@@ -99,13 +87,8 @@ class UserService {
     return user;
   }
 
-  public async updateUserStats(identifier: string | number, stats: Partial<UserStats>): Promise<WalletUser | null> {
-    let query;
-    if (typeof identifier === "string") {
-      query = { walletAddress: identifier.toLowerCase() };
-    } else {
-      query = { fid: identifier };
-    }
+  public async updateUserStats(identifier: string, stats: Partial<UserStats>): Promise<WalletUser | null> {
+    let query = { walletAddress: identifier.toLowerCase() };
 
     const updatedUser = await this.users.findOneAndUpdate(query, stats, { new: true });
     if (!updatedUser) {

@@ -1,10 +1,3 @@
-export interface QuickAuthUser {
-  fid: number;
-  username?: string;
-  displayName?: string;
-  pfpUrl?: string;
-}
-
 // New wallet-based user interface
 export interface WalletUser {
   walletAddress: string;

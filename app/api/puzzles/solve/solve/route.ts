@@ -39,10 +39,26 @@ export async function POST(request: NextRequest) {
     const updatedUserPuzzle = await puzzleService.updateUserPuzzle(userPuzzleData);
 
     if (updatedUserPuzzle) {
-      // Update user stats
-      const currentUser = await userService.getUser(user.walletAddress);
-      const newPoints = currentUser.totalPoints + userPuzzleData.points!;
-      const newTotalSolved = currentUser.totalPuzzlesSolved + 1;
+      // Get or create user
+      let currentUser;
+      try {
+        currentUser = await userService.getUser(user.walletAddress);
+      } catch (error: any) {
+        // User doesn't exist, create them
+        if (error.status === 404) {
+          await userService.createUser({
+            walletAddress: user.walletAddress,
+            displayName: user.displayName || user.walletAddress.slice(0, 8),
+          });
+          // Fetch the newly created user to get full stats
+          currentUser = await userService.getUser(user.walletAddress);
+        } else {
+          throw error;
+        }
+      }
+
+      const newPoints = (currentUser.totalPoints || 0) + userPuzzleData.points!;
+      const newTotalSolved = (currentUser.totalPuzzlesSolved || 0) + 1;
 
       await userService.updateUserStats(user.walletAddress, {
         totalPoints: newPoints,
