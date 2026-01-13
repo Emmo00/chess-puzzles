@@ -73,21 +73,36 @@ class UserService {
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
 
-    console.log("Last login date:", lastLogin);
-    console.log("Yesterday date:", yesterday);
-    console.log("Today date:", today);
-
     // Normalize times to midnight for comparison
-    today.setHours(0, 0, 0, 0);
-    lastLogin.setHours(0, 0, 0, 0);
-    yesterday.setHours(0, 0, 0, 0);
+    const todayMidnight = new Date(today);
+    todayMidnight.setHours(0, 0, 0, 0);
+    
+    const lastLoginMidnight = new Date(lastLogin);
+    lastLoginMidnight.setHours(0, 0, 0, 0);
+    
+    const yesterdayMidnight = new Date(yesterday);
+    yesterdayMidnight.setHours(0, 0, 0, 0);
 
-    if (lastLogin.getTime() === yesterday.getTime()) {
+    console.log("Last login date:", lastLoginMidnight);
+    console.log("Yesterday date:", yesterdayMidnight);
+    console.log("Today date:", todayMidnight);
+    console.log("Current streak before update:", user.currentStreak);
+
+    if (lastLoginMidnight.getTime() === todayMidnight.getTime()) {
+      // Already logged in today, don't change streak
+      console.log("Already logged in today, keeping streak at:", user.currentStreak);
+    } else if (lastLoginMidnight.getTime() === yesterdayMidnight.getTime()) {
+      // Logged in yesterday, increment streak
       user.currentStreak += 1;
+      console.log("Logged in yesterday, incrementing streak to:", user.currentStreak);
     } else {
+      // Missed a day or more, reset streak
       user.currentStreak = 1;
+      console.log("Missed days, resetting streak to 1");
     }
+    
     user.longestStreak = Math.max(user.longestStreak, user.currentStreak);
+    user.lastLogin = new Date(); // Update lastLogin here
     await user.save();
 
     return user;

@@ -38,6 +38,9 @@ export async function POST(request: NextRequest) {
     const updatedUserPuzzle = await puzzleService.updateUserPuzzle(userPuzzleData);
 
     if (updatedUserPuzzle) {
+      // Update streak first (this also updates lastLogin)
+      await userService.updateUserStreak(user.walletAddress);
+
       // Update user stats
       const currentUser = await userService.getUser(user.walletAddress);
       const newPoints = currentUser.totalPoints + userPuzzleData.points!;
@@ -46,12 +49,8 @@ export async function POST(request: NextRequest) {
       await userService.updateUserStats(user.walletAddress, {
         totalPoints: newPoints,
         totalPuzzlesSolved: newTotalSolved,
-        lastLogin: new Date(),
         lastPuzzleDate: new Date().toISOString(),
       });
-
-      // Update streak
-      await userService.updateUserStreak(user.walletAddress);
     }
 
     return NextResponse.json({
