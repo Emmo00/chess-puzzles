@@ -70,13 +70,13 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-black">Current Streak:</span>
                     <span className="bg-black text-orange-300 px-3 py-1 font-black text-xl">
-                      {userStats?.currentStreak || 0} days
+                      {userStats?.currentStreak || 0} {userStats?.currentStreak === 1 ? "day" : "days"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-black">Longest Streak:</span>
                     <span className="font-black text-black">
-                      {userStats?.longestStreak || 0} days
+                      {userStats?.longestStreak || 0} {userStats?.longestStreak === 1 ? "day" : "days"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
