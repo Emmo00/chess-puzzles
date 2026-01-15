@@ -75,7 +75,7 @@ export default function Home() {
     {
       id: 3,
       title: "Leaderboard",
-      subtitle: "$CHESS Rewards",
+      subtitle: "Top Players",
       accentColor: "bg-purple-400",
       icon: "★",
       href: "/leaderboard",
