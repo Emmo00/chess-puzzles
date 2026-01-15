@@ -116,15 +116,15 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
         <div className="border-t-4 border-black bg-gray-50 px-4 py-3 text-xs text-gray-600 space-y-1 text-center shrink-0">
           <div className="flex justify-center gap-4">
             <Link href="/terms-of-service" className="hover:text-black transition-colors font-bold">
-              terms
+              Terms
             </Link>
             <span>·</span>
             <Link href="/privacy-policy" className="hover:text-black transition-colors font-bold">
-              privacy
+              Privacy
             </Link>
             <span>·</span>
             <a href="https://t.me/+qffqunjhX3c4OGVk" target="_blank" rel="noopener noreferrer" className="hover:text-black transition-colors font-bold">
-              support
+              Support
             </a>
           </div>
           <p className="text-xs">Not operated by Opera or MiniPay</p>
