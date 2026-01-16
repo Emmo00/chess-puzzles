@@ -8,6 +8,8 @@ import ChessBoard, { ChessBoardRef } from "../../components/chess-board";
 import { useUserStats } from "../../lib/hooks/useUserStats";
 import { Puzzle } from "../../lib/types";
 
+type HintStage = 'none' | 'piece' | 'move';
+
 export default function SolvePuzzlesPage() {
   const [mounted, setMounted] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<{
@@ -27,13 +29,21 @@ export default function SolvePuzzlesPage() {
     timeElapsed: number;
     mistakes: number;
     points: number;
-    usedHint: boolean;
-    usedSolution: boolean;
+    hintCount: number;
   } | null>(null);
-  const [showHint, setShowHint] = useState(false);
-  const [hintUsed, setHintUsed] = useState(false);
-  const [solutionUsed, setSolutionUsed] = useState(false);
-  const [highlightedSquare, setHighlightedSquare] = useState<string | null>(null);
+  
+  // Hint state
+  const [hintStage, setHintStage] = useState<HintStage>('none');
+  const [hintCount, setHintCount] = useState(0);
+  const [highlightedSquares, setHighlightedSquares] = useState<{ from?: string; to?: string } | null>(null);
+  
+  // History navigation state
+  const [canGoBack, setCanGoBack] = useState(false);
+  const [canGoForward, setCanGoForward] = useState(false);
+  
+  // Wrong move state
+  const [isWrongMoveActive, setIsWrongMoveActive] = useState(false);
+  
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [currentTurn, setCurrentTurn] = useState<"w" | "b">("w");
 
@@ -156,8 +166,7 @@ export default function SolvePuzzlesPage() {
         body: JSON.stringify({
           puzzleId: currentPuzzle.puzzleid,
           mistakes: mistakeCount,
-          usedHint: hintUsed,
-          usedSolution: solutionUsed,
+          hintCount: hintCount,
           rating: currentPuzzle.rating,
         }),
       });
@@ -168,8 +177,7 @@ export default function SolvePuzzlesPage() {
           timeElapsed: finalElapsedTime,
           mistakes: mistakeCount,
           points: result.points,
-          usedHint: hintUsed,
-          usedSolution: solutionUsed,
+          hintCount: hintCount,
         });
       }
     } catch (error) {
@@ -178,31 +186,51 @@ export default function SolvePuzzlesPage() {
   };
 
   const handleShowHint = () => {
-    if (!hintUsed) {
-      setHintUsed(true);
+    if (hintStage === 'none') {
+      // First click: show piece to move
+      setHintStage('piece');
+      const nextMove = chessBoardRef.current?.getNextMove();
+      if (nextMove) {
+        setHighlightedSquares({ from: nextMove.from });
+      }
+    } else if (hintStage === 'piece') {
+      // Second click: show target square too (and count this as using a hint)
+      setHintStage('move');
+      setHintCount(prev => prev + 1);
+      const nextMove = chessBoardRef.current?.getNextMove();
+      if (nextMove) {
+        setHighlightedSquares({ from: nextMove.from, to: nextMove.to });
+      }
     }
-    
-    if (showHint) {
-      // Hide hint - remove highlight
-      setShowHint(false);
-      setHighlightedSquare(null);
-    } else {
-      // Show hint - highlight the next piece to move
-      setShowHint(true);
-      const fromSquare = chessBoardRef.current?.getNextMoveFromSquare();
-      setHighlightedSquare(fromSquare || null);
-    }
+    // After 'move' stage, button becomes disabled until next correct move
   };
 
-  const handleShowSolution = () => {
-    if (solutionUsed) return; // Already used, don't allow again
-    
-    setSolutionUsed(true);
-    setShowHint(false);
-    setHighlightedSquare(null);
-    
-    // Auto-play all remaining moves
-    chessBoardRef.current?.playSolution();
+  const handleBack = () => {
+    chessBoardRef.current?.goBack();
+  };
+
+  const handleForward = () => {
+    chessBoardRef.current?.goForward();
+  };
+
+  const handleRetry = () => {
+    chessBoardRef.current?.undoWrongMove();
+  };
+
+  const handleHistoryChange = (back: boolean, forward: boolean) => {
+    setCanGoBack(back);
+    setCanGoForward(forward);
+  };
+
+  const handleWrongMoveStateChange = (isWrongMove: boolean) => {
+    setIsWrongMoveActive(isWrongMove);
+  };
+
+  const handleProgress = (progress: number) => {
+    setPuzzleProgress(progress);
+    // Reset hint stage when a correct move is made
+    setHintStage('none');
+    setHighlightedSquares(null);
   };
 
   const handleStartNewPuzzle = () => {
@@ -213,10 +241,12 @@ export default function SolvePuzzlesPage() {
     setPuzzleProgress(0);
     setStartTime(null);
     setElapsedTime(0);
-    setShowHint(false);
-    setHintUsed(false);
-    setSolutionUsed(false);
-    setHighlightedSquare(null);
+    setHintStage('none');
+    setHintCount(0);
+    setHighlightedSquares(null);
+    setCanGoBack(false);
+    setCanGoForward(false);
+    setIsWrongMoveActive(false);
     setCurrentMoveIndex(0);
     
     // Immediately fetch a new puzzle
@@ -276,8 +306,11 @@ export default function SolvePuzzlesPage() {
             <div className="space-y-2 text-lg font-black text-black">
               <div className="bg-white border-2 border-black p-2">TIME: {formatTime(completionStats.timeElapsed)}</div>
               <div className="bg-white border-2 border-black p-2">MISTAKES: {completionStats.mistakes}</div>
-              {completionStats.usedHint && !completionStats.usedSolution && <div className="bg-yellow-200 border-2 border-black p-2">HINT USED 💡</div>}
-              {completionStats.usedSolution && <div className="bg-purple-200 border-2 border-black p-2">SOLUTION USED 🔮</div>}
+              {completionStats.hintCount > 0 && (
+                <div className="bg-yellow-200 border-2 border-black p-2">
+                  HINTS USED: {completionStats.hintCount} 💡
+                </div>
+              )}
               <div className="bg-white border-2 border-black p-2">POINTS: +{completionStats.points}</div>
             </div>
             <button
@@ -309,32 +342,77 @@ export default function SolvePuzzlesPage() {
                 ref={chessBoardRef}
                 puzzle={currentPuzzle}
                 onComplete={handlePuzzleComplete}
-                onProgress={setPuzzleProgress}
+                onProgress={handleProgress}
                 onWrongMove={() => setMistakeCount((prev) => prev + 1)}
                 onMoveIndexChange={setCurrentMoveIndex}
                 onTurnChange={setCurrentTurn}
-                highlightedSquare={highlightedSquare}
+                onWrongMoveStateChange={handleWrongMoveStateChange}
+                onHistoryChange={handleHistoryChange}
+                highlightedSquares={highlightedSquares}
               />
             </div>
             <div className="w-full max-w-xs shrink-0 space-y-3">
-              {/* Hint Section */}
+              {/* Navigation and Hint Controls */}
               <div className="flex gap-2">
+                {/* Back Button */}
                 <button
-                  onClick={handleShowHint}
-                  className={`flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all ${
-                    hintUsed ? "bg-yellow-200" : "bg-yellow-400"
+                  onClick={handleBack}
+                  disabled={!canGoBack}
+                  className={`py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${
+                    canGoBack 
+                      ? "bg-gray-300 text-black hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px" 
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed opacity-50"
                   }`}
                 >
-                  {showHint ? "HIDE HINT" : hintUsed ? "SHOW HINT (USED)" : "SHOW HINT"}
+                  ← BACK
                 </button>
+                
+                {/* Hint/Retry Button */}
+                {isWrongMoveActive ? (
+                  <button
+                    onClick={handleRetry}
+                    className="flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all bg-red-400"
+                  >
+                    🔄 RETRY
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleShowHint}
+                    disabled={hintStage === 'move' || canGoForward}
+                    className={`flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${
+                      hintStage === 'move' || canGoForward
+                        ? "bg-yellow-200 opacity-50 cursor-not-allowed"
+                        : hintCount > 0
+                        ? "bg-yellow-200 hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px"
+                        : "bg-yellow-400 hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px"
+                    }`}
+                  >
+                    {hintStage === 'none' && `💡 SHOW HINT${hintCount > 0 ? ` (${hintCount})` : ''}`}
+                    {hintStage === 'piece' && '👆 SHOW MOVE'}
+                    {hintStage === 'move' && '✓ HINT SHOWN'}
+                  </button>
+                )}
+                
+                {/* Next Button */}
                 <button
-                  onClick={handleShowSolution}
-                  disabled={solutionUsed}
-                  className={`flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all ${solutionUsed ? "bg-purple-200 opacity-50 cursor-not-allowed" : "bg-purple-400"}`}
+                  onClick={handleForward}
+                  disabled={!canGoForward}
+                  className={`py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${
+                    canGoForward 
+                      ? "bg-gray-300 text-black hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px" 
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed opacity-50"
+                  }`}
                 >
-                  {solutionUsed ? "SOLUTION USED" : "SHOW SOLUTION"}
+                  NEXT →
                 </button>
               </div>
+              
+              {/* Hint count indicator */}
+              {hintCount > 0 && (
+                <div className="text-center text-sm font-bold text-gray-600">
+                  Hints used: {hintCount} {hintCount >= 3 ? '(0 points)' : hintCount === 2 ? '(25% points)' : '(50% points)'}
+                </div>
+              )}
             </div>
           </>
         )}

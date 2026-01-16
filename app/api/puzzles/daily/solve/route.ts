@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     
     const user = await authenticateWalletUser(request);
     const body = await request.json();
-    const { puzzleId, mistakes = 0, usedHint = false, usedSolution = false, rating = 1200 } = body;
+    const { puzzleId, mistakes = 0, hintCount = 0, rating = 1200 } = body;
 
     if (!puzzleId) {
       return NextResponse.json(
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const puzzleService = new PuzzleService();
     const userService = new UserService();
 
-    const points = calculatePoints({ rating, mistakes, usedHint, usedSolution });
+    const points = calculatePoints({ rating, mistakes, hintCount });
 
     const userPuzzleData: Partial<UserPuzzle> = {
       userWalletAddress: user.walletAddress,

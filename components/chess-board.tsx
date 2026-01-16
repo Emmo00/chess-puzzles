@@ -12,15 +12,20 @@ interface ChessBoardProps {
   onWrongMove?: () => void;
   onMoveIndexChange?: (moveIndex: number) => void;
   onTurnChange?: (turn: 'w' | 'b') => void;
-  highlightedSquare?: string | null;
+  onWrongMoveStateChange?: (isWrongMove: boolean) => void;
+  onHistoryChange?: (canGoBack: boolean, canGoForward: boolean) => void;
+  highlightedSquares?: { from?: string; to?: string } | null;
 }
 
 export interface ChessBoardRef {
-  playSolution: () => void;
-  getNextMoveFromSquare: () => string | null;
+  getNextMove: () => { from: string; to: string } | null;
+  goBack: () => void;
+  goForward: () => void;
+  undoWrongMove: () => void;
+  isAtLatestPosition: () => boolean;
 }
 
-const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onComplete, onProgress, onWrongMove, onMoveIndexChange, onTurnChange, highlightedSquare }, ref) => {
+const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onComplete, onProgress, onWrongMove, onMoveIndexChange, onTurnChange, onWrongMoveStateChange, onHistoryChange, highlightedSquares }, ref) => {
   const [mounted, setMounted] = useState(false);
   const [game, setGame] = useState<Chess | null>(null);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
@@ -29,8 +34,12 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
   const [optionSquares, setOptionSquares] = useState<Record<string, React.CSSProperties>>({});
   const [moveFrom, setMoveFrom] = useState<string>("");
   const [wrongMoveSquares, setWrongMoveSquares] = useState<Record<string, React.CSSProperties>>({});
-  const [isAnimatingWrongMove, setIsAnimatingWrongMove] = useState(false);
+  const [isWrongMoveActive, setIsWrongMoveActive] = useState(false);
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  
+  // Move history for back/forward navigation
+  const [moveHistory, setMoveHistory] = useState<{ fen: string; moveIndex: number }[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
   useEffect(() => {
     setMounted(true);
@@ -108,90 +117,134 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
       // Load the FEN position (before opponent's move)
       chess.load(puzzle.fen);
 
+      // Initialize history with starting position
+      const initialHistory = [{ fen: chess.fen(), moveIndex: -1 }];
+      setMoveHistory(initialHistory);
+      setHistoryIndex(0);
+
       // Set initial position to show the FEN state
       setBoardPosition(chess.fen());
       setGame(chess);
       setCurrentMoveIndex(-1); // -1 means we haven't applied the first move yet
       setIsPlayerTurn(false);
-      onProgress?.(0);
-      
-      // Notify parent about initial turn
-      if (onTurnChange) {
-        onTurnChange(chess.turn());
-      }
+      setIsWrongMoveActive(false);
+      setWrongMoveSquares({});
 
       // After a timeout, apply the first move (opponent's move) to show the puzzle position
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         if (puzzle.moves.length > 0) {
           chess.move(puzzle.moves[0]);
           playMoveSound(true); // Opening move sound
           setBoardPosition(chess.fen());
           setCurrentMoveIndex(0);
-          onMoveIndexChange?.(0);
           setIsPlayerTurn(true); // Now it's player's turn
           
-          // Notify parent about turn change
-          if (onTurnChange) {
-            onTurnChange(chess.turn());
-          }
+          // Add to history
+          const newHistory = [...initialHistory, { fen: chess.fen(), moveIndex: 0 }];
+          setMoveHistory(newHistory);
+          setHistoryIndex(1);
         }
       }, 1000); // 1 second delay to show animation
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [puzzle, onProgress]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [puzzle?.puzzleid]);
+  
+  // Notify parent about state changes via separate effects
+  useEffect(() => {
+    onProgress?.(0);
+  }, [puzzle?.puzzleid]);
+  
+  useEffect(() => {
+    if (game) {
+      onTurnChange?.(game.turn());
+    }
+  }, [game, onTurnChange]);
+  
+  useEffect(() => {
+    onMoveIndexChange?.(currentMoveIndex);
+  }, [currentMoveIndex, onMoveIndexChange]);
+  
+  useEffect(() => {
+    const canBack = historyIndex > 0;
+    const canForward = historyIndex < moveHistory.length - 1;
+    onHistoryChange?.(canBack, canForward);
+  }, [historyIndex, moveHistory.length, onHistoryChange]);
+  
+  useEffect(() => {
+    onWrongMoveStateChange?.(isWrongMoveActive);
+  }, [isWrongMoveActive, onWrongMoveStateChange]);
 
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
-    // Get the "from" square of the next expected move (for hint highlighting)
-    getNextMoveFromSquare: () => {
+    // Get the next expected move (from and to squares for hint highlighting)
+    getNextMove: () => {
       if (!puzzle || currentMoveIndex < 0) return null;
       const nextMoveIndex = currentMoveIndex + 1;
       if (nextMoveIndex >= puzzle.moves.length) return null;
       const nextMove = puzzle.moves[nextMoveIndex];
-      // Move format is like "d1d3" - first 2 chars are the "from" square
-      return nextMove.substring(0, 2);
-    },
-    // Auto-play all remaining solution moves
-    playSolution: () => {
-      if (!game || !puzzle) return;
-      
-      let gameCopy = new Chess(game.fen());
-      let moveIdx = currentMoveIndex + 1;
-      
-      const playNextMove = () => {
-        if (moveIdx >= puzzle.moves.length) {
-          // All moves played, trigger completion
-          setTimeout(() => {
-            onComplete?.();
-          }, 500);
-          return;
-        }
-        
-        const move = puzzle.moves[moveIdx];
-        try {
-          gameCopy.move(move);
-          playMoveSound(true);
-          setBoardPosition(gameCopy.fen());
-          setCurrentMoveIndex(moveIdx);
-          onMoveIndexChange?.(moveIdx);
-          setGame(new Chess(gameCopy.fen()));
-          
-          // Update progress
-          const totalPlayerMoves = Math.ceil((puzzle.moves.length - 1) / 2);
-          const playerMovesCompleted = Math.floor(moveIdx / 2);
-          onProgress?.(Math.min(playerMovesCompleted, totalPlayerMoves));
-          
-          moveIdx++;
-          // Continue to next move after delay
-          setTimeout(playNextMove, 600);
-        } catch (error) {
-          console.error('Error playing solution move:', error);
-        }
+      // Move format is like "d1d3" or "e7e8q" - first 2 chars are "from", next 2 are "to"
+      return {
+        from: nextMove.substring(0, 2),
+        to: nextMove.substring(2, 4),
       };
-      
-      // Start playing moves
-      playNextMove();
     },
-  }), [game, puzzle, currentMoveIndex, onComplete, onProgress, onMoveIndexChange, playMoveSound]);
+    // Navigate back in history
+    goBack: () => {
+      if (historyIndex <= 0 || moveHistory.length === 0) return;
+      
+      const newIndex = historyIndex - 1;
+      const historyEntry = moveHistory[newIndex];
+      
+      const chess = new Chess(historyEntry.fen);
+      setGame(chess);
+      setBoardPosition(historyEntry.fen);
+      setHistoryIndex(newIndex);
+      setCurrentMoveIndex(historyEntry.moveIndex);
+      
+      // Clear any wrong move state when navigating
+      setWrongMoveSquares({});
+      setIsWrongMoveActive(false);
+    },
+    // Navigate forward in history
+    goForward: () => {
+      if (historyIndex >= moveHistory.length - 1) return;
+      
+      const newIndex = historyIndex + 1;
+      const historyEntry = moveHistory[newIndex];
+      
+      const chess = new Chess(historyEntry.fen);
+      setGame(chess);
+      setBoardPosition(historyEntry.fen);
+      setHistoryIndex(newIndex);
+      setCurrentMoveIndex(historyEntry.moveIndex);
+    },
+    // Undo wrong move (for retry)
+    undoWrongMove: () => {
+      if (!isWrongMoveActive || moveHistory.length < 2) return;
+      
+      // Go back to the position before the wrong move
+      const newHistory = moveHistory.slice(0, -1);
+      const lastEntry = newHistory[newHistory.length - 1];
+      
+      const chess = new Chess(lastEntry.fen);
+      setGame(chess);
+      setBoardPosition(lastEntry.fen);
+      setMoveHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
+      setCurrentMoveIndex(lastEntry.moveIndex);
+      
+      // Clear wrong move state
+      setWrongMoveSquares({});
+      setIsWrongMoveActive(false);
+      setIsPlayerTurn(true);
+    },
+    // Check if currently at the latest position
+    isAtLatestPosition: () => {
+      return historyIndex === moveHistory.length - 1;
+    },
+  }), [puzzle, currentMoveIndex, moveHistory, historyIndex, isWrongMoveActive]);
 
   const onPieceDrop = ({
     piece,
@@ -203,6 +256,9 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
     targetSquare: string | null;
   }) => {
     if (!game || !puzzle || !isPlayerTurn || !targetSquare) return false;
+    
+    // Don't allow moves if not at latest position or if wrong move is active
+    if (historyIndex !== moveHistory.length - 1 || isWrongMoveActive) return false;
 
     const gameCopy = new Chess(game.fen());
 
@@ -228,8 +284,12 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
             setBoardPosition(gameCopy.fen());
             const newMoveIndex = currentMoveIndex + 1;
             setCurrentMoveIndex(newMoveIndex);
-            onMoveIndexChange?.(newMoveIndex);
             setIsPlayerTurn(false);
+            
+            // Add to history
+            const newHistory = [...moveHistory, { fen: gameCopy.fen(), moveIndex: newMoveIndex }];
+            setMoveHistory(newHistory);
+            setHistoryIndex(newHistory.length - 1);
 
             // Update progress - count only player moves (odd indices after the first move)
             const totalPlayerMoves = Math.ceil((puzzle.moves.length - 1) / 2);
@@ -250,49 +310,42 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
                   playMoveSound(true); // Opponent move sound
                   setGame(gameCopy);
                   setBoardPosition(gameCopy.fen());
-                  setCurrentMoveIndex(newMoveIndex);
-                  onMoveIndexChange?.(newMoveIndex);
+                  const opponentMoveIndex = newMoveIndex + 1;
+                  setCurrentMoveIndex(opponentMoveIndex);
                   setIsPlayerTurn(true);
                   
-                  // Notify parent about turn change
-                  if (onTurnChange) {
-                    onTurnChange(gameCopy.turn());
-                  }
-                  
-                  // Notify parent about turn change
-                  if (onTurnChange) {
-                    onTurnChange(gameCopy.turn());
-                  }
+                  // Add opponent move to history
+                  const historyWithOpponent = [...newHistory, { fen: gameCopy.fen(), moveIndex: opponentMoveIndex }];
+                  setMoveHistory(historyWithOpponent);
+                  setHistoryIndex(historyWithOpponent.length - 1);
                 }
               }, 1000);
             }
 
             return true;
           } else {
-            // Wrong move! Show animation and revert
+            // Wrong move! Keep the position and show retry button
             playMoveSound(false);
-            setIsAnimatingWrongMove(true);
             setWrongMoveSquares({
               [sourceSquare]: { background: "rgba(255, 0, 0, 0.7)" },
               [targetSquare]: { background: "rgba(255, 0, 0, 0.7)" }
             });
             
-            // Temporarily show the wrong move
+            // Show the wrong move and keep it
             setGame(gameCopy);
             setBoardPosition(gameCopy.fen());
+            setIsPlayerTurn(false); // Disable further moves
+            setIsWrongMoveActive(true);
             
-            // Increase attempt count
+            // Add wrong move to history so it can be undone
+            const newHistory = [...moveHistory, { fen: gameCopy.fen(), moveIndex: currentMoveIndex }];
+            setMoveHistory(newHistory);
+            setHistoryIndex(newHistory.length - 1);
+            
+            // Notify parent about wrong move
             onWrongMove?.();
             
-            setTimeout(() => {
-              // Revert to previous position
-              setGame(game);
-              setBoardPosition(game.fen());
-              setWrongMoveSquares({});
-              setIsAnimatingWrongMove(false);
-            }, 800);
-            
-            return true; // Allow the move temporarily for animation
+            return true;
           }
         }
       }
@@ -349,6 +402,9 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
 
   function onSquareClick({ square, piece }: SquareHandlerArgs) {
     if (!game || !puzzle) return;
+    
+    // Don't allow moves if not at latest position or if wrong move is active
+    if (historyIndex !== moveHistory.length - 1 || isWrongMoveActive) return;
 
     // Initialize audio on first click (user gesture required)
     initAudioContext();
@@ -418,8 +474,12 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
             setBoardPosition(gameCopy.fen());
             const newMoveIndex = currentMoveIndex + 1;
             setCurrentMoveIndex(newMoveIndex);
-            onMoveIndexChange?.(newMoveIndex);
             setIsPlayerTurn(false);
+            
+            // Add to history
+            const newHistory = [...moveHistory, { fen: gameCopy.fen(), moveIndex: newMoveIndex }];
+            setMoveHistory(newHistory);
+            setHistoryIndex(newHistory.length - 1);
             
             // Update progress
             const totalPlayerMoves = Math.ceil((puzzle.moves.length - 1) / 2);
@@ -440,35 +500,38 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
                   playMoveSound(true); // Opponent move sound
                   setGame(gameCopy);
                   setBoardPosition(gameCopy.fen());
-                  setCurrentMoveIndex(newMoveIndex + 1);
-                  onMoveIndexChange?.(newMoveIndex + 1);
+                  const opponentMoveIndex = newMoveIndex + 1;
+                  setCurrentMoveIndex(opponentMoveIndex);
                   setIsPlayerTurn(true);
+                  
+                  // Add opponent move to history
+                  const historyWithOpponent = [...newHistory, { fen: gameCopy.fen(), moveIndex: opponentMoveIndex }];
+                  setMoveHistory(historyWithOpponent);
+                  setHistoryIndex(historyWithOpponent.length - 1);
                 }
               }, 1000);
             }
           } else {
-            // Wrong move! Show animation and revert
+            // Wrong move! Keep the position and show retry button
             playMoveSound(false);
-            setIsAnimatingWrongMove(true);
             setWrongMoveSquares({
               [moveFrom]: { background: "rgba(255, 0, 0, 0.7)" },
               [square]: { background: "rgba(255, 0, 0, 0.7)" }
             });
             
-            // Temporarily show the wrong move
+            // Show the wrong move and keep it
             setGame(gameCopy);
             setBoardPosition(gameCopy.fen());
+            setIsPlayerTurn(false); // Disable further moves
+            setIsWrongMoveActive(true);
             
-            // Increase attempt count
+            // Add wrong move to history so it can be undone
+            const newHistory = [...moveHistory, { fen: gameCopy.fen(), moveIndex: currentMoveIndex }];
+            setMoveHistory(newHistory);
+            setHistoryIndex(newHistory.length - 1);
+            
+            // Notify parent about wrong move
             onWrongMove?.();
-            
-            setTimeout(() => {
-              // Revert to previous position
-              setGame(game);
-              setBoardPosition(game.fen());
-              setWrongMoveSquares({});
-              setIsAnimatingWrongMove(false);
-            }, 800);
           }
         }
       }
@@ -486,20 +549,25 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
 
   if (!mounted) return null;
 
-  // Build highlight styles for hint
+  // Build highlight styles for hint (supports both from and to squares)
   const hintSquareStyles: Record<string, React.CSSProperties> = {};
-  if (highlightedSquare) {
-    hintSquareStyles[highlightedSquare] = {
+  if (highlightedSquares?.from) {
+    hintSquareStyles[highlightedSquares.from] = {
       background: "rgba(255, 200, 0, 0.7)",
       boxShadow: "inset 0 0 0 4px rgba(255, 150, 0, 1)",
     };
   }
+  if (highlightedSquares?.to) {
+    hintSquareStyles[highlightedSquares.to] = {
+      background: "rgba(100, 200, 100, 0.7)",
+      boxShadow: "inset 0 0 0 4px rgba(50, 150, 50, 1)",
+    };
+  }
 
   return (
-    <div className={`inline-block border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] ${isAnimatingWrongMove ? 'animate-pulse' : ''}`}>
+    <div className={`inline-block border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] ${isWrongMoveActive ? 'animate-pulse' : ''}`}>
       <div 
         style={{ width: "320px", height: "320px" }}
-        className={isAnimatingWrongMove ? 'animate-bounce' : ''}
       >
         <Chessboard
           options={{
@@ -507,7 +575,7 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
             onSquareClick,
             allowDragging: false,
             boardOrientation: "white",
-            animationDurationInMs: isAnimatingWrongMove ? 200 : 500,
+            animationDurationInMs: 500,
             boardStyle: {
               borderRadius: "0px",
             },
