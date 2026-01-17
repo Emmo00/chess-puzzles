@@ -318,7 +318,7 @@ export default function SolvePuzzlesPage() {
               ✕
             </button>
             
-            <div className="text-3xl font-black text-black mb-4 transform -rotate-2">PUZZLE SOLVED! 🎉</div>
+            <div className="text-3xl font-black text-black mb-4 transform mt-4 -rotate-2">PUZZLE SOLVED!</div>
             <div className="space-y-2 text-lg font-black text-black">
               <div className="bg-white border-2 border-black p-2">TIME: {formatTime(completionStats.timeElapsed)}</div>
               <div className="bg-white border-2 border-black p-2">MISTAKES: {completionStats.mistakes}</div>
@@ -422,7 +422,7 @@ export default function SolvePuzzlesPage() {
                     }`}
                   >
                     {hintStage === 'none' && `💡 HINT${hintCount > 0 ? ` (${hintCount})` : ''}`}
-                    {hintStage === 'piece' && '👆 SHOW MOVE'}
+                    {hintStage === 'piece' && 'SHOW MOVE'}
                     {hintStage === 'move' && '✓ HINT SHOWN'}
                   </button>
                 )}
@@ -444,7 +444,7 @@ export default function SolvePuzzlesPage() {
               {/* Hint count indicator */}
               {hintCount > 0 && !isCompleted && (
                 <div className="text-center text-sm font-bold text-gray-600">
-                  Hints used: {hintCount} {hintCount >= 3 ? '(0 points)' : hintCount === 2 ? '(25% points)' : '(50% points)'}
+                  Hints used: {hintCount} {hintCount >= 3 ? '(+0 points)' : hintCount === 2 ? '(-75% points)' : '(-50% points)'}
                 </div>
               )}
               
