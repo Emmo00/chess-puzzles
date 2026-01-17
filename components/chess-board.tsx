@@ -156,11 +156,18 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
     onProgress?.(0);
   }, [puzzle?.puzzleid]);
   
+  // Track turn based on board position (FEN contains turn info)
   useEffect(() => {
-    if (game) {
-      onTurnChange?.(game.turn());
+    if (boardPosition) {
+      // FEN format: position turn castling en-passant halfmove fullmove
+      // e.g., "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+      const fenParts = boardPosition.split(' ');
+      if (fenParts.length >= 2) {
+        const turn = fenParts[1] as 'w' | 'b';
+        onTurnChange?.(turn);
+      }
     }
-  }, [game, onTurnChange]);
+  }, [boardPosition, onTurnChange]);
   
   useEffect(() => {
     onMoveIndexChange?.(currentMoveIndex);

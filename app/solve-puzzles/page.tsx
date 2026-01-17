@@ -387,7 +387,7 @@ export default function SolvePuzzlesPage() {
                         : "bg-yellow-400 hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px"
                     }`}
                   >
-                    {hintStage === 'none' && `💡 SHOW HINT${hintCount > 0 ? ` (${hintCount})` : ''}`}
+                    {hintStage === 'none' && `💡 HINT${hintCount > 0 ? ` (${hintCount})` : ''}`}
                     {hintStage === 'piece' && '👆 SHOW MOVE'}
                     {hintStage === 'move' && '✓ HINT SHOWN'}
                   </button>
