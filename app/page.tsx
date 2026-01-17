@@ -88,6 +88,14 @@ export default function Home() {
       icon: "⚙",
       href: "/settings",
     },
+    {
+      id: 5,
+      title: "FAQ",
+      subtitle: "How It Works",
+      accentColor: "bg-yellow-400",
+      icon: "?",
+      href: "/faq",
+    },
   ];
 
   return (
@@ -121,7 +129,7 @@ export default function Home() {
           </div>
 
           {/* 4 CTA Blocks - Responsive Grid */}
-          <div className="w-full flex flex-col gap-2 mb-8 pointer-events-auto">
+          <div className="w-full flex flex-col gap-2 mb-4 pointer-events-auto">
             {ctaBlocks.map((cta) => (
               <CTABlock
                 key={cta.id}

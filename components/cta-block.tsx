@@ -26,7 +26,7 @@ export default function CTABlock({ title, subtitle, accentColor, icon, href = "#
     <span
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`w-full border-4 border-black ${accentColor} px-3 py-4 font-black text-xs uppercase tracking-wider text-black transition-all duration-200 flex flex-col items-center justify-center gap-2 cursor-pointer`}
+      className={`w-full border-4 border-black ${accentColor} px-3 py-2 font-black text-xs uppercase tracking-wider text-black transition-all duration-200 flex flex-col items-center justify-center cursor-pointer`}
       style={{
         boxShadow: isHovered
           ? "6px 6px 0px rgba(0, 0, 0, 0.3), 0px 0px 16px rgba(0, 0, 0, 0.4)"
