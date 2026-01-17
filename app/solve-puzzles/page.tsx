@@ -44,6 +44,9 @@ export default function SolvePuzzlesPage() {
   // Wrong move state
   const [isWrongMoveActive, setIsWrongMoveActive] = useState(false);
   
+  // Completion modal state
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [currentTurn, setCurrentTurn] = useState<"w" | "b">("w");
 
@@ -155,6 +158,7 @@ export default function SolvePuzzlesPage() {
 
     const finalElapsedTime = Date.now() - startTime;
     setIsCompleted(true);
+    setShowCompletionModal(true);
 
     try {
       const response = await fetch("/api/puzzles/solve/solve", {
@@ -237,6 +241,7 @@ export default function SolvePuzzlesPage() {
     setCurrentPuzzle(null);
     setIsCompleted(false);
     setCompletionStats(null);
+    setShowCompletionModal(false);
     setMistakeCount(0);
     setPuzzleProgress(0);
     setStartTime(null);
@@ -251,6 +256,10 @@ export default function SolvePuzzlesPage() {
     
     // Immediately fetch a new puzzle
     fetchPuzzle();
+  };
+
+  const handleCloseCompletionModal = () => {
+    setShowCompletionModal(false);
   };
 
   const formatTime = (ms: number) => {
@@ -297,11 +306,18 @@ export default function SolvePuzzlesPage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-6 gap-3 min-h-0">
-        {/* Show completion stats if puzzle is completed */}
-        {isCompleted && completionStats && (
-          <div className="w-full max-w-xs bg-green-400 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 text-center mb-4">
+      {/* Completion Modal */}
+      {showCompletionModal && completionStats && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-xs bg-green-400 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 text-center relative">
+            {/* Close button */}
+            <button
+              onClick={handleCloseCompletionModal}
+              className="absolute top-2 right-2 w-8 h-8 bg-white border-2 border-black font-black text-black hover:bg-gray-100 transition-colors flex items-center justify-center"
+            >
+              ✕
+            </button>
+            
             <div className="text-3xl font-black text-black mb-4 transform -rotate-2">PUZZLE SOLVED! 🎉</div>
             <div className="space-y-2 text-lg font-black text-black">
               <div className="bg-white border-2 border-black p-2">TIME: {formatTime(completionStats.timeElapsed)}</div>
@@ -313,17 +329,28 @@ export default function SolvePuzzlesPage() {
               )}
               <div className="bg-white border-2 border-black p-2">POINTS: +{completionStats.points}</div>
             </div>
-            <button
-              onClick={handleStartNewPuzzle}
-              className="mt-4 bg-black text-white px-6 py-3 font-black text-lg border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
-            >
-              NEW PUZZLE
-            </button>
+            <div className="mt-4 space-y-2">
+              <button
+                onClick={handleStartNewPuzzle}
+                className="w-full bg-black text-white px-6 py-3 font-black text-lg border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
+              >
+                NEXT PUZZLE →
+              </button>
+              <button
+                onClick={handleCloseCompletionModal}
+                className="w-full bg-white text-black px-6 py-2 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
+              >
+                ANALYZE POSITION
+              </button>
+            </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Show puzzle interface if puzzle is loaded and not completed */}
-        {currentPuzzle && !isCompleted && (
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-6 gap-3 min-h-0">
+        {/* Show puzzle interface if puzzle is loaded */}
+        {currentPuzzle && (
           <>
             {" "}
             <div className="w-full max-w-xs shrink-0">
@@ -367,8 +394,15 @@ export default function SolvePuzzlesPage() {
                   ← BACK
                 </button>
                 
-                {/* Hint/Retry Button */}
-                {isWrongMoveActive ? (
+                {/* Hint/Retry/Next Button */}
+                {isCompleted ? (
+                  <button
+                    onClick={handleStartNewPuzzle}
+                    className="flex-1 text-white py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all bg-green-600"
+                  >
+                    NEXT PUZZLE →
+                  </button>
+                ) : isWrongMoveActive ? (
                   <button
                     onClick={handleRetry}
                     className="flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all bg-red-400"
@@ -408,9 +442,16 @@ export default function SolvePuzzlesPage() {
               </div>
               
               {/* Hint count indicator */}
-              {hintCount > 0 && (
+              {hintCount > 0 && !isCompleted && (
                 <div className="text-center text-sm font-bold text-gray-600">
                   Hints used: {hintCount} {hintCount >= 3 ? '(0 points)' : hintCount === 2 ? '(25% points)' : '(50% points)'}
+                </div>
+              )}
+              
+              {/* Completed indicator */}
+              {isCompleted && (
+                <div className="text-center text-sm font-bold text-green-600">
+                  ✓ Puzzle completed! Use ← → to analyze the solution.
                 </div>
               )}
             </div>
