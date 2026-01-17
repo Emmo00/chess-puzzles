@@ -126,15 +126,11 @@ export default function LeaderboardPage() {
         <div className="w-full max-w-md">
           <div className="bg-purple-400 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
             {/* Header */}
-            <div className="bg-black text-white px-4 py-3 flex items-center justify-between font-black text-sm">
-              <div className="flex items-center gap-2">
-                <span className="w-12">RANK</span>
-                <span>PLAYER</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="w-16 text-right">PUZZLES</span>
-                <span className="w-16 text-right">POINTS</span>
-              </div>
+            <div className="bg-black text-white px-4 py-3 grid grid-cols-[3rem_1fr_4rem_4rem] gap-2 items-center font-black text-sm">
+              <span>RANK</span>
+              <span>PLAYER</span>
+              <span className="text-right">PUZZLES</span>
+              <span className="text-right">POINTS</span>
             </div>
 
             {/* Loading State */}
@@ -161,32 +157,28 @@ export default function LeaderboardPage() {
                   return (
                     <div
                       key={entry.walletAddress}
-                      className={`px-4 py-3 flex items-center justify-between ${
+                      className={`px-4 py-3 grid grid-cols-[3rem_1fr_4rem_4rem] gap-2 items-center ${
                         isCurrentUser ? "bg-cyan-300" : getRankStyle(entry.rank)
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="w-12 font-black text-black">
-                          {getRankEmoji(entry.rank)}
-                        </span>
-                        <div>
-                          <div className="font-black text-black text-sm">
-                            {entry.displayName}
-                            {isCurrentUser && " (YOU)"}
-                          </div>
-                          <div className="text-xs font-bold text-black/60">
-                            {formatAddress(entry.walletAddress)}
-                          </div>
+                      <span className="font-black text-black">
+                        {getRankEmoji(entry.rank)}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="font-black text-black text-sm truncate">
+                          {entry.displayName}
+                          {isCurrentUser && " (YOU)"}
+                        </div>
+                        <div className="text-xs font-bold text-black/60 truncate">
+                          {formatAddress(entry.walletAddress)}
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <span className="w-16 text-right font-black text-black">
-                          {entry.totalPuzzlesSolved}
-                        </span>
-                        <span className="w-16 text-right font-bold text-black/70">
-                          {entry.totalPoints}
-                        </span>
-                      </div>
+                      <span className="text-right font-black text-black">
+                        {entry.totalPuzzlesSolved}
+                      </span>
+                      <span className="text-right font-bold text-black/70">
+                        {entry.totalPoints}
+                      </span>
                     </div>
                   );
                 })}
