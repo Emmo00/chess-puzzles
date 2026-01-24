@@ -7,10 +7,10 @@ export interface PuzzleAPIResponse {
 
 export interface FetchPuzzleOptions {
   id?: string;
-  themesType?: string;
-  playerMoves?: number;
+  themesType?: "ANY" | "ALL";
+  playerMoves?: string; // Can be exact "3" or range "2-5"
   count?: number;
-  rating?: number; // Single rating value - API uses puzzle's ratingDeviation to find matches
+  rating?: string; // Can be exact "1500" or range "1200-1800"
   themes?: string[]; // Array of theme IDs
 }
 
@@ -21,18 +21,17 @@ class PuzzleAPIClient {
   constructor() {
     const { PUZZLE_API_URL, PUZZLE_API_KEY } = process.env;
 
-    if (!PUZZLE_API_URL || !PUZZLE_API_KEY) {
-      throw new HttpException(500, "Puzzle API not configured");
+    if (!PUZZLE_API_KEY) {
+      throw new HttpException(500, "Puzzle API key not configured");
     }
 
-    this.baseUrl = PUZZLE_API_URL;
+    this.baseUrl = PUZZLE_API_URL || "https://your-api-domain.com";
     this.apiKey = PUZZLE_API_KEY;
   }
 
   private buildHeaders(): HeadersInit {
     return {
-      "X-RapidAPI-Host": this.baseUrl,
-      "X-RapidAPI-Key": this.apiKey,
+      "x-api-key": this.apiKey,
     };
   }
 
@@ -43,13 +42,13 @@ class PuzzleAPIClient {
       queryParams.append("id", params.id);
     }
     if (params.playerMoves) {
-      queryParams.append("playerMoves", params.playerMoves.toString());
+      queryParams.append("playerMoves", params.playerMoves);
     }
     if (params.count) {
       queryParams.append("count", params.count.toString());
     }
     if (params.rating) {
-      queryParams.append("rating", params.rating.toString());
+      queryParams.append("rating", params.rating);
     }
     if (params.themes && params.themes.length > 0) {
       // API expects JSON array format: ?themes=["theme1","theme2"]
@@ -60,14 +59,14 @@ class PuzzleAPIClient {
       }
     }
 
-    const url = `https://${this.baseUrl}/?${queryParams.toString()}`;
+    const url = `${this.baseUrl}/puzzles?${queryParams.toString()}`;
     return url;
   }
 
   public async fetchPuzzles(options: FetchPuzzleOptions): Promise<Puzzle[]> {
     const url = this.buildUrl(options);
 
-    console.log("Fetching puzzles from URL:", url, this.buildHeaders());
+    console.log("Fetching puzzles from URL:", url);
 
     const response = await fetch(url, {
       method: "GET",
@@ -99,21 +98,20 @@ class PuzzleAPIClient {
     themes?: string[]
   ): Promise<Puzzle> {
     const options: FetchPuzzleOptions = {
-      playerMoves: moves,
+      playerMoves: moves.toString(),
       count: 1,
     };
 
-    // Add rating filter if provided - use midpoint of range
-    // API uses puzzle's ratingDeviation to find matches around this value
+    // Add rating filter if provided - use range format "min-max"
     if (ratingRange) {
-      options.rating = Math.round((ratingRange.min + ratingRange.max) / 2);
+      options.rating = `${ratingRange.min}-${ratingRange.max}`;
     }
 
     // Add themes filter if provided
     if (themes && themes.length > 0) {
       options.themes = themes;
-      // Use ONE so puzzle matches at least one of the enabled themes
-      options.themesType = "ONE";
+      // Use ANY so puzzle matches at least one of the enabled themes
+      options.themesType = "ANY";
     }
 
     const puzzles = await this.fetchPuzzles(options);
