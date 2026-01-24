@@ -59,7 +59,7 @@ class PuzzleAPIClient {
       }
     }
 
-    const url = `${this.baseUrl}/puzzles?${queryParams.toString()}`;
+    const url = `${this.baseUrl}/?${queryParams.toString()}`;
     return url;
   }
 
@@ -72,8 +72,6 @@ class PuzzleAPIClient {
       method: "GET",
       headers: this.buildHeaders(),
     });
-
-    console.log("response from database service", await response.text())
 
     if (!response.ok) {
       console.log("Puzzle API response not ok:", response.status, await response.text());
