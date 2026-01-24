@@ -30,7 +30,7 @@ Contact your API administrator to obtain a valid API key. API keys must be white
 
 Retrieve chess puzzles with optional filtering.
 
-**Endpoint:** `GET /puzzles`
+**Endpoint:** `GET /`
 
 **Query Parameters:**
 
@@ -73,16 +73,16 @@ Retrieve chess puzzles with optional filtering.
 
 **Request:**
 ```bash
-GET /puzzles?id=00008
+GET /?id=00008
 ```
 
 With API key header:
 ```bash
-curl -H "x-api-key: your-api-key" https://your-api-domain.com/puzzles?id=00008
+curl -H "x-api-key: your-api-key" https://your-api-domain.com/?id=00008
 ```
 
 ```javascript
-fetch('https://your-api-domain.com/puzzles?id=00008', {
+fetch('https://your-api-domain.com/?id=00008', {
   headers: {
     'x-api-key': 'your-api-key'
   }
@@ -115,11 +115,11 @@ fetch('https://your-api-domain.com/puzzles?id=00008', {
 
 **Request:**
 ```bash
-GET /puzzles?count=10
+GET /?count=10
 ```
 
 ```javascript
-fetch('https://your-api-domain.com/puzzles?count=10', {
+fetch('https://your-api-domain.com/?count=10', {
   headers: {
     'x-api-key': 'your-api-key'
   }
@@ -153,11 +153,11 @@ fetch('https://your-api-domain.com/puzzles?count=10', {
 
 **Request:**
 ```bash
-GET /puzzles?count=5&rating=1500-1800
+GET /?count=5&rating=1500-1800
 ```
 
 ```javascript
-fetch('https://your-api-domain.com/puzzles?count=5&rating=1500-1800', {
+fetch('https://your-api-domain.com/?count=5&rating=1500-1800', {
   headers: {
     'x-api-key': 'your-api-key'
   }
@@ -175,12 +175,12 @@ Returns 5 random puzzles with rating between 1500-1800.
 
 **Request:**
 ```bash
-GET /puzzles?count=10&themes=["fork","pin"]&themesType=ANY
+GET /?count=10&themes=["fork","pin"]&themesType=ANY
 ```
 
 ```javascript
 const themes = JSON.stringify(['fork', 'pin']);
-fetch(`https://your-api-domain.com/puzzles?count=10&themes=${encodeURIComponent(themes)}&themesType=ANY`, {
+fetch(`https://your-api-domain.com/?count=10&themes=${encodeURIComponent(themes)}&themesType=ANY`, {
   headers: {
     'x-api-key': 'your-api-key'
   }
@@ -198,12 +198,12 @@ Returns 10 puzzles that have **either** "fork" OR "pin" themes (or both).
 
 **Request:**
 ```bash
-GET /puzzles?count=10&themes=["fork","pin"]&themesType=ALL
+GET /?count=10&themes=["fork","pin"]&themesType=ALL
 ```
 
 ```javascript
 const themes = JSON.stringify(['fork', 'pin']);
-fetch(`https://your-api-domain.com/puzzles?count=10&themes=${encodeURIComponent(themes)}&themesType=ALL`, {
+fetch(`https://your-api-domain.com/?count=10&themes=${encodeURIComponent(themes)}&themesType=ALL`, {
   headers: {
     'x-api-key': 'your-api-key'
   }
@@ -221,11 +221,11 @@ Returns 10 puzzles that have **both** "fork" AND "pin" themes.
 
 **Request:**
 ```bash
-GET /puzzles?count=10&playerMoves=3
+GET /?count=10&playerMoves=3
 ```
 
 ```javascript
-fetch('https://your-api-domain.com/puzzles?count=10&playerMoves=3', {
+fetch('https://your-api-domain.com/?count=10&playerMoves=3', {
   headers: {
     'x-api-key': 'your-api-key'
   }
@@ -243,7 +243,7 @@ Returns 10 puzzles where the player needs to make exactly 3 moves.
 
 **Request:**
 ```bash
-GET /puzzles?count=5&rating=1200-1500&themes=["endgame"]&playerMoves=2-4
+GET /?count=5&rating=1200-1500&themes=["endgame"]&playerMoves=2-4
 ```
 
 ```javascript
@@ -255,7 +255,7 @@ const params = new URLSearchParams({
   playerMoves: '2-4'
 });
 
-fetch(`https://your-api-domain.com/puzzles?${params}`, {
+fetch(`https://your-api-domain.com/?${params}`, {
   headers: {
     'x-api-key': 'your-api-key'
   }
@@ -305,7 +305,7 @@ Common themes include:
 
 **Request:**
 ```bash
-GET /puzzles?count=10
+GET /?count=10
 ```
 
 **Response:** `401 Unauthorized`
@@ -321,7 +321,7 @@ GET /puzzles?count=10
 
 **Request:**
 ```bash
-GET /puzzles?count=10 -H "x-api-key: invalid-key"
+GET /?count=10 -H "x-api-key: invalid-key"
 ```
 
 **Response:** `403 Forbidden`
@@ -337,7 +337,7 @@ GET /puzzles?count=10 -H "x-api-key: invalid-key"
 
 **Request:**
 ```bash
-GET /puzzles
+GET /
 ```
 
 **Response:** `400 Bad Request`
@@ -353,7 +353,7 @@ GET /puzzles
 
 **Request:**
 ```bash
-GET /puzzles?id=invalid999999
+GET /?id=invalid999999
 ```
 
 **Response:** `400 Bad Request`
@@ -369,7 +369,7 @@ GET /puzzles?id=invalid999999
 
 **Request:**
 ```bash
-GET /puzzles?count=10&themes=fork,pin
+GET /?count=10&themes=fork,pin
 ```
 
 **Response:** `400 Bad Request`
@@ -385,7 +385,7 @@ GET /puzzles?count=10&themes=fork,pin
 
 **Request:**
 ```bash
-GET /puzzles?count=10&themes=["fork","pin"]
+GET /?count=10&themes=["fork","pin"]
 ```
 
 **Response:** `400 Bad Request`
@@ -466,7 +466,7 @@ async function fetchPuzzles(
   }
   if (filters?.playerMoves) params.append('playerMoves', filters.playerMoves);
   
-  const response = await fetch(`https://your-api-domain.com/puzzles?${params}`, {
+  const response = await fetch(`https://your-api-domain.com/?${params}`, {
     headers: {
       'x-api-key': apiKey
     }

@@ -73,6 +73,8 @@ class PuzzleAPIClient {
       headers: this.buildHeaders(),
     });
 
+    console.log("response from database service", await response.text())
+
     if (!response.ok) {
       console.log("Puzzle API response not ok:", response.status, await response.text());
       throw new HttpException(500, "Failed to fetch puzzle from API");
