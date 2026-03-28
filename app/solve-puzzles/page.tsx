@@ -407,7 +407,7 @@ export default function SolvePuzzlesPage() {
                     onClick={handleRetry}
                     className="flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all bg-red-400"
                   >
-                    🔄 RETRY
+                    RETRY
                   </button>
                 ) : (
                   <button
@@ -421,8 +421,8 @@ export default function SolvePuzzlesPage() {
                         : "bg-yellow-400 hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px"
                     }`}
                   >
-                    {hintStage === 'none' && `💡 HINT${hintCount > 0 ? ` (${hintCount})` : ''}`}
-                    {hintStage === 'piece' && 'SHOW MOVE'}
+                    {hintStage === 'none' && `HINT${hintCount > 0 ? ` (${hintCount})` : ''}`}
+                    {hintStage === 'piece' && <span className="font-black text-xs">SHOW MOVE</span>}
                     {hintStage === 'move' && '✓ HINT SHOWN'}
                   </button>
                 )}
