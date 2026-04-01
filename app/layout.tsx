@@ -62,6 +62,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="talentapp:project_verification" content="44156f46d8761b652f56dfd70ed3225d67f0125aca67276ace896a974edcfe491f5da33ad557bec3583760ec78463fa110f8d4f08c7fee73d932fe741b556953" />
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-TPBVDV2BQ9"
