@@ -8,6 +8,7 @@ import ChessBoard, { ChessBoardRef } from "../../components/chess-board";
 import { useUserStats } from "../../lib/hooks/useUserStats";
 import { Puzzle } from "../../lib/types";
 import { getBasePoints, getHintMultiplier } from "../../lib/utils/points";
+import { getThemeById } from "../../lib/config/puzzleThemes";
 
 type HintStage = 'none' | 'piece' | 'move';
 
@@ -276,6 +277,16 @@ export default function SolvePuzzlesPage() {
     return Math.round(basePoints * (1 - hintMultiplier));
   };
 
+  const getThemeLabel = (themeId: string) => {
+    const configuredTheme = getThemeById(themeId);
+    if (configuredTheme) return configuredTheme.name;
+
+    return themeId
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/[_-]/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
   if (!mounted) return null;
 
   if (loading) {
@@ -373,6 +384,25 @@ export default function SolvePuzzlesPage() {
                   {currentTurn === "w" ? "⚪ WHITE TO MOVE" : "⚫ BLACK TO MOVE"}
                 </div>
               </div>
+
+              {currentPuzzle.themes.length > 0 && (
+                <div className="mb-3 flex flex-wrap justify-center gap-1.5">
+                  {currentPuzzle.themes.slice(0, 5).map((themeId) => (
+                    <span
+                      key={themeId}
+                      className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-600 bg-gray-100 border border-gray-300 rounded-full"
+                      title={themeId}
+                    >
+                      {getThemeLabel(themeId)}
+                    </span>
+                  ))}
+                  {currentPuzzle.themes.length > 5 && (
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-500 bg-gray-100 border border-gray-300 rounded-full">
+                      +{currentPuzzle.themes.length - 5}
+                    </span>
+                  )}
+                </div>
+              )}
 
               <ChessBoard
                 ref={chessBoardRef}
