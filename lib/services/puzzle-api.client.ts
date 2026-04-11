@@ -59,7 +59,8 @@ class PuzzleAPIClient {
       }
     }
 
-    const url = `${this.baseUrl}/?${queryParams.toString()}`;
+    const normalizedBaseUrl = this.baseUrl.replace(/\/$/, "");
+    const url = `${normalizedBaseUrl}/puzzles?${queryParams.toString()}`;
     return url;
   }
 
