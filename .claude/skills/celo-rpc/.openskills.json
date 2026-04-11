@@ -1,0 +1,7 @@
+{
+  "source": "celo-org/agent-skills",
+  "sourceType": "git",
+  "repoUrl": "https://github.com/celo-org/agent-skills",
+  "subpath": "skills\\celo-rpc",
+  "installedAt": "2026-04-11T06:12:19.776Z"
+}
