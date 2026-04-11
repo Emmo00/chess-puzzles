@@ -7,6 +7,7 @@ import Link from "next/link";
 import ChessBoard, { ChessBoardRef } from "../../components/chess-board";
 import { useUserStats } from "../../lib/hooks/useUserStats";
 import { Puzzle } from "../../lib/types";
+import { getBasePoints, getHintMultiplier } from "../../lib/utils/points";
 
 type HintStage = 'none' | 'piece' | 'move';
 
@@ -267,6 +268,14 @@ export default function SolvePuzzlesPage() {
     return `${seconds}s`;
   };
 
+  const getHintPenaltyPoints = () => {
+    if (!currentPuzzle || hintCount === 0) return 0;
+
+    const basePoints = getBasePoints(currentPuzzle.rating);
+    const hintMultiplier = getHintMultiplier(hintCount);
+    return Math.round(basePoints * (1 - hintMultiplier));
+  };
+
   if (!mounted) return null;
 
   if (loading) {
@@ -444,7 +453,7 @@ export default function SolvePuzzlesPage() {
               {/* Hint count indicator */}
               {hintCount > 0 && !isCompleted && (
                 <div className="text-center text-sm font-bold text-gray-600">
-                  Hints used: {hintCount} {hintCount >= 3 ? '(+0 points)' : hintCount === 2 ? '(-75% points)' : '(-50% points)'}
+                  Hints used: {hintCount} (-{getHintPenaltyPoints()} points)
                 </div>
               )}
               

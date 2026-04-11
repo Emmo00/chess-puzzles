@@ -19,7 +19,7 @@ const faqItems: FAQItem[] = [
   },
   {
     question: "How do hints work?",
-    answer: "Hints are revealed in two stages. First click shows you which piece to move (highlighted in yellow). Second click shows you where to move it (highlighted in green). Using hints reduces your points: 1 hint = 50% points, 2 hints = 25% points, 3+ hints = 0 points."
+    answer: "Hints are revealed in two stages. First click shows you which piece to move (highlighted in yellow). Second click shows you where to move it (highlighted in green). Using hints deducts points from your puzzle reward, and multiple hints reduce your final reward further."
   },
   {
     question: "How are points calculated?",
