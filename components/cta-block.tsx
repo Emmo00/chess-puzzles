@@ -26,7 +26,7 @@ export default function CTABlock({ title, subtitle, accentColor, icon, href = "#
     <span
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`w-full border-4 border-black ${accentColor} px-3 py-2 font-black text-xs uppercase tracking-wider text-black transition-all duration-200 flex flex-col items-center justify-center cursor-pointer`}
+      className={`w-full h-28 border-4 border-black ${accentColor} px-3 py-2 font-black text-xs uppercase tracking-wider text-black transition-all duration-200 flex flex-col items-center justify-center cursor-pointer text-center`}
       style={{
         boxShadow: isHovered
           ? "6px 6px 0px rgba(0, 0, 0, 0.3), 0px 0px 16px rgba(0, 0, 0, 0.4)"
@@ -36,28 +36,28 @@ export default function CTABlock({ title, subtitle, accentColor, icon, href = "#
       }}
     >
       <span className="text-xl">{icon}</span>
-      <div className="flex flex-col items-center gap-0.5">
+      <div className="flex flex-col items-center gap-0.5 leading-tight">
         <span className="text-xs font-black">{title}</span>
-        <span className="text-[10px] font-bold opacity-75">{subtitle}</span>
+        <span className="text-[10px] font-bold opacity-75 text-center">{subtitle}</span>
       </div>
     </span>
   )
 
   return (
     <div
-      className="animate-in fade-in slide-in-from-bottom-4 duration-700"
+      className="h-full animate-in fade-in slide-in-from-bottom-4 duration-700"
       style={{
         animation: `slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards`,
       }}
     >
       {onClick ? (
-        <button onClick={onClick} className="w-full">{buttonContent}</button>
+        <button onClick={onClick} className="w-full h-full">{buttonContent}</button>
       ) : href && href !== "#" ? (
-        <Link href={href} className="block">
+        <Link href={href} className="block h-full">
           {buttonContent}
         </Link>
       ) : (
-        <button className="w-full">{buttonContent}</button>
+        <button className="w-full h-full">{buttonContent}</button>
       )}
       <style jsx>{`
         @keyframes slideUp {
