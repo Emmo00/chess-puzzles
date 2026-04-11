@@ -129,7 +129,7 @@ export default function Home() {
           </div>
 
           {/* 4 CTA Blocks - Responsive Grid */}
-          <div className="w-full flex flex-col gap-2 mb-4 pointer-events-auto">
+          <div className="w-full grid grid-cols-2 gap-2 mb-4 pointer-events-auto pb-8 px-4">
             {ctaBlocks.map((cta) => (
               <CTABlock
                 key={cta.id}
