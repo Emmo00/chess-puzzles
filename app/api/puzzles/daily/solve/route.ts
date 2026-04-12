@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
     const updatedUserPuzzle = await puzzleService.updateUserPuzzle(userPuzzleData);
 
     if (updatedUserPuzzle) {
-      // Update streak first (this also updates lastLogin)
-      await userService.updateUserStreak(user.walletAddress);
+      // Update streak using UTC day boundaries
+      await userService.updateUserStreakByUTCDay(user.walletAddress);
 
       // Update user stats
       const currentUser = await userService.getUser(user.walletAddress);

@@ -1,0 +1,317 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      { "name": "token", "type": "address", "internalType": "address" },
+      { "name": "initialServerSigner", "type": "address", "internalType": "address" },
+      { "name": "initialCheckInAmount", "type": "uint256", "internalType": "uint256" },
+      { "name": "initialMaxDailyCheckIns", "type": "uint256", "internalType": "uint256" },
+      { "name": "initialOwner", "type": "address", "internalType": "address" }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "CHECK_IN_TYPEHASH",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "bytes32", "internalType": "bytes32" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "LEADERBOARD_TYPEHASH",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "bytes32", "internalType": "bytes32" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "checkInAmount",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "claimDailyCheckIn",
+    "inputs": [
+      { "name": "day", "type": "uint256", "internalType": "uint256" },
+      { "name": "nonce", "type": "uint256", "internalType": "uint256" },
+      { "name": "deadline", "type": "uint256", "internalType": "uint256" },
+      { "name": "signature", "type": "bytes", "internalType": "bytes" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "claimLeaderboardPayout",
+    "inputs": [
+      { "name": "amount", "type": "uint256", "internalType": "uint256" },
+      { "name": "claimId", "type": "bytes32", "internalType": "bytes32" },
+      { "name": "nonce", "type": "uint256", "internalType": "uint256" },
+      { "name": "deadline", "type": "uint256", "internalType": "uint256" },
+      { "name": "signature", "type": "bytes", "internalType": "bytes" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "currentDay",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "dailyCheckInCount",
+    "inputs": [{ "name": "day", "type": "uint256", "internalType": "uint256" }],
+    "outputs": [{ "name": "count", "type": "uint256", "internalType": "uint256" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "eip712Domain",
+    "inputs": [],
+    "outputs": [
+      { "name": "fields", "type": "bytes1", "internalType": "bytes1" },
+      { "name": "name", "type": "string", "internalType": "string" },
+      { "name": "version", "type": "string", "internalType": "string" },
+      { "name": "chainId", "type": "uint256", "internalType": "uint256" },
+      { "name": "verifyingContract", "type": "address", "internalType": "address" },
+      { "name": "salt", "type": "bytes32", "internalType": "bytes32" },
+      { "name": "extensions", "type": "uint256[]", "internalType": "uint256[]" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "hasClaimedDailyCheckIn",
+    "inputs": [
+      { "name": "day", "type": "uint256", "internalType": "uint256" },
+      { "name": "user", "type": "address", "internalType": "address" }
+    ],
+    "outputs": [{ "name": "hasClaimed", "type": "bool", "internalType": "bool" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "hashCheckInClaim",
+    "inputs": [
+      { "name": "user", "type": "address", "internalType": "address" },
+      { "name": "day", "type": "uint256", "internalType": "uint256" },
+      { "name": "nonce", "type": "uint256", "internalType": "uint256" },
+      { "name": "deadline", "type": "uint256", "internalType": "uint256" }
+    ],
+    "outputs": [{ "name": "", "type": "bytes32", "internalType": "bytes32" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "hashLeaderboardClaim",
+    "inputs": [
+      { "name": "user", "type": "address", "internalType": "address" },
+      { "name": "amount", "type": "uint256", "internalType": "uint256" },
+      { "name": "claimId", "type": "bytes32", "internalType": "bytes32" },
+      { "name": "nonce", "type": "uint256", "internalType": "uint256" },
+      { "name": "deadline", "type": "uint256", "internalType": "uint256" }
+    ],
+    "outputs": [{ "name": "", "type": "bytes32", "internalType": "bytes32" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "maxDailyCheckIns",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "address", "internalType": "address" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "ownerWithdraw",
+    "inputs": [
+      { "name": "to", "type": "address", "internalType": "address" },
+      { "name": "amount", "type": "uint256", "internalType": "uint256" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "payoutToken",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "address", "internalType": "contract IERC20" }],
+    "stateMutability": "view"
+  },
+  { "type": "function", "name": "renounceOwnership", "inputs": [], "outputs": [], "stateMutability": "nonpayable" },
+  {
+    "type": "function",
+    "name": "serverSigner",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "address", "internalType": "address" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "setCheckInAmount",
+    "inputs": [{ "name": "newAmount", "type": "uint256", "internalType": "uint256" }],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setMaxDailyCheckIns",
+    "inputs": [{ "name": "newMax", "type": "uint256", "internalType": "uint256" }],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setServerSigner",
+    "inputs": [{ "name": "newSigner", "type": "address", "internalType": "address" }],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "transferOwnership",
+    "inputs": [{ "name": "newOwner", "type": "address", "internalType": "address" }],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "usedDigests",
+    "inputs": [{ "name": "digest", "type": "bytes32", "internalType": "bytes32" }],
+    "outputs": [{ "name": "used", "type": "bool", "internalType": "bool" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "usedLeaderboardClaimIds",
+    "inputs": [{ "name": "claimId", "type": "bytes32", "internalType": "bytes32" }],
+    "outputs": [{ "name": "used", "type": "bool", "internalType": "bool" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "CheckInAmountUpdated",
+    "inputs": [
+      { "name": "previousAmount", "type": "uint256", "indexed": false, "internalType": "uint256" },
+      { "name": "newAmount", "type": "uint256", "indexed": false, "internalType": "uint256" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DailyCheckInClaimed",
+    "inputs": [
+      { "name": "day", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "user", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "amount", "type": "uint256", "indexed": false, "internalType": "uint256" },
+      { "name": "nonce", "type": "uint256", "indexed": false, "internalType": "uint256" },
+      { "name": "digest", "type": "bytes32", "indexed": false, "internalType": "bytes32" }
+    ],
+    "anonymous": false
+  },
+  { "type": "event", "name": "EIP712DomainChanged", "inputs": [], "anonymous": false },
+  {
+    "type": "event",
+    "name": "LeaderboardClaimed",
+    "inputs": [
+      { "name": "claimId", "type": "bytes32", "indexed": true, "internalType": "bytes32" },
+      { "name": "user", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "amount", "type": "uint256", "indexed": false, "internalType": "uint256" },
+      { "name": "nonce", "type": "uint256", "indexed": false, "internalType": "uint256" },
+      { "name": "digest", "type": "bytes32", "indexed": false, "internalType": "bytes32" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MaxDailyCheckInsUpdated",
+    "inputs": [
+      { "name": "previousMax", "type": "uint256", "indexed": false, "internalType": "uint256" },
+      { "name": "newMax", "type": "uint256", "indexed": false, "internalType": "uint256" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OwnerWithdrawal",
+    "inputs": [
+      { "name": "to", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "amount", "type": "uint256", "indexed": false, "internalType": "uint256" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferred",
+    "inputs": [
+      { "name": "previousOwner", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "newOwner", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ServerSignerUpdated",
+    "inputs": [
+      { "name": "previousSigner", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "newSigner", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  { "type": "error", "name": "AlreadyClaimedToday", "inputs": [] },
+  { "type": "error", "name": "DailyLimitReached", "inputs": [] },
+  { "type": "error", "name": "DigestAlreadyUsed", "inputs": [] },
+  { "type": "error", "name": "ECDSAInvalidSignature", "inputs": [] },
+  {
+    "type": "error",
+    "name": "ECDSAInvalidSignatureLength",
+    "inputs": [{ "name": "length", "type": "uint256", "internalType": "uint256" }]
+  },
+  {
+    "type": "error",
+    "name": "ECDSAInvalidSignatureS",
+    "inputs": [{ "name": "s", "type": "bytes32", "internalType": "bytes32" }]
+  },
+  { "type": "error", "name": "InsufficientContractBalance", "inputs": [] },
+  { "type": "error", "name": "InvalidCheckInDay", "inputs": [] },
+  { "type": "error", "name": "InvalidShortString", "inputs": [] },
+  { "type": "error", "name": "InvalidSigner", "inputs": [] },
+  { "type": "error", "name": "LeaderboardClaimAlreadyUsed", "inputs": [] },
+  {
+    "type": "error",
+    "name": "OwnableInvalidOwner",
+    "inputs": [{ "name": "owner", "type": "address", "internalType": "address" }]
+  },
+  {
+    "type": "error",
+    "name": "OwnableUnauthorizedAccount",
+    "inputs": [{ "name": "account", "type": "address", "internalType": "address" }]
+  },
+  { "type": "error", "name": "ReentrancyGuardReentrantCall", "inputs": [] },
+  {
+    "type": "error",
+    "name": "SafeERC20FailedOperation",
+    "inputs": [{ "name": "token", "type": "address", "internalType": "address" }]
+  },
+  { "type": "error", "name": "SignatureExpired", "inputs": [] },
+  {
+    "type": "error",
+    "name": "StringTooLong",
+    "inputs": [{ "name": "str", "type": "string", "internalType": "string" }]
+  },
+  { "type": "error", "name": "ZeroAddress", "inputs": [] },
+  { "type": "error", "name": "ZeroValue", "inputs": [] }
+]

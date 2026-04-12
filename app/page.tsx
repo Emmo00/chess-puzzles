@@ -8,13 +8,17 @@ import CTABlock from "../components/cta-block";
 import { WalletConnect } from "@/components/WalletConnect";
 import { PaymentModal } from "@/components/PaymentModal";
 import { StreakModal } from "@/components/StreakModal";
+import { PuzzlesActionModal } from "@/components/PuzzlesActionModal";
+import { EarlyAccessBadge } from "@/components/EarlyAccessBadge";
 import { useUserStats } from "../lib/hooks/useUserStats";
 import { useStreak } from "../lib/hooks/useStreak";
+import { useDailyCheckin } from "@/lib/hooks/useDailyCheckin";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showStreakModal, setShowStreakModal] = useState(false);
+  const [showPuzzlesModal, setShowPuzzlesModal] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<{
     hasAccess: boolean;
     hasDailyAccess: boolean;
@@ -22,6 +26,7 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const { userStats } = useUserStats();
   const { streakData, isLoading: streakLoading } = useStreak();
+  const { status: checkInStatus, refreshStatus: refreshCheckInStatus } = useDailyCheckin();
 
   useEffect(() => {
     setMounted(true);
@@ -50,6 +55,16 @@ export default function Home() {
     checkPaymentStatus(); // Refresh payment status
   };
 
+  const handleOpenPuzzles = () => {
+    if (!isConnected) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
+    refreshCheckInStatus();
+    setShowPuzzlesModal(true);
+  };
+
   const handleStreakClick = () => {
     if (!isConnected) {
       alert("Please connect your wallet first");
@@ -62,15 +77,20 @@ export default function Home() {
 
   // Determine access status
   const hasAccess = paymentStatus?.hasAccess;
+  const reservationStatus = checkInStatus?.reservation?.status;
+  const showEarlyBadge =
+    Boolean(isConnected) &&
+    Boolean(checkInStatus?.hasSlots) &&
+    (!reservationStatus || reservationStatus === "expired" || reservationStatus === "failed");
 
   const ctaBlocks = [
     {
       id: 1,
-      title: "Solve Puzzles",
-      subtitle: "Solve & Earn Points",
+      title: "Puzzles",
+      subtitle: "Daily + Classic",
       accentColor: hasAccess ? "bg-green-400" : "bg-cyan-400",
       icon: "▲",
-      href: "/solve-puzzles",
+      onClick: handleOpenPuzzles,
     },
     {
       id: 3,
@@ -108,12 +128,18 @@ export default function Home() {
       {/* Foreground Content */}
       <div className="relative z-10 flex flex-col h-full pointer-events-none">
         {/* Header with Streak Badge and Wallet */}
-        <header className="pt-6 px-6 flex justify-between items-center shrink-0 pointer-events-auto">
+        <header className="pt-6 px-6 flex justify-between items-center shrink-0 pointer-events-auto gap-3">
           <WalletConnect />
-          <StreakBadge 
-            days={streakData?.currentStreak || userStats?.currentStreak || 0} 
-            onClick={handleStreakClick}
-          />
+          <div className="flex items-center gap-3">
+            <EarlyAccessBadge
+              visible={showEarlyBadge}
+              slotsRemaining={checkInStatus?.slotsRemaining || 0}
+            />
+            <StreakBadge
+              days={streakData?.currentStreak || userStats?.currentStreak || 0}
+              onClick={handleStreakClick}
+            />
+          </div>
         </header>
 
         {/* Main Content - Centered, No Scroll */}
@@ -138,10 +164,19 @@ export default function Home() {
                 accentColor={cta.accentColor}
                 icon={cta.icon}
                 href={cta.href}
+                onClick={cta.onClick}
               />
             ))}
           </div>
         </main>
+
+        <PuzzlesActionModal
+          isOpen={showPuzzlesModal}
+          onClose={() => setShowPuzzlesModal(false)}
+          checkInAmountDisplay={checkInStatus?.checkInAmountDisplay}
+          checkInTokenSymbol={checkInStatus?.payoutTokenSymbol}
+          slotsRemaining={checkInStatus?.slotsRemaining}
+        />
 
         {/* Payment Modal */}
         <PaymentModal

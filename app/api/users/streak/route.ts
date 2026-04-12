@@ -3,6 +3,7 @@ import dbConnect from "../../../../lib/db";
 import { authenticateWalletUser } from "../../../../lib/auth";
 import UserService from "../../../../lib/services/users.service";
 import userModel from "../../../../lib/models/users.model";
+import { getUtcDayNumber } from "@/lib/utils/time";
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,17 +57,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Update streak when user solves a puzzle
-    const today = new Date().toDateString();
-    const lastPuzzleDate = userData.lastPuzzleDate ? new Date(userData.lastPuzzleDate).toDateString() : null;
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
+    // Update streak when user solves a puzzle using UTC day boundaries
+    const todayUtcDay = getUtcDayNumber();
+    const lastPuzzleUtcDay = userData.lastPuzzleDate
+      ? getUtcDayNumber(new Date(userData.lastPuzzleDate))
+      : null;
     
     let newStreak = userData.currentStreak;
     
-    if (!lastPuzzleDate || lastPuzzleDate === yesterday) {
+    if (lastPuzzleUtcDay === null || lastPuzzleUtcDay === todayUtcDay - 1) {
       // Continue or start streak
-      newStreak = lastPuzzleDate === yesterday ? userData.currentStreak + 1 : 1;
-    } else if (lastPuzzleDate === today) {
+      newStreak = lastPuzzleUtcDay === todayUtcDay - 1 ? userData.currentStreak + 1 : 1;
+    } else if (lastPuzzleUtcDay === todayUtcDay) {
       // Already played today, no change
       newStreak = userData.currentStreak;
     } else {

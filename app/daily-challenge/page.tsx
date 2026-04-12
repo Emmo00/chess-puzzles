@@ -1,0 +1,450 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import confetti from "canvas-confetti";
+import { useAccount } from "wagmi";
+
+import ChessBoard, { ChessBoardRef } from "@/components/chess-board";
+import { useChainSwitching } from "@/lib/hooks/useChainSwitching";
+import { useCheckinClaim } from "@/lib/hooks/useCheckinClaim";
+import { useDailyCheckin } from "@/lib/hooks/useDailyCheckin";
+import { Puzzle } from "@/lib/types";
+
+type HintStage = "none" | "piece" | "move";
+
+interface ClaimPayload {
+  day: number;
+  nonce: string;
+  deadline: number;
+  signature: `0x${string}`;
+}
+
+export default function DailyChallengePage() {
+  const [mounted, setMounted] = useState(false);
+  const [puzzleLoading, setPuzzleLoading] = useState(false);
+  const [currentPuzzle, setCurrentPuzzle] = useState<Puzzle | null>(null);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [mistakeCount, setMistakeCount] = useState(0);
+  const [claimPayload, setClaimPayload] = useState<ClaimPayload | null>(null);
+  const [claimMessage, setClaimMessage] = useState<string | null>(null);
+  const [hintStage, setHintStage] = useState<HintStage>("none");
+  const [hintCount, setHintCount] = useState(0);
+  const [highlightedSquares, setHighlightedSquares] = useState<
+    { from?: string; to?: string } | null
+  >(null);
+  const [canGoBack, setCanGoBack] = useState(false);
+  const [canGoForward, setCanGoForward] = useState(false);
+  const [isWrongMoveActive, setIsWrongMoveActive] = useState(false);
+
+  const chessBoardRef = useRef<ChessBoardRef>(null);
+  const router = useRouter();
+
+  const { address, isConnected } = useAccount();
+  const { isOnCorrectChain, switchToPreferredChain } = useChainSwitching();
+  const {
+    status,
+    loading,
+    error,
+    refreshStatus,
+    reserveDailyChallenge,
+    solveDailyChallenge,
+    confirmClaim,
+  } = useDailyCheckin();
+  const {
+    sendClaim,
+    txHash,
+    isPending: claimSubmitting,
+    isConfirming: claimConfirming,
+    isSuccess: claimTxMined,
+    claimError,
+  } = useCheckinClaim();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !isConnected) {
+      router.push("/");
+    }
+  }, [mounted, isConnected, router]);
+
+  useEffect(() => {
+    if (!status?.challenge) {
+      return;
+    }
+
+    const reservationStatus = status.reservation?.status;
+    if (!reservationStatus || reservationStatus === "expired" || reservationStatus === "failed") {
+      return;
+    }
+
+    setCurrentPuzzle({
+      puzzleid: status.challenge.puzzleId,
+      fen: status.challenge.fen,
+      rating: status.challenge.rating,
+      ratingdeviation: status.challenge.ratingDeviation,
+      moves: status.challenge.moves,
+      themes: status.challenge.themes,
+    });
+
+    if (status.reservation?.status === "earned" && status.reservation.claimSignature && status.reservation.claimNonce && status.reservation.claimDeadline) {
+      setIsCompleted(true);
+      setClaimPayload({
+        day: status.utcDay,
+        nonce: status.reservation.claimNonce,
+        deadline: status.reservation.claimDeadline,
+        signature: status.reservation.claimSignature,
+      });
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (!claimTxMined || !txHash) {
+      return;
+    }
+
+    let attempts = 0;
+    let isCancelled = false;
+
+    const confirmWithRetry = async () => {
+      while (!isCancelled && attempts < 6) {
+        attempts += 1;
+        try {
+          const confirmation = await confirmClaim(txHash);
+          if (confirmation.success) {
+            setClaimMessage("Reward claimed successfully");
+            fireConfetti();
+            await refreshStatus();
+            return;
+          }
+
+          if (!confirmation.pending) {
+            setClaimMessage(confirmation.message || "Claim confirmation failed");
+            return;
+          }
+        } catch (err: any) {
+          setClaimMessage(err.message || "Claim confirmation failed");
+          return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+
+      if (!isCancelled) {
+        setClaimMessage("Transaction submitted. Confirmation is still pending.");
+      }
+    };
+
+    confirmWithRetry();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [claimTxMined, txHash, confirmClaim, refreshStatus]);
+
+  const pendingSeconds = useMemo(() => {
+    const expiry = status?.reservation?.pendingExpiresAt;
+    if (!expiry) return 0;
+
+    const diff = Math.floor((new Date(expiry).getTime() - Date.now()) / 1000);
+    return Math.max(diff, 0);
+  }, [status?.reservation?.pendingExpiresAt, currentPuzzle]);
+
+  const rewardLabel = useMemo(() => {
+    const rawAmount = Number(status?.checkInAmountDisplay || 0);
+    const amount = Number.isFinite(rawAmount)
+      ? rawAmount.toFixed(4).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1")
+      : "0";
+    const symbol = status?.payoutTokenSymbol || "TOKEN";
+    return `${amount} ${symbol}`;
+  }, [status?.checkInAmountDisplay, status?.payoutTokenSymbol]);
+
+  const handleReserveChallenge = async () => {
+    setPuzzleLoading(true);
+    setClaimMessage(null);
+
+    try {
+      const result = await reserveDailyChallenge();
+      setCurrentPuzzle(result.puzzle);
+      setIsCompleted(false);
+      setClaimPayload(null);
+      setMistakeCount(0);
+      setHintCount(0);
+      setHintStage("none");
+      setHighlightedSquares(null);
+    } catch (err: any) {
+      setClaimMessage(err.message || "Could not reserve daily challenge");
+    } finally {
+      setPuzzleLoading(false);
+    }
+  };
+
+  const handlePuzzleComplete = async () => {
+    if (!currentPuzzle) {
+      return;
+    }
+
+    setIsCompleted(true);
+
+    try {
+      const result = await solveDailyChallenge(currentPuzzle.puzzleid);
+      if (result.success) {
+        setClaimPayload(result.claim);
+        setClaimMessage("Challenge solved. Claim your reward on-chain.");
+        fireConfetti();
+      }
+    } catch (err: any) {
+      setClaimMessage(err.message || "Failed to submit solved challenge");
+    }
+  };
+
+  const handleClaimReward = async () => {
+    if (!claimPayload) {
+      setClaimMessage("Claim payload not available. Try refreshing status.");
+      return;
+    }
+
+    if (!isOnCorrectChain) {
+      setClaimMessage("Switch to Celo network before claiming.");
+      return;
+    }
+
+    setClaimMessage(null);
+
+    try {
+      await sendClaim(claimPayload);
+      setClaimMessage("Transaction sent. Waiting for confirmation...");
+    } catch (err: any) {
+      setClaimMessage(err.message || "Failed to send claim transaction");
+    }
+  };
+
+  const handleShowHint = () => {
+    if (hintStage === "none") {
+      setHintStage("piece");
+      const nextMove = chessBoardRef.current?.getNextMove();
+      if (nextMove) {
+        setHighlightedSquares({ from: nextMove.from });
+      }
+      return;
+    }
+
+    if (hintStage === "piece") {
+      setHintStage("move");
+      setHintCount((prev) => prev + 1);
+      const nextMove = chessBoardRef.current?.getNextMove();
+      if (nextMove) {
+        setHighlightedSquares({ from: nextMove.from, to: nextMove.to });
+      }
+    }
+  };
+
+  const fireConfetti = () => {
+    confetti({
+      particleCount: 80,
+      spread: 65,
+      startVelocity: 45,
+      origin: { y: 0.7 },
+    });
+
+    setTimeout(() => {
+      confetti({
+        particleCount: 120,
+        spread: 95,
+        startVelocity: 35,
+        origin: { x: 0.2, y: 0.75 },
+      });
+    }, 250);
+
+    setTimeout(() => {
+      confetti({
+        particleCount: 120,
+        spread: 95,
+        startVelocity: 35,
+        origin: { x: 0.8, y: 0.75 },
+      });
+    }, 350);
+  };
+
+  if (!mounted) return null;
+
+  if (loading && !status) {
+    return (
+      <div className="w-screen h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  const isClaimed = status?.reservation?.status === "claimed";
+  const canClaim = Boolean(claimPayload) && !isClaimed;
+
+  return (
+    <div className="min-h-screen w-full bg-white text-black flex flex-col">
+      <header className="pt-4 px-4 flex justify-between items-center shrink-0">
+        <Link
+          href="/"
+          className="bg-black text-white px-2 py-1 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
+        >
+          ← BACK
+        </Link>
+        <div className="flex items-center gap-2">
+          <div className="px-3 py-2 font-black text-xs border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-yellow-300 text-black">
+            💰 {rewardLabel}
+          </div>
+          <div className="px-3 py-2 font-black text-xs border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-cyan-300 text-black">
+            SLOTS {status?.slotsRemaining ?? "--"}
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-6 gap-4 min-h-0">
+        {!isOnCorrectChain && (
+          <button
+            onClick={switchToPreferredChain}
+            className="bg-yellow-400 text-black px-4 py-3 font-black text-xs uppercase border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]"
+          >
+            ⚠ Switch To Celo To Claim
+          </button>
+        )}
+
+        {!currentPuzzle && (
+          <div className="w-full max-w-xs text-center space-y-6">
+            <div className="bg-orange-300 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 transform -rotate-1">
+              <h1 className="text-2xl font-black text-black uppercase mb-2">Daily Challenge</h1>
+              <p className="text-sm font-bold uppercase text-black">
+                Solve one high-rated puzzle. No points, streak still counts.
+              </p>
+              <p className="text-xs font-black uppercase text-black mt-3 bg-white border-2 border-black py-1">
+                Reward: {rewardLabel}
+              </p>
+            </div>
+
+            <button
+              onClick={handleReserveChallenge}
+              disabled={puzzleLoading || !status?.hasSlots}
+              className="w-full bg-green-400 text-black py-4 px-6 font-black text-lg border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50 disabled:hover:translate-x-0 disabled:hover:translate-y-0"
+            >
+              {puzzleLoading ? "RESERVING..." : status?.hasSlots ? "START CHALLENGE" : "SLOTS FULL"}
+            </button>
+
+            {status?.reservation?.pendingExpiresAt && (
+              <p className="text-xs font-black uppercase text-gray-700">
+                Reservation expires in {pendingSeconds}s
+              </p>
+            )}
+          </div>
+        )}
+
+        {currentPuzzle && (
+          <>
+            <div className="w-full max-w-xs">
+              <div className="mb-3 flex justify-center">
+                <div className="px-3 py-1 font-black text-xs border-2 border-black bg-white shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                  RATING {currentPuzzle.rating}
+                </div>
+              </div>
+
+              <ChessBoard
+                ref={chessBoardRef}
+                puzzle={currentPuzzle}
+                onComplete={handlePuzzleComplete}
+                onWrongMove={() => setMistakeCount((prev) => prev + 1)}
+                onWrongMoveStateChange={setIsWrongMoveActive}
+                onHistoryChange={(back, forward) => {
+                  setCanGoBack(back);
+                  setCanGoForward(forward);
+                }}
+                onProgress={() => {
+                  setHintStage("none");
+                  setHighlightedSquares(null);
+                }}
+                highlightedSquares={highlightedSquares}
+              />
+            </div>
+
+            <div className="w-full max-w-xs space-y-3">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => chessBoardRef.current?.goBack()}
+                  disabled={!canGoBack}
+                  className={`py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${
+                    canGoBack
+                      ? "bg-gray-300 text-black hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed opacity-50"
+                  }`}
+                >
+                  ←
+                </button>
+
+                {isWrongMoveActive ? (
+                  <button
+                    onClick={() => chessBoardRef.current?.undoWrongMove()}
+                    className="flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-red-400"
+                  >
+                    RETRY
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleShowHint}
+                    disabled={hintStage === "move" || canGoForward || isCompleted}
+                    className={`flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
+                      hintStage === "move" || canGoForward || isCompleted
+                        ? "bg-yellow-200 opacity-50 cursor-not-allowed"
+                        : "bg-yellow-400"
+                    }`}
+                  >
+                    {hintStage === "none" ? `HINT${hintCount > 0 ? ` (${hintCount})` : ""}` : hintStage === "piece" ? "SHOW MOVE" : "HINT SHOWN"}
+                  </button>
+                )}
+
+                <button
+                  onClick={() => chessBoardRef.current?.goForward()}
+                  disabled={!canGoForward}
+                  className={`py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${
+                    canGoForward
+                      ? "bg-gray-300 text-black hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed opacity-50"
+                  }`}
+                >
+                  →
+                </button>
+              </div>
+
+            </div>
+          </>
+        )}
+
+        {isCompleted && (
+          <div className="w-full max-w-xs bg-green-300 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-5 transform rotate-1">
+            <h3 className="text-xl font-black uppercase text-black mb-2">Challenge Solved</h3>
+            <p className="text-sm font-bold uppercase text-black mb-4">
+              Claim {rewardLabel} on Celo
+            </p>
+
+            <button
+              onClick={handleClaimReward}
+              disabled={!canClaim || claimSubmitting || claimConfirming || isClaimed}
+              className="w-full bg-black text-green-200 py-3 px-4 font-black text-sm uppercase tracking-wide border-2 border-green-200 hover:bg-gray-800 transition-all disabled:opacity-50"
+            >
+              {isClaimed
+                ? "REWARD CLAIMED"
+                : claimSubmitting || claimConfirming
+                ? "CLAIMING..."
+                : "CLAIM REWARD"}
+            </button>
+          </div>
+        )}
+
+        {(claimMessage || claimError || error) && (
+          <div className="w-full max-w-xs bg-white border-2 border-black p-3 text-xs font-black uppercase">
+            {claimMessage || claimError || error}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

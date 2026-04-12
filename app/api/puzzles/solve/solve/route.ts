@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Update streak first (this also updates lastLogin)
-      await userService.updateUserStreak(user.walletAddress);
+      // Update streak using UTC day boundaries
+      await userService.updateUserStreakByUTCDay(user.walletAddress);
 
       const newPoints = (currentUser.totalPoints || 0) + userPuzzleData.points!;
       const newTotalSolved = (currentUser.totalPuzzlesSolved || 0) + 1;

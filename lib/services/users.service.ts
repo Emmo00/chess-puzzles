@@ -1,5 +1,6 @@
 import { WalletUser, UserStats, UserSettings } from "../types";
 import userModel from "../models/users.model";
+import { getUtcDayNumber } from "@/lib/utils/time";
 
 export class HttpException extends Error {
   status: number;
@@ -103,6 +104,39 @@ class UserService {
     
     user.longestStreak = Math.max(user.longestStreak, user.currentStreak);
     user.lastLogin = new Date(); // Update lastLogin here
+    await user.save();
+
+    return user;
+  }
+
+  public async updateUserStreakByUTCDay(identifier: string, playedAt: Date = new Date()) {
+    const query = { walletAddress: identifier.toLowerCase() };
+    const user = await this.users.findOne(query);
+
+    if (!user) {
+      throw new HttpException(404, "User not found");
+    }
+
+    const currentUtcDay = getUtcDayNumber(playedAt);
+    const lastPuzzleUtcDay = user.lastPuzzleDate
+      ? getUtcDayNumber(new Date(user.lastPuzzleDate))
+      : null;
+
+    if (lastPuzzleUtcDay === currentUtcDay) {
+      user.lastLogin = playedAt;
+      await user.save();
+      return user;
+    }
+
+    if (lastPuzzleUtcDay === currentUtcDay - 1) {
+      user.currentStreak += 1;
+    } else {
+      user.currentStreak = 1;
+    }
+
+    user.longestStreak = Math.max(user.longestStreak, user.currentStreak);
+    user.lastLogin = playedAt;
+
     await user.save();
 
     return user;
