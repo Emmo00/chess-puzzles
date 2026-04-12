@@ -17,6 +17,7 @@ import payoutContractAbiJson from "@/abis/payout-contract.json";
 import revenueCollectorAbiJson from "@/abis/revenue-receiver.json";
 import { useChainSwitching } from "@/lib/hooks/useChainSwitching";
 import { CUSD_ADDRESSES, PAYOUT_CLAIM_CONTRACT } from "@/lib/config/wagmi";
+import { selectSupportedFeeCurrency } from "@/lib/utils/feeCurrency";
 
 const ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
@@ -195,6 +196,8 @@ function ContractAdminPanel({
   abi,
   adminFunctionNames,
 }: ContractAdminPanelProps) {
+  const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
   const [contractAddress, setContractAddress] = useState(defaultAddress);
   const [showAllWriteFunctions, setShowAllWriteFunctions] = useState(false);
   const [selectedFunctionName, setSelectedFunctionName] = useState("");
@@ -258,7 +261,7 @@ function ContractAdminPanel({
     });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setLocalError(null);
 
     if (!selectedFunction) {
@@ -268,6 +271,16 @@ function ContractAdminPanel({
 
     if (!ADDRESS_REGEX.test(contractAddress.trim())) {
       setLocalError("Enter a valid contract address.");
+      return;
+    }
+
+    if (!isConnected || !address) {
+      setLocalError("Connect your wallet first.");
+      return;
+    }
+
+    if (!publicClient) {
+      setLocalError("Blockchain client unavailable. Please retry.");
       return;
     }
 
@@ -282,10 +295,17 @@ function ContractAdminPanel({
         args: parsedArgs,
       });
 
+      const feeCurrency = await selectSupportedFeeCurrency({
+        publicClient,
+        account: address,
+        to: contractAddress.trim() as `0x${string}`,
+        data: calldata,
+      });
+
       sendTransaction({
         to: contractAddress.trim() as `0x${string}`,
         data: calldata,
-        feeCurrency: CUSD_ADDRESSES[celo.id] as `0x${string}`,
+        feeCurrency,
       });
     } catch (error: any) {
       setLocalError(error.message || "Failed to prepare transaction");
@@ -586,7 +606,7 @@ function PayoutFundingPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConfirmed]);
 
-  const handleDeposit = () => {
+  const handleDeposit = async () => {
     setError(null);
 
     if (!isConnected || !address) {
@@ -627,10 +647,22 @@ function PayoutFundingPanel({
         args: [claimsAddress.trim() as `0x${string}`, amountBaseUnits],
       });
 
+      if (!publicClient) {
+        setError("Blockchain client unavailable. Please retry.");
+        return;
+      }
+
+      const feeCurrency = await selectSupportedFeeCurrency({
+        publicClient,
+        account: address,
+        to: tokenAddress.trim() as `0x${string}`,
+        data: calldata,
+      });
+
       sendTransaction({
         to: tokenAddress.trim() as `0x${string}`,
         data: calldata,
-        feeCurrency: CUSD_ADDRESSES[celo.id] as `0x${string}`,
+        feeCurrency,
       });
     } catch (prepareError: any) {
       setError(prepareError.message || "Failed to prepare deposit transaction");

@@ -1,14 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount, useWaitForTransactionReceipt, useSendTransaction } from "wagmi";
+import {
+  useAccount,
+  useWaitForTransactionReceipt,
+  useSendTransaction,
+  usePublicClient,
+} from "wagmi";
 import { encodeFunctionData, parseUnits } from "viem";
 import { CUSD_ABI, getCUSDAddress, PAYMENT_AMOUNTS, PAYMENT_RECIPIENT } from "../utils/payment";
 import { PaymentType } from "../types/payment";
 import { isOnCorrectChain } from "../config/wagmi";
+import { selectSupportedFeeCurrency } from "@/lib/utils/feeCurrency";
 
 export function usePayment() {
   const { address, chainId } = useAccount();
+  const publicClient = usePublicClient();
   const { sendTransaction, data: hash, isPending } = useSendTransaction();
   const [paymentType, setPaymentType] = useState<PaymentType | null>(null);
 
@@ -36,11 +43,22 @@ export function usePayment() {
         args: [PAYMENT_RECIPIENT, amount],
       });
 
+      if (!publicClient) {
+        throw new Error("Blockchain client unavailable. Please retry.");
+      }
+
+      const feeCurrency = await selectSupportedFeeCurrency({
+        publicClient,
+        account: address as `0x${string}`,
+        to: cusdAddress as `0x${string}`,
+        data,
+      });
+
       await sendTransaction({
         account: address,
         to: cusdAddress as `0x${string}`,
         data,
-        feeCurrency: cusdAddress as `0x${string}`,
+        feeCurrency,
       });
     } catch (error) {
       setPaymentType(null);

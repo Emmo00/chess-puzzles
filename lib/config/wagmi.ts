@@ -19,6 +19,14 @@ export const isOnCorrectChain = (chainId?: number): boolean => {
   return chainId === celo.id;
 };
 
+export const SUPPORTED_CURRENCIES = [
+  "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e", // USDT ON Celo Mainnet
+  "0x765DE816845861e75A25fCA122bb6898B8B1282a", // USDm on Celo Mainnet
+  "0xcebA9300f2b948710d2653dD7B07f33A8B32118C", // USDC ON Celo Mainnet
+  "0x765DE816845861e75A25fCA122bb6898B8B1282a", // Celo cUSD Mainnet
+  "0x471EcE3750Da237f93B8E339c536989b8978a438", // Celo CELO Mainnet
+];
+
 // cUSD Contract Address (Celo mainnet only)
 export const CUSD_ADDRESSES = {
   [celo.id]: "0x765DE816845861e75A25fCA122bb6898B8B1282a", // Celo cUSD Mainnet

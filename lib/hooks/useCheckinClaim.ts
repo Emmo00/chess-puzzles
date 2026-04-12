@@ -2,15 +2,20 @@
 
 import { useState } from "react";
 import { encodeFunctionData } from "viem";
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useAccount,
+  useSendTransaction,
+  useWaitForTransactionReceipt,
+  usePublicClient,
+} from "wagmi";
 
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
 import {
-  CUSD_ADDRESSES,
   isOnCorrectChain,
   PAYOUT_CLAIM_CONTRACT,
   PREFERRED_CHAIN,
 } from "@/lib/config/wagmi";
+import { selectSupportedFeeCurrency } from "@/lib/utils/feeCurrency";
 
 interface ClaimPayload {
   day: number;
@@ -21,6 +26,7 @@ interface ClaimPayload {
 
 export function useCheckinClaim() {
   const { address, chainId } = useAccount();
+  const publicClient = usePublicClient();
   const { sendTransaction, data: txHash, isPending } = useSendTransaction();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
@@ -36,10 +42,8 @@ export function useCheckinClaim() {
       throw new Error(`Please switch to Celo network (${PREFERRED_CHAIN.name})`);
     }
 
-    const feeCurrency = CUSD_ADDRESSES[chainId as keyof typeof CUSD_ADDRESSES];
-
-    if (!feeCurrency) {
-      throw new Error("cUSD fee currency is not available for this chain");
+    if (!publicClient) {
+      throw new Error("Blockchain client unavailable. Please retry.");
     }
 
     const data = encodeFunctionData({
@@ -53,6 +57,13 @@ export function useCheckinClaim() {
       ],
     });
 
+    const feeCurrency = await selectSupportedFeeCurrency({
+      publicClient,
+      account: address as `0x${string}`,
+      to: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+      data,
+    });
+
     setClaimError(null);
 
     try {
@@ -60,7 +71,7 @@ export function useCheckinClaim() {
         account: address,
         to: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
         data,
-        feeCurrency: feeCurrency as `0x${string}`,
+        feeCurrency,
       });
     } catch (error: any) {
       const message = error?.shortMessage || error?.message || "Claim transaction failed";
