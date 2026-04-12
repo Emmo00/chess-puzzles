@@ -20,12 +20,37 @@ export const isOnCorrectChain = (chainId?: number): boolean => {
 };
 
 export const SUPPORTED_CURRENCIES = [
-  "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e", // USDT ON Celo Mainnet
-  "0x765DE816845861e75A25fCA122bb6898B8B1282a", // USDm on Celo Mainnet
-  "0xcebA9300f2b948710d2653dD7B07f33A8B32118C", // USDC ON Celo Mainnet
-  "0x765DE816845861e75A25fCA122bb6898B8B1282a", // Celo cUSD Mainnet
-  "0x471EcE3750Da237f93B8E339c536989b8978a438", // Celo CELO Mainnet
-];
+  {
+    symbol: "USDT",
+    tokenAddress: "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e",
+    feeCurrencyAddress: "0x0e2a3e05bc9a16f5292a6170456a710cb89c6f72",
+    decimals: 6,
+  },
+  {
+    symbol: "USDC",
+    tokenAddress: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
+    feeCurrencyAddress: "0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B",
+    decimals: 6,
+  },
+  {
+    symbol: "cUSD",
+    tokenAddress: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+    feeCurrencyAddress: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+    decimals: 18,
+  },
+  {
+    symbol: "cEUR",
+    tokenAddress: "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73",
+    feeCurrencyAddress: "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73",
+    decimals: 18,
+  },
+  {
+    symbol: "cREAL",
+    tokenAddress: "0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787",
+    feeCurrencyAddress: "0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787",
+    decimals: 18,
+  },
+] as const;
 
 // cUSD Contract Address (Celo mainnet only)
 export const CUSD_ADDRESSES = {

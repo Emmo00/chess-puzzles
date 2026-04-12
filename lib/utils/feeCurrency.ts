@@ -21,6 +21,26 @@ interface SelectFeeCurrencyParams {
 const GAS_SAFETY_NUMERATOR = BigInt(12);
 const GAS_SAFETY_DENOMINATOR = BigInt(10);
 
+const pow10BigInt = (exp: number): bigint => {
+  let result = BigInt(1);
+  for (let i = 0; i < exp; i += 1) {
+    result *= BigInt(10);
+  }
+  return result;
+};
+
+const normalizeAmountTo18Decimals = (amount: bigint, decimals: number): bigint => {
+  if (decimals === 18) {
+    return amount;
+  }
+
+  if (decimals < 18) {
+    return amount * pow10BigInt(18 - decimals);
+  }
+
+  return amount / pow10BigInt(decimals - 18);
+};
+
 export async function selectSupportedFeeCurrency({
   publicClient,
   account,
@@ -29,20 +49,20 @@ export async function selectSupportedFeeCurrency({
   value = BigInt(0),
 }: SelectFeeCurrencyParams): Promise<`0x${string}`> {
   const seen = new Set<string>();
-  const candidates = SUPPORTED_CURRENCIES.filter((address) => {
-    const lowered = address.toLowerCase();
+  const candidates = SUPPORTED_CURRENCIES.filter((currency) => {
+    const lowered = currency.feeCurrencyAddress.toLowerCase();
     if (seen.has(lowered)) {
       return false;
     }
     seen.add(lowered);
     return true;
-  }) as `0x${string}`[];
+  });
 
-  for (const feeCurrency of candidates) {
+  for (const currency of candidates) {
     try {
       const [balance, gasEstimate, gasPriceHex] = await Promise.all([
         publicClient.readContract({
-          address: feeCurrency,
+          address: currency.tokenAddress,
           abi: ERC20_BALANCE_ABI,
           functionName: "balanceOf",
           args: [account],
@@ -52,11 +72,11 @@ export async function selectSupportedFeeCurrency({
           to,
           data,
           value,
-          feeCurrency,
+          feeCurrency: currency.feeCurrencyAddress,
         }),
         publicClient.request({
           method: "eth_gasPrice",
-          params: [feeCurrency],
+          params: [currency.feeCurrencyAddress],
         }),
       ]);
 
@@ -64,8 +84,13 @@ export async function selectSupportedFeeCurrency({
       const estimatedFeeWithBuffer =
         (gasEstimate * gasPrice * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
 
-      if (balance >= estimatedFeeWithBuffer) {
-        return feeCurrency;
+      const normalizedBalance = normalizeAmountTo18Decimals(
+        balance,
+        currency.decimals
+      );
+
+      if (normalizedBalance >= estimatedFeeWithBuffer) {
+        return currency.feeCurrencyAddress as `0x${string}`;
       }
     } catch {
       // Skip currencies that are unsupported by wallet/network or missing balance for fees.
