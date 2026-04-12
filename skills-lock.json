@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "chess-payout-claims": {
+      "source": "emmo00/chess-puzzles-contracts",
+      "sourceType": "github",
+      "computedHash": "d24626c673214578dea1e1a1047d076d81a897c7e0cb880f78693bc83f02d6ed"
+    }
+  }
+}
