@@ -14,20 +14,12 @@ import { Puzzle } from "@/lib/types";
 
 type HintStage = "none" | "piece" | "move";
 
-interface ClaimPayload {
-  day: number;
-  nonce: string;
-  deadline: number;
-  signature: `0x${string}`;
-}
-
 export default function DailyChallengePage() {
   const [mounted, setMounted] = useState(false);
   const [puzzleLoading, setPuzzleLoading] = useState(false);
   const [currentPuzzle, setCurrentPuzzle] = useState<Puzzle | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [mistakeCount, setMistakeCount] = useState(0);
-  const [claimPayload, setClaimPayload] = useState<ClaimPayload | null>(null);
   const [claimMessage, setClaimMessage] = useState<string | null>(null);
   const [hintStage, setHintStage] = useState<HintStage>("none");
   const [hintCount, setHintCount] = useState(0);
@@ -50,6 +42,7 @@ export default function DailyChallengePage() {
     refreshStatus,
     reserveDailyChallenge,
     solveDailyChallenge,
+    fetchClaimPayload,
     confirmClaim,
   } = useDailyCheckin();
   const {
@@ -80,7 +73,6 @@ export default function DailyChallengePage() {
     if (reservationStatus === "claimed") {
       setCurrentPuzzle(null);
       setIsCompleted(false);
-      setClaimPayload(null);
       return;
     }
 
@@ -97,19 +89,12 @@ export default function DailyChallengePage() {
       themes: status.challenge.themes,
     });
 
-    if (status.reservation?.status === "earned" && status.reservation.claimSignature && status.reservation.claimNonce && status.reservation.claimDeadline) {
+    if (status.reservation?.status === "earned" || status.reservation?.status === "claiming") {
       setIsCompleted(true);
-      setClaimPayload({
-        day: status.utcDay,
-        nonce: status.reservation.claimNonce,
-        deadline: status.reservation.claimDeadline,
-        signature: status.reservation.claimSignature,
-      });
       return;
     }
 
     setIsCompleted(false);
-    setClaimPayload(null);
   }, [status]);
 
   useEffect(() => {
@@ -186,7 +171,6 @@ export default function DailyChallengePage() {
       const result = await reserveDailyChallenge();
       setCurrentPuzzle(result.puzzle);
       setIsCompleted(false);
-      setClaimPayload(null);
       setMistakeCount(0);
       setHintCount(0);
       setHintStage("none");
@@ -208,7 +192,6 @@ export default function DailyChallengePage() {
     try {
       const result = await solveDailyChallenge(currentPuzzle.puzzleid);
       if (result.success) {
-        setClaimPayload(result.claim);
         setClaimMessage("Challenge solved. Claim your reward on-chain.");
         fireConfetti();
       }
@@ -218,11 +201,6 @@ export default function DailyChallengePage() {
   };
 
   const handleClaimReward = async () => {
-    if (!claimPayload) {
-      setClaimMessage("Claim payload not available. Try refreshing status.");
-      return;
-    }
-
     if (!isOnCorrectChain) {
       setClaimMessage("Switch to Celo network before claiming.");
       return;
@@ -231,6 +209,7 @@ export default function DailyChallengePage() {
     setClaimMessage(null);
 
     try {
+      const claimPayload = await fetchClaimPayload();
       await sendClaim(claimPayload);
       setClaimMessage("Transaction sent. Waiting for confirmation...");
     } catch (err: any) {
@@ -298,7 +277,7 @@ export default function DailyChallengePage() {
   const reservationStatus = status?.reservation?.status;
   const isClaimed = reservationStatus === "claimed";
   const isAlreadySolvedToday = isClaimed;
-  const canClaim = Boolean(claimPayload) && !isClaimed;
+  const canClaim = Boolean(isCompleted) && !isClaimed;
 
   return (
     <div className="min-h-screen w-full bg-white text-black flex flex-col">

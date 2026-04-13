@@ -76,9 +76,6 @@ class CheckInService {
         ? {
             status: reservation.status,
             pendingExpiresAt: reservation.pendingExpiresAt,
-            claimDeadline: reservation.claimDeadline,
-            claimNonce: reservation.claimNonce,
-            claimSignature: reservation.claimSignature,
             claimTxHash: reservation.claimTxHash,
             claimedAt: reservation.claimedAt,
           }
@@ -272,13 +269,11 @@ class CheckInService {
       throw new HttpException(400, "Submitted puzzle does not match today's challenge");
     }
 
-    const signedPayload = await this.generateSignedPayload(normalizedWallet, utcDay);
-
     currentReservation.status = "earned";
     currentReservation.solvedAt = new Date();
-    currentReservation.claimNonce = signedPayload.nonce;
-    currentReservation.claimDeadline = signedPayload.deadline;
-    currentReservation.claimSignature = signedPayload.signature;
+    currentReservation.claimNonce = undefined;
+    currentReservation.claimDeadline = undefined;
+    currentReservation.claimSignature = undefined;
     await currentReservation.save();
 
     await userPuzzlesModel.findOneAndUpdate(
@@ -297,12 +292,44 @@ class CheckInService {
       success: true,
       status: currentReservation.status,
       checkInAmountWei: currentReservation.checkInAmountWei,
-      claim: {
-        day: utcDay,
-        nonce: currentReservation.claimNonce,
-        deadline: currentReservation.claimDeadline,
-        signature: currentReservation.claimSignature,
-      },
+    };
+  }
+
+  public async getFreshClaimPayload(walletAddress: string) {
+    const utcDay = getUtcDayNumber();
+    const normalizedWallet = walletAddress.toLowerCase();
+
+    const reservation = await CheckInReservation.findOne({
+      walletAddress: normalizedWallet,
+      utcDay,
+    });
+
+    if (!reservation) {
+      throw new HttpException(404, "No daily check-in reservation found");
+    }
+
+    if (reservation.status === "claimed") {
+      throw new HttpException(409, "Daily challenge reward already claimed");
+    }
+
+    if (!["earned", "claiming"].includes(reservation.status)) {
+      throw new HttpException(
+        409,
+        `Cannot claim reward while reservation is '${reservation.status}'`
+      );
+    }
+
+    const signedPayload = await this.generateSignedPayload(normalizedWallet, utcDay);
+
+    if (signedPayload.deadline <= Math.floor(Date.now() / 1000)) {
+      throw new HttpException(500, "Generated claim signature is already expired");
+    }
+
+    return {
+      day: utcDay,
+      nonce: signedPayload.nonce,
+      deadline: signedPayload.deadline,
+      signature: signedPayload.signature,
     };
   }
 

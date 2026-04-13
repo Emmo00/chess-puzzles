@@ -15,11 +15,15 @@ interface DailyChallengePuzzle {
 interface ReservationData {
   status: string;
   pendingExpiresAt?: string;
-  claimDeadline?: number;
-  claimNonce?: string;
-  claimSignature?: `0x${string}`;
   claimTxHash?: string;
   claimedAt?: string;
+}
+
+interface ClaimPayload {
+  day: number;
+  nonce: string;
+  deadline: number;
+  signature: `0x${string}`;
 }
 
 export interface DailyCheckinStatus {
@@ -67,12 +71,6 @@ interface SolveResponse {
   success: boolean;
   status: string;
   checkInAmountWei: string;
-  claim: {
-    day: number;
-    nonce: string;
-    deadline: number;
-    signature: `0x${string}`;
-  };
 }
 
 export function useDailyCheckin() {
@@ -199,6 +197,27 @@ export function useDailyCheckin() {
     [address, refreshStatus]
   );
 
+  const fetchClaimPayload = useCallback(async (): Promise<ClaimPayload> => {
+    if (!address) {
+      throw new Error("Wallet not connected");
+    }
+
+    const response = await fetch("/api/checkin/claim/payload", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${address}`,
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to fetch fresh claim payload");
+    }
+
+    return data.claim as ClaimPayload;
+  }, [address]);
+
   useEffect(() => {
     refreshStatus();
   }, [refreshStatus]);
@@ -210,6 +229,7 @@ export function useDailyCheckin() {
     refreshStatus,
     reserveDailyChallenge,
     solveDailyChallenge,
+    fetchClaimPayload,
     confirmClaim,
   };
 }
