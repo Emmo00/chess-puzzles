@@ -2,19 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { encodeFunctionData } from "viem";
-import {
-  useAccount,
-  useSendTransaction,
-  useWaitForTransactionReceipt,
-  usePublicClient,
-} from "wagmi";
+import { useAccount, useSendTransaction, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
-import {
-  isOnCorrectChain,
-  PAYOUT_CLAIM_CONTRACT,
-  PREFERRED_CHAIN,
-} from "@/lib/config/wagmi";
+import { isOnCorrectChain, PAYOUT_CLAIM_CONTRACT, PREFERRED_CHAIN } from "@/lib/config/wagmi";
 import { selectSupportedFeeCurrency } from "@/lib/utils/feeCurrency";
 
 interface ClaimPayload {
@@ -71,9 +62,7 @@ export function useCheckinClaim() {
     }
 
     if (payload.user.toLowerCase() !== address.toLowerCase()) {
-      throw new Error(
-        "Claim payload wallet does not match the connected wallet. Refresh and try again."
-      );
+      throw new Error("Claim payload wallet does not match the connected wallet. Refresh and try again.");
     }
 
     const now = Math.floor(Date.now() / 1000);
@@ -93,12 +82,18 @@ export function useCheckinClaim() {
     const data = encodeFunctionData({
       abi: PAYOUT_CLAIMS_ABI,
       functionName: "claimDailyCheckIn",
-      args: [
-        BigInt(payload.day),
-        BigInt(payload.nonce),
-        BigInt(payload.deadline),
-        payload.signature,
-      ],
+      args: [BigInt(payload.day), BigInt(payload.nonce), BigInt(payload.deadline), payload.signature],
+    });
+
+    console.info("[ClaimFlow][useCheckinClaim] encodedFunctionData", {
+      functionName: "claimDailyCheckIn",
+      args: {
+        day: payload.day,
+        nonce: payload.nonce,
+        deadline: payload.deadline,
+        signature: payload.signature,
+      },
+      data,
     });
 
     const feeCurrency = await selectSupportedFeeCurrency({

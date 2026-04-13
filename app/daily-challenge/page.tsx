@@ -23,9 +23,7 @@ export default function DailyChallengePage() {
   const [claimMessage, setClaimMessage] = useState<string | null>(null);
   const [hintStage, setHintStage] = useState<HintStage>("none");
   const [hintCount, setHintCount] = useState(0);
-  const [highlightedSquares, setHighlightedSquares] = useState<
-    { from?: string; to?: string } | null
-  >(null);
+  const [highlightedSquares, setHighlightedSquares] = useState<{ from?: string; to?: string } | null>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [isWrongMoveActive, setIsWrongMoveActive] = useState(false);
@@ -172,7 +170,10 @@ export default function DailyChallengePage() {
   const rewardLabel = useMemo(() => {
     const rawAmount = Number(status?.checkInAmountDisplay || 0);
     const amount = Number.isFinite(rawAmount)
-      ? rawAmount.toFixed(4).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1")
+      ? rawAmount
+          .toFixed(4)
+          .replace(/\.0+$/, "")
+          .replace(/(\.\d*?)0+$/, "$1")
       : "0";
     const symbol = status?.payoutTokenSymbol || "TOKEN";
     return `${amount} ${symbol}`;
@@ -246,6 +247,8 @@ export default function DailyChallengePage() {
       logClaimFlow("claim.tx.submitted", { address });
       setClaimMessage("Transaction sent. Waiting for confirmation...");
     } catch (err: any) {
+      console.error("[ClaimFlow][DailyChallengePage] claim.error", err);
+
       logClaimFlow("claim.error", {
         address,
         message: err?.message,
@@ -375,9 +378,7 @@ export default function DailyChallengePage() {
                 </button>
 
                 {status?.reservation?.pendingExpiresAt && (
-                  <p className="text-xs font-black uppercase text-gray-700">
-                    Reservation expires in {pendingSeconds}s
-                  </p>
+                  <p className="text-xs font-black uppercase text-gray-700">Reservation expires in {pendingSeconds}s</p>
                 )}
               </>
             )}
@@ -442,7 +443,11 @@ export default function DailyChallengePage() {
                         : "bg-yellow-400"
                     }`}
                   >
-                    {hintStage === "none" ? `HINT${hintCount > 0 ? ` (${hintCount})` : ""}` : hintStage === "piece" ? "SHOW MOVE" : "HINT SHOWN"}
+                    {hintStage === "none"
+                      ? `HINT${hintCount > 0 ? ` (${hintCount})` : ""}`
+                      : hintStage === "piece"
+                        ? "SHOW MOVE"
+                        : "HINT SHOWN"}
                   </button>
                 )}
 
@@ -458,7 +463,6 @@ export default function DailyChallengePage() {
                   →
                 </button>
               </div>
-
             </div>
           </>
         )}
@@ -466,20 +470,14 @@ export default function DailyChallengePage() {
         {isCompleted && (
           <div className="w-full max-w-xs bg-green-300 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-5 transform rotate-1">
             <h3 className="text-xl font-black uppercase text-black mb-2">Challenge Solved</h3>
-            <p className="text-sm font-bold uppercase text-black mb-4">
-              Claim {rewardLabel} on Celo
-            </p>
+            <p className="text-sm font-bold uppercase text-black mb-4">Claim {rewardLabel} on Celo</p>
 
             <button
               onClick={handleClaimReward}
               disabled={!canClaim || claimSubmitting || claimConfirming || isClaimed}
               className="w-full bg-black text-green-200 py-3 px-4 font-black text-sm uppercase tracking-wide border-2 border-green-200 hover:bg-gray-800 transition-all disabled:opacity-50"
             >
-              {isClaimed
-                ? "REWARD CLAIMED"
-                : claimSubmitting || claimConfirming
-                ? "CLAIMING..."
-                : "CLAIM REWARD"}
+              {isClaimed ? "REWARD CLAIMED" : claimSubmitting || claimConfirming ? "CLAIMING..." : "CLAIM REWARD"}
             </button>
           </div>
         )}
