@@ -4,7 +4,7 @@ import Script from "next/script";
 
 import "./globals.css";
 import { WalletProvider } from "../lib/providers/WalletProvider";
-import { ChainNotification } from "../components/ChainNotification";
+import { FarcasterMiniAppReady } from "@/components/FarcasterMiniAppReady";
 import { Inter, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 
 // Initialize fonts
@@ -15,24 +15,55 @@ const sourceSerif4 = Source_Serif_4({
   weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
 });
 
+const FALLBACK_APP_URL = "https://example.com";
+const appBaseUrl = (() => {
+  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL || FALLBACK_APP_URL;
+  try {
+    return new URL(configuredUrl);
+  } catch {
+    return new URL(FALLBACK_APP_URL);
+  }
+})();
+
+const buildAppUrl = (path: string) => new URL(path, appBaseUrl).toString();
+
+const miniAppEmbed = {
+  version: "1",
+  imageUrl: buildAppUrl("/api/og"),
+  button: {
+    title: "Play Chess Puzzles",
+    action: {
+      type: "launch_miniapp",
+      name: "Chess Puzzles",
+      url: buildAppUrl("/"),
+      splashImageUrl: buildAppUrl("/chess-puzzles.svg"),
+      splashBackgroundColor: "#fff9ec",
+    },
+  },
+} as const;
+
 
 
 export const metadata: Metadata = {
   title: "Chess Puzzles - Master Your Tactics",
   description: "Solve challenging chess puzzles and improve your tactical skills",
   generator: "Chess Puzzles App",
+  metadataBase: appBaseUrl,
   openGraph: {
     title: "Chess Puzzles - Master Your Tactics",
     description: "Challenge yourself with engaging chess puzzles and improve your tactical skills",
     images: [
       {
-        url: "/api/og",
+        url: buildAppUrl("/api/og"),
         width: 1200,
         height: 630,
         alt: "Chess Puzzles App",
       },
     ],
     type: "website",
+  },
+  other: {
+    "fc:miniapp": JSON.stringify(miniAppEmbed),
   },
 
   icons: {
@@ -80,6 +111,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} antialiased`}>
         <WalletProvider>
+          <FarcasterMiniAppReady />
           {children}
         </WalletProvider>
       </body>
