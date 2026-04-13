@@ -31,7 +31,7 @@ class CheckInService {
   private signingService = new CheckInSigningService();
 
   public async getDailyStatus(walletAddress?: string) {
-    const utcDay = getUtcDayNumber();
+    const utcDay: number = getUtcDayNumber();
     const contractValues = await this.contractService.getCheckInContractValues();
     const challenge = await DailyChallenge.findOne({ utcDay });
 
@@ -90,7 +90,7 @@ class CheckInService {
   }
 
   public async reserveDailyChallenge(walletAddress: string) {
-    const utcDay = getUtcDayNumber();
+    const utcDay: number = getUtcDayNumber();
     const normalizedWallet = walletAddress.toLowerCase();
 
     const contractValues = await this.contractService.getCheckInContractValues();
@@ -107,10 +107,11 @@ class CheckInService {
       challenge = reloadedChallenge;
     }
 
-    const existingReservation = await CheckInReservation.findOne({
+    const existingReservation: ICheckInReservation | null =
+      await CheckInReservation.findOne({
       walletAddress: normalizedWallet,
       utcDay,
-    });
+      });
 
     if (existingReservation) {
       if (existingReservation.status === "pending") {
@@ -222,7 +223,7 @@ class CheckInService {
   }
 
   public async solveDailyChallenge(walletAddress: string, puzzleId: string) {
-    const utcDay = getUtcDayNumber();
+    const utcDay: number = getUtcDayNumber();
     const normalizedWallet = walletAddress.toLowerCase();
 
     const reservation = await CheckInReservation.findOne({
@@ -302,7 +303,7 @@ class CheckInService {
   }
 
   public async getFreshClaimPayload(walletAddress: string) {
-    const utcDay = getUtcDayNumber();
+    const utcDay: number = getUtcDayNumber();
     const normalizedWallet = walletAddress.toLowerCase();
 
     const reservation = await CheckInReservation.findOne({
@@ -341,7 +342,7 @@ class CheckInService {
   }
 
   public async markClaiming(walletAddress: string, txHash: string) {
-    const utcDay = getUtcDayNumber();
+    const utcDay: number = getUtcDayNumber();
 
     const reservation = await CheckInReservation.findOne({
       walletAddress: walletAddress.toLowerCase(),
@@ -368,7 +369,7 @@ class CheckInService {
   }
 
   public async markClaimed(walletAddress: string, txHash: string) {
-    const utcDay = getUtcDayNumber();
+    const utcDay: number = getUtcDayNumber();
     const reservation = await CheckInReservation.findOne({
       walletAddress: walletAddress.toLowerCase(),
       utcDay,
@@ -387,7 +388,7 @@ class CheckInService {
   }
 
   public async markFailedClaim(walletAddress: string, txHash: string, error: string) {
-    const utcDay = getUtcDayNumber();
+    const utcDay: number = getUtcDayNumber();
     const reservation = await CheckInReservation.findOne({
       walletAddress: walletAddress.toLowerCase(),
       utcDay,
