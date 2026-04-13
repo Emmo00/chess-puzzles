@@ -54,6 +54,10 @@ export default function DailyChallengePage() {
     claimError,
   } = useCheckinClaim();
 
+  const logClaimFlow = (step: string, details?: Record<string, unknown>) => {
+    console.info("[ClaimFlow][DailyChallengePage]", step, details || {});
+  };
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -102,14 +106,24 @@ export default function DailyChallengePage() {
       return;
     }
 
+    logClaimFlow("confirm.effect.start", { txHash, claimTxMined });
+
     let attempts = 0;
     let isCancelled = false;
 
     const confirmWithRetry = async () => {
       while (!isCancelled && attempts < 6) {
         attempts += 1;
+        logClaimFlow("confirm.effect.attempt", { txHash, attempt: attempts });
         try {
           const confirmation = await confirmClaim(txHash);
+          logClaimFlow("confirm.effect.response", {
+            txHash,
+            attempt: attempts,
+            success: confirmation.success,
+            pending: confirmation.pending,
+            message: confirmation.message,
+          });
           if (confirmation.success) {
             setClaimMessage("Reward claimed successfully");
             fireConfetti();
@@ -122,6 +136,11 @@ export default function DailyChallengePage() {
             return;
           }
         } catch (err: any) {
+          logClaimFlow("confirm.effect.error", {
+            txHash,
+            attempt: attempts,
+            message: err?.message,
+          });
           setClaimMessage(err.message || "Claim confirmation failed");
           return;
         }
@@ -130,6 +149,7 @@ export default function DailyChallengePage() {
       }
 
       if (!isCancelled) {
+        logClaimFlow("confirm.effect.timeout", { txHash, attempts });
         setClaimMessage("Transaction submitted. Confirmation is still pending.");
       }
     };
@@ -201,6 +221,12 @@ export default function DailyChallengePage() {
   };
 
   const handleClaimReward = async () => {
+    logClaimFlow("claim.click", {
+      address,
+      isOnCorrectChain,
+      reservationStatus: status?.reservation?.status,
+    });
+
     if (!isOnCorrectChain) {
       setClaimMessage("Switch to Celo network before claiming.");
       return;
@@ -210,9 +236,20 @@ export default function DailyChallengePage() {
 
     try {
       const claimPayload = await fetchClaimPayload();
+      logClaimFlow("claim.payload.received", {
+        user: claimPayload.user,
+        day: claimPayload.day,
+        deadline: claimPayload.deadline,
+        nonce: claimPayload.nonce,
+      });
       await sendClaim(claimPayload);
+      logClaimFlow("claim.tx.submitted", { address });
       setClaimMessage("Transaction sent. Waiting for confirmation...");
     } catch (err: any) {
+      logClaimFlow("claim.error", {
+        address,
+        message: err?.message,
+      });
       setClaimMessage(err.message || "Failed to send claim transaction");
     }
   };
