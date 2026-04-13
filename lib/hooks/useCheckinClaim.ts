@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { encodeFunctionData } from "viem";
 import {
   useAccount,
@@ -18,6 +18,7 @@ import {
 import { selectSupportedFeeCurrency } from "@/lib/utils/feeCurrency";
 
 interface ClaimPayload {
+  user: `0x${string}`;
   day: number;
   nonce: string;
   deadline: number;
@@ -33,7 +34,30 @@ export function useCheckinClaim() {
   });
   const [claimError, setClaimError] = useState<string | null>(null);
 
+  const logClaimFlow = (step: string, details?: Record<string, unknown>) => {
+    console.info("[ClaimFlow][useCheckinClaim]", step, details || {});
+  };
+
+  useEffect(() => {
+    logClaimFlow("tx.state", {
+      txHash,
+      isPending,
+      isConfirming,
+      isSuccess,
+      claimError,
+    });
+  }, [txHash, isPending, isConfirming, isSuccess, claimError]);
+
   const sendClaim = async (payload: ClaimPayload) => {
+    logClaimFlow("sendClaim.start", {
+      connectedAddress: address,
+      chainId,
+      payloadUser: payload.user,
+      day: payload.day,
+      nonce: payload.nonce,
+      deadline: payload.deadline,
+    });
+
     if (!address || !chainId) {
       throw new Error("Wallet not connected");
     }
@@ -45,6 +69,26 @@ export function useCheckinClaim() {
     if (!publicClient) {
       throw new Error("Blockchain client unavailable. Please retry.");
     }
+
+    if (payload.user.toLowerCase() !== address.toLowerCase()) {
+      throw new Error(
+        "Claim payload wallet does not match the connected wallet. Refresh and try again."
+      );
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.deadline <= now) {
+      throw new Error("Claim signature expired. Please try claiming again.");
+    }
+
+    logClaimFlow("sendClaim.preflight.passed", {
+      connectedAddress: address,
+      payloadUser: payload.user,
+      chainId,
+      now,
+      deadline: payload.deadline,
+      secondsUntilExpiry: payload.deadline - now,
+    });
 
     const data = encodeFunctionData({
       abi: PAYOUT_CLAIMS_ABI,
@@ -64,17 +108,40 @@ export function useCheckinClaim() {
       data,
     });
 
+    logClaimFlow("sendClaim.feeCurrency.selected", {
+      connectedAddress: address,
+      feeCurrency,
+      contract: PAYOUT_CLAIM_CONTRACT,
+      callDataLength: data.length,
+    });
+
     setClaimError(null);
 
     try {
+      logClaimFlow("sendClaim.submit", {
+        connectedAddress: address,
+        contract: PAYOUT_CLAIM_CONTRACT,
+      });
+
       await sendTransaction({
         account: address,
         to: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
         data,
         feeCurrency,
       });
+
+      logClaimFlow("sendClaim.submitted", {
+        connectedAddress: address,
+        contract: PAYOUT_CLAIM_CONTRACT,
+      });
     } catch (error: any) {
       const message = error?.shortMessage || error?.message || "Claim transaction failed";
+      logClaimFlow("sendClaim.error", {
+        message,
+        shortMessage: error?.shortMessage,
+        details: error?.details,
+        cause: error?.cause?.message,
+      });
       setClaimError(message);
       throw new Error(message);
     }

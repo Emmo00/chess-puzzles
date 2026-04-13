@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 
 import { authenticateWalletUser } from "@/lib/auth";
 import { PAYOUT_CLAIM_CONTRACT } from "@/lib/config/wagmi";
@@ -8,14 +9,33 @@ import CheckInService from "@/lib/services/checkin.service";
 
 const TX_HASH_REGEX = /^0x[a-fA-F0-9]{64}$/;
 
+const maskAddress = (address?: string) => {
+  if (!address || address.length < 10) return address;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+};
+
 export async function POST(request: NextRequest) {
+  const requestId = request.headers.get("x-claim-debug-id") || randomUUID();
+
   try {
+    console.info("[ClaimFlow][API][confirm] start", { requestId });
+
     await dbConnect();
 
     const user = await authenticateWalletUser(request);
     const { txHash } = await request.json();
 
+    console.info("[ClaimFlow][API][confirm] input", {
+      requestId,
+      wallet: maskAddress(user.walletAddress),
+      txHash,
+    });
+
     if (!txHash || typeof txHash !== "string" || !TX_HASH_REGEX.test(txHash)) {
+      console.info("[ClaimFlow][API][confirm] invalidTxHash", {
+        requestId,
+        txHash,
+      });
       return NextResponse.json(
         { message: "Invalid txHash provided" },
         { status: 400 }
@@ -26,6 +46,12 @@ export async function POST(request: NextRequest) {
     const contractService = new CheckInContractService();
 
     const reservation = await checkInService.markClaiming(user.walletAddress, txHash);
+    console.info("[ClaimFlow][API][confirm] markClaiming", {
+      requestId,
+      wallet: maskAddress(user.walletAddress),
+      reservationStatus: reservation.status,
+    });
+
     if (reservation.status === "claimed") {
       return NextResponse.json({
         success: true,
@@ -42,8 +68,19 @@ export async function POST(request: NextRequest) {
       receipt = await publicClient.getTransactionReceipt({
         hash: txHash as `0x${string}`,
       });
+
+      console.info("[ClaimFlow][API][confirm] receipt", {
+        requestId,
+        txHash,
+        status: receipt.status,
+        blockNumber: Number(receipt.blockNumber),
+      });
     } catch (error: any) {
       if (error.name === "TransactionReceiptNotFoundError") {
+        console.info("[ClaimFlow][API][confirm] receiptPending", {
+          requestId,
+          txHash,
+        });
         return NextResponse.json(
           {
             success: false,
@@ -57,6 +94,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (receipt.status !== "success") {
+      console.info("[ClaimFlow][API][confirm] receiptReverted", {
+        requestId,
+        txHash,
+      });
+
       await checkInService.markFailedClaim(
         user.walletAddress,
         txHash,
@@ -81,6 +123,17 @@ export async function POST(request: NextRequest) {
     const toMatches =
       transaction.to?.toLowerCase() === PAYOUT_CLAIM_CONTRACT.toLowerCase();
 
+    console.info("[ClaimFlow][API][confirm] txValidation", {
+      requestId,
+      txHash,
+      from: transaction.from,
+      to: transaction.to,
+      expectedWallet: user.walletAddress,
+      expectedContract: PAYOUT_CLAIM_CONTRACT,
+      fromMatches,
+      toMatches,
+    });
+
     if (!fromMatches || !toMatches) {
       await checkInService.markFailedClaim(
         user.walletAddress,
@@ -102,6 +155,13 @@ export async function POST(request: NextRequest) {
       txHash
     );
 
+    console.info("[ClaimFlow][API][confirm] claimed", {
+      requestId,
+      wallet: maskAddress(user.walletAddress),
+      txHash,
+      claimedAt: claimedReservation.claimedAt,
+    });
+
     return NextResponse.json({
       success: true,
       status: claimedReservation.status,
@@ -109,7 +169,12 @@ export async function POST(request: NextRequest) {
       claimedAt: claimedReservation.claimedAt,
     });
   } catch (error: any) {
-    console.error("Error confirming check-in claim:", error);
+    console.error("[ClaimFlow][API][confirm] error", {
+      requestId,
+      message: error?.message,
+      stack: error?.stack,
+      status: error?.status,
+    });
     return NextResponse.json(
       { message: error.message || "Failed to confirm check-in claim" },
       { status: error.status || 500 }

@@ -2,9 +2,14 @@ import { randomInt } from "crypto";
 
 import {
   CHECKIN_RESERVATION_TTL_MINUTES,
+  CHECKIN_SIGNATURE_TTL_SECONDS,
+  CHECK_IN_CLAIM_TYPES,
   DAILY_CHALLENGE_MAX_RATING,
   DAILY_CHALLENGE_MIN_RATING,
+  PAYOUT_CLAIMS_ABI,
+  PAYOUT_CLAIMS_EIP712_DOMAIN,
 } from "@/lib/config/payoutClaims";
+import { PAYOUT_CLAIM_CONTRACT } from "@/lib/config/wagmi";
 import {
   CheckInReservation,
   ICheckInReservation,
@@ -16,6 +21,7 @@ import userPuzzlesModel from "@/lib/models/userPuzzles.model";
 import PuzzleAPIClient from "@/lib/services/puzzle-api.client";
 import CheckInContractService from "@/lib/services/checkin-contract.service";
 import CheckInSigningService from "@/lib/services/checkin-signing.service";
+import { recoverTypedDataAddress } from "viem";
 
 const ACTIVE_STATUSES = ["pending", "earned", "claiming", "claimed"];
 
@@ -326,6 +332,7 @@ class CheckInService {
     }
 
     return {
+      user: normalizedWallet as `0x${string}`,
       day: utcDay,
       nonce: signedPayload.nonce,
       deadline: signedPayload.deadline,
@@ -465,15 +472,70 @@ class CheckInService {
   private async generateSignedPayload(walletAddress: string, utcDay: number) {
     let retries = 0;
 
+    const publicClient = this.contractService.getPublicClient();
+    const [onChainSigner, onChainDomain] = await Promise.all([
+      publicClient.readContract({
+        address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+        abi: PAYOUT_CLAIMS_ABI,
+        functionName: "serverSigner",
+      }),
+      publicClient.readContract({
+        address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+        abi: PAYOUT_CLAIMS_ABI,
+        functionName: "eip712Domain",
+      }),
+    ]);
+
+    const [, domainName, domainVersion, domainChainId, domainVerifyingContract] =
+      onChainDomain;
+
+    const expectedDomain = PAYOUT_CLAIMS_EIP712_DOMAIN;
+    const domainMatches =
+      String(domainName) === expectedDomain.name &&
+      String(domainVersion) === expectedDomain.version &&
+      Number(domainChainId) === Number(expectedDomain.chainId) &&
+      String(domainVerifyingContract).toLowerCase() ===
+        String(expectedDomain.verifyingContract).toLowerCase();
+
+    if (!domainMatches) {
+      throw new HttpException(
+        500,
+        "EIP-712 domain mismatch between backend config and payout contract"
+      );
+    }
+
     while (retries < 3) {
       const nonce = this.signingService.generateNonce();
+      const deadline =
+        Math.floor(Date.now() / 1000) + CHECKIN_SIGNATURE_TTL_SECONDS;
 
       try {
         const signed = await this.signingService.signCheckInClaim(
           walletAddress as `0x${string}`,
           utcDay,
-          nonce
+          nonce,
+          deadline
         );
+
+        const recoveredAddress = await recoverTypedDataAddress({
+          domain: expectedDomain,
+          types: CHECK_IN_CLAIM_TYPES,
+          primaryType: "CheckInClaim",
+          message: {
+            user: walletAddress as `0x${string}`,
+            day: BigInt(utcDay),
+            nonce: BigInt(signed.nonce),
+            deadline: BigInt(signed.deadline),
+          },
+          signature: signed.signature,
+        });
+
+        if (recoveredAddress.toLowerCase() !== String(onChainSigner).toLowerCase()) {
+          throw new HttpException(
+            500,
+            "CHECKIN_SIGNER_PRIVATE_KEY does not match on-chain serverSigner"
+          );
+        }
 
         return signed;
       } catch (error: any) {

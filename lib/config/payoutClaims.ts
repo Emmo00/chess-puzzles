@@ -18,6 +18,28 @@ export const PAYOUT_CLAIMS_EIP712_DOMAIN = {
 export const PAYOUT_CLAIMS_ABI = [
   {
     type: "function",
+    name: "serverSigner",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "eip712Domain",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [
+      { name: "fields", type: "bytes1" },
+      { name: "name", type: "string" },
+      { name: "version", type: "string" },
+      { name: "chainId", type: "uint256" },
+      { name: "verifyingContract", type: "address" },
+      { name: "salt", type: "bytes32" },
+      { name: "extensions", type: "uint256[]" },
+    ],
+  },
+  {
+    type: "function",
     name: "payoutToken",
     stateMutability: "view",
     inputs: [],

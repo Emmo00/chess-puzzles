@@ -58,7 +58,14 @@ export class CheckInSigningService {
       );
     }
 
-    return privateKeyToAccount(privateKey as `0x${string}`);
+    const normalizedPrivateKey = privateKey.split("#")[0]?.trim();
+    if (!normalizedPrivateKey || !/^0x[a-fA-F0-9]{64}$/.test(normalizedPrivateKey)) {
+      throw new Error(
+        "CHECKIN_SIGNER_PRIVATE_KEY must be a valid 32-byte hex private key"
+      );
+    }
+
+    return privateKeyToAccount(normalizedPrivateKey as `0x${string}`);
   }
 }
 

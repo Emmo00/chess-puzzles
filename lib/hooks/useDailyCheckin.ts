@@ -20,6 +20,7 @@ interface ReservationData {
 }
 
 interface ClaimPayload {
+  user: `0x${string}`;
   day: number;
   nonce: string;
   deadline: number;
@@ -78,6 +79,10 @@ export function useDailyCheckin() {
   const [status, setStatus] = useState<DailyCheckinStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const logClaimFlow = (step: string, details?: Record<string, unknown>) => {
+    console.info("[ClaimFlow][useDailyCheckin]", step, details || {});
+  };
 
   const refreshStatus = useCallback(async () => {
     if (!address) {
@@ -164,6 +169,11 @@ export function useDailyCheckin() {
         throw new Error("Wallet not connected");
       }
 
+      logClaimFlow("confirmClaim.start", {
+        address,
+        txHash,
+      });
+
       const response = await fetch("/api/checkin/claim/confirm", {
         method: "POST",
         headers: {
@@ -174,6 +184,15 @@ export function useDailyCheckin() {
       });
 
       const data = await response.json();
+
+      logClaimFlow("confirmClaim.response", {
+        address,
+        txHash,
+        status: response.status,
+        ok: response.ok,
+        pending: response.status === 202,
+        payload: data,
+      });
 
       if (response.status === 202) {
         return {
@@ -202,6 +221,8 @@ export function useDailyCheckin() {
       throw new Error("Wallet not connected");
     }
 
+    logClaimFlow("fetchClaimPayload.start", { address });
+
     const response = await fetch("/api/checkin/claim/payload", {
       method: "POST",
       headers: {
@@ -211,6 +232,19 @@ export function useDailyCheckin() {
     });
 
     const data = await response.json();
+
+    logClaimFlow("fetchClaimPayload.response", {
+      address,
+      status: response.status,
+      ok: response.ok,
+      user: data?.claim?.user,
+      day: data?.claim?.day,
+      deadline: data?.claim?.deadline,
+      nonce: data?.claim?.nonce,
+      signatureLength: data?.claim?.signature?.length,
+      error: data?.message,
+    });
+
     if (!response.ok) {
       throw new Error(data.message || "Failed to fetch fresh claim payload");
     }
