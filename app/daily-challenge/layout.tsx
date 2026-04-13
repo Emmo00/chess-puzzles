@@ -1,7 +1,7 @@
 import type React from "react";
 import type { Metadata } from "next";
 
-const FALLBACK_APP_URL = "https://example.com";
+const FALLBACK_APP_URL = "https://chesspuzzles.xyz";
 
 const appBaseUrl = (() => {
   const configuredUrl = process.env.NEXT_PUBLIC_APP_URL || FALLBACK_APP_URL;
