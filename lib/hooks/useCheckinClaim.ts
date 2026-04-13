@@ -115,6 +115,34 @@ export function useCheckinClaim() {
       callDataLength: data.length,
     });
 
+    const txRequest = {
+      account: address as `0x${string}`,
+      to: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+      data,
+      feeCurrency,
+    };
+
+    logClaimFlow("sendClaim.txRequest.full", {
+      txRequest,
+      txParams: {
+        account: txRequest.account,
+        to: txRequest.to,
+        data: txRequest.data,
+        dataLength: txRequest.data.length,
+        feeCurrency: txRequest.feeCurrency,
+        chainId,
+        value: "0x0 (implicit default)",
+      },
+      claimFunction: "claimDailyCheckIn",
+      claimArgs: {
+        day: payload.day,
+        nonce: payload.nonce,
+        deadline: payload.deadline,
+        signature: payload.signature,
+        signatureLength: payload.signature.length,
+      },
+    });
+
     setClaimError(null);
 
     try {
@@ -123,12 +151,7 @@ export function useCheckinClaim() {
         contract: PAYOUT_CLAIM_CONTRACT,
       });
 
-      await sendTransaction({
-        account: address,
-        to: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
-        data,
-        feeCurrency,
-      });
+      await sendTransaction(txRequest);
 
       logClaimFlow("sendClaim.submitted", {
         connectedAddress: address,

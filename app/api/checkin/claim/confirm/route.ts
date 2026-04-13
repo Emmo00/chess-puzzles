@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 
 import { authenticateWalletUser } from "@/lib/auth";
+import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
 import { PAYOUT_CLAIM_CONTRACT } from "@/lib/config/wagmi";
 import dbConnect from "@/lib/db";
 import CheckInContractService from "@/lib/services/checkin-contract.service";
 import CheckInService from "@/lib/services/checkin.service";
+import { decodeFunctionData } from "viem";
 
 const TX_HASH_REGEX = /^0x[a-fA-F0-9]{64}$/;
 
@@ -75,6 +77,12 @@ export async function POST(request: NextRequest) {
         status: receipt.status,
         blockNumber: Number(receipt.blockNumber),
       });
+
+      console.info("[ClaimFlow][API][confirm] receiptFull", {
+        requestId,
+        txHash,
+        receipt,
+      });
     } catch (error: any) {
       if (error.name === "TransactionReceiptNotFoundError") {
         console.info("[ClaimFlow][API][confirm] receiptPending", {
@@ -116,6 +124,37 @@ export async function POST(request: NextRequest) {
 
     const transaction = await publicClient.getTransaction({
       hash: txHash as `0x${string}`,
+    });
+
+    let decodedInput: {
+      functionName: string;
+      args: string[];
+    } | null = null;
+
+    try {
+      const decoded = decodeFunctionData({
+        abi: PAYOUT_CLAIMS_ABI,
+        data: transaction.input,
+      });
+
+      decodedInput = {
+        functionName: decoded.functionName,
+        args: (decoded.args || []).map((arg) =>
+          typeof arg === "bigint" ? arg.toString() : String(arg)
+        ),
+      };
+    } catch (decodeError: any) {
+      decodedInput = {
+        functionName: "decode_failed",
+        args: [decodeError?.message || "unknown decode error"],
+      };
+    }
+
+    console.info("[ClaimFlow][API][confirm] txFull", {
+      requestId,
+      txHash,
+      transaction,
+      decodedInput,
     });
 
     const fromMatches =
