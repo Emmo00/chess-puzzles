@@ -77,6 +77,13 @@ export default function DailyChallengePage() {
     }
 
     const reservationStatus = status.reservation?.status;
+    if (reservationStatus === "claimed") {
+      setCurrentPuzzle(null);
+      setIsCompleted(false);
+      setClaimPayload(null);
+      return;
+    }
+
     if (!reservationStatus || reservationStatus === "expired" || reservationStatus === "failed") {
       return;
     }
@@ -98,7 +105,11 @@ export default function DailyChallengePage() {
         deadline: status.reservation.claimDeadline,
         signature: status.reservation.claimSignature,
       });
+      return;
     }
+
+    setIsCompleted(false);
+    setClaimPayload(null);
   }, [status]);
 
   useEffect(() => {
@@ -163,6 +174,11 @@ export default function DailyChallengePage() {
   }, [status?.checkInAmountDisplay, status?.payoutTokenSymbol]);
 
   const handleReserveChallenge = async () => {
+    if (status?.reservation?.status === "claimed") {
+      setClaimMessage("You already solved today's puzzle and claimed the reward. Come back after 00:00 GMT.");
+      return;
+    }
+
     setPuzzleLoading(true);
     setClaimMessage(null);
 
@@ -279,7 +295,9 @@ export default function DailyChallengePage() {
     );
   }
 
-  const isClaimed = status?.reservation?.status === "claimed";
+  const reservationStatus = status?.reservation?.status;
+  const isClaimed = reservationStatus === "claimed";
+  const isAlreadySolvedToday = isClaimed;
   const canClaim = Boolean(claimPayload) && !isClaimed;
 
   return (
@@ -323,18 +341,29 @@ export default function DailyChallengePage() {
               </p>
             </div>
 
-            <button
-              onClick={handleReserveChallenge}
-              disabled={puzzleLoading || !status?.hasSlots}
-              className="w-full bg-green-400 text-black py-4 px-6 font-black text-lg border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50 disabled:hover:translate-x-0 disabled:hover:translate-y-0"
-            >
-              {puzzleLoading ? "RESERVING..." : status?.hasSlots ? "START CHALLENGE" : "SLOTS FULL"}
-            </button>
+            {isAlreadySolvedToday ? (
+              <div className="bg-green-300 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-5 transform rotate-1">
+                <h3 className="text-lg font-black uppercase text-black mb-2">Puzzle Already Solved</h3>
+                <p className="text-sm font-bold uppercase text-black">
+                  You solved today's daily challenge. Come back after 00:00 GMT.
+                </p>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={handleReserveChallenge}
+                  disabled={puzzleLoading || !status?.hasSlots}
+                  className="w-full bg-green-400 text-black py-4 px-6 font-black text-lg border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50 disabled:hover:translate-x-0 disabled:hover:translate-y-0"
+                >
+                  {puzzleLoading ? "RESERVING..." : status?.hasSlots ? "START CHALLENGE" : "SLOTS FULL"}
+                </button>
 
-            {status?.reservation?.pendingExpiresAt && (
-              <p className="text-xs font-black uppercase text-gray-700">
-                Reservation expires in {pendingSeconds}s
-              </p>
+                {status?.reservation?.pendingExpiresAt && (
+                  <p className="text-xs font-black uppercase text-gray-700">
+                    Reservation expires in {pendingSeconds}s
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}

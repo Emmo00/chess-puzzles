@@ -20,6 +20,7 @@ interface SelectFeeCurrencyParams {
 
 const GAS_SAFETY_NUMERATOR = BigInt(12);
 const GAS_SAFETY_DENOMINATOR = BigInt(10);
+const FEE_ABSTRACTION_GAS_OVERHEAD = BigInt(50000);
 
 const pow10BigInt = (exp: number): bigint => {
   let result = BigInt(1);
@@ -48,6 +49,27 @@ export async function selectSupportedFeeCurrency({
   data,
   value = BigInt(0),
 }: SelectFeeCurrencyParams): Promise<`0x${string}`> {
+  let baseGasEstimate: bigint;
+  try {
+    baseGasEstimate = await publicClient.estimateGas({
+      account,
+      to,
+      data,
+      value,
+    });
+  } catch (error: any) {
+    const txErrorMessage =
+      error?.shortMessage ||
+      error?.message ||
+      "Transaction simulation failed before fee currency selection.";
+
+    throw new Error(
+      `Transaction cannot be executed in current state: ${txErrorMessage}`
+    );
+  }
+
+  const effectiveGasEstimate = baseGasEstimate + FEE_ABSTRACTION_GAS_OVERHEAD;
+
   const seen = new Set<string>();
   const candidates = SUPPORTED_CURRENCIES.filter((currency) => {
     const lowered = currency.feeCurrencyAddress.toLowerCase();
@@ -60,19 +82,12 @@ export async function selectSupportedFeeCurrency({
 
   for (const currency of candidates) {
     try {
-      const [balance, gasEstimate, gasPriceHex] = await Promise.all([
+      const [balance, gasPriceHex] = await Promise.all([
         publicClient.readContract({
           address: currency.tokenAddress,
           abi: ERC20_BALANCE_ABI,
           functionName: "balanceOf",
           args: [account],
-        }),
-        publicClient.estimateGas({
-          account,
-          to,
-          data,
-          value,
-          feeCurrency: currency.feeCurrencyAddress,
         }),
         publicClient.request({
           method: "eth_gasPrice",
@@ -80,9 +95,18 @@ export async function selectSupportedFeeCurrency({
         }),
       ]);
 
+      // Probe feeCurrency support without coupling to target calldata reverts.
+      await publicClient.estimateGas({
+        account,
+        to: account,
+        value: BigInt(0),
+        feeCurrency: currency.feeCurrencyAddress,
+      });
+
       const gasPrice = BigInt(gasPriceHex as string);
       const estimatedFeeWithBuffer =
-        (gasEstimate * gasPrice * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
+        (effectiveGasEstimate * gasPrice * GAS_SAFETY_NUMERATOR) /
+        GAS_SAFETY_DENOMINATOR;
 
       const normalizedBalance = normalizeAmountTo18Decimals(
         balance,
@@ -99,6 +123,6 @@ export async function selectSupportedFeeCurrency({
   }
 
   throw new Error(
-    "No supported fee currency has enough balance to cover gas. Fund one of SUPPORTED_CURRENCIES and try again."
+    "No supported fee currency has enough balance to cover gas, or your wallet does not support Celo feeCurrency transactions. Use MiniPay/Valora and fund one of SUPPORTED_CURRENCIES."
   );
 }
