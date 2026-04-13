@@ -11,7 +11,8 @@
   "dependencies": {
     "@celo/abis": "^14.0.1",
     "@celo/identity": "^5.1.2",
-    "@farcaster/miniapp-sdk": "^0.2.3",
+    "@farcaster/miniapp-sdk": "^0.3.0",
+    "@farcaster/miniapp-wagmi-connector": "^2.0.0",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
