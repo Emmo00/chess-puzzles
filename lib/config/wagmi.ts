@@ -63,6 +63,7 @@ export const PAYMENT_RECIPIENT = "0xEA22ca862C3AFDA79Ef7Fb5Ae8f13D245354f05b";
 
 // Payout Claim Contract
 export const PAYOUT_CLAIM_CONTRACT = "0xD80D8615a0B51335017cdDB923037d2a9a9ab830";
+
 // MiniPay detection helper
 export const isMiniPay = (): boolean => {
   if (typeof window !== "undefined" && window.ethereum) {

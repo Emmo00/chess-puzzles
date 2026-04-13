@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { encodeFunctionData } from "viem";
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
+import { useAccount, useSendTransaction, useWaitForTransactionReceipt, usePublicClient, useWriteContract, useConnect } from "wagmi";
 
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
 import { isOnCorrectChain, PAYOUT_CLAIM_CONTRACT, PREFERRED_CHAIN } from "@/lib/config/wagmi";
@@ -17,9 +17,9 @@ interface ClaimPayload {
 }
 
 export function useCheckinClaim() {
-  const { address, chainId } = useAccount();
+  const { address, chainId, isConnected } = useAccount();
   const publicClient = usePublicClient();
-  const { sendTransaction, data: txHash, isPending } = useSendTransaction();
+  const { data: txHash, isPending, mutateAsync: sendTransaction } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
   });
@@ -146,7 +146,13 @@ export function useCheckinClaim() {
         contract: PAYOUT_CLAIM_CONTRACT,
       });
 
-      await sendTransaction(txRequest);
+      await sendTransaction({
+        abi: PAYOUT_CLAIMS_ABI,
+        functionName: "claimDailyCheckIn",
+        args: [BigInt(payload.day), BigInt(payload.nonce), BigInt(payload.deadline), payload.signature],
+        address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+        feeCurrency,
+      });
 
       logClaimFlow("sendClaim.submitted", {
         connectedAddress: address,
