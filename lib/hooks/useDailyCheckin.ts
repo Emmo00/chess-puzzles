@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAccount } from "wagmi";
 
 interface DailyChallengePuzzle {
@@ -76,6 +76,7 @@ interface SolveResponse {
 
 export function useDailyCheckin() {
   const { address } = useAccount();
+  const claimDebugIdRef = useRef<string | null>(null);
   const [status, setStatus] = useState<DailyCheckinStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +84,17 @@ export function useDailyCheckin() {
   const logClaimFlow = (step: string, details?: Record<string, unknown>) => {
     console.info("[ClaimFlow][useDailyCheckin]", step, details || {});
   };
+
+  const getOrCreateClaimDebugId = useCallback(() => {
+    if (!claimDebugIdRef.current) {
+      claimDebugIdRef.current =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `claim-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    return claimDebugIdRef.current;
+  }, []);
 
   const refreshStatus = useCallback(async () => {
     if (!address) {
@@ -179,6 +191,7 @@ export function useDailyCheckin() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${address}`,
+          "x-claim-debug-id": getOrCreateClaimDebugId(),
         },
         body: JSON.stringify({ txHash }),
       });
@@ -203,10 +216,12 @@ export function useDailyCheckin() {
       }
 
       if (!response.ok) {
+        claimDebugIdRef.current = null;
         throw new Error(data.message || "Failed to confirm claim transaction");
       }
 
       await refreshStatus();
+      claimDebugIdRef.current = null;
       return {
         success: true,
         pending: false,
@@ -228,6 +243,7 @@ export function useDailyCheckin() {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${address}`,
+        "x-claim-debug-id": getOrCreateClaimDebugId(),
       },
     });
 
@@ -246,11 +262,12 @@ export function useDailyCheckin() {
     });
 
     if (!response.ok) {
+      claimDebugIdRef.current = null;
       throw new Error(data.message || "Failed to fetch fresh claim payload");
     }
 
     return data.claim as ClaimPayload;
-  }, [address]);
+  }, [address, getOrCreateClaimDebugId]);
 
   useEffect(() => {
     refreshStatus();
