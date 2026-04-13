@@ -345,7 +345,7 @@ export default function DailyChallengePage() {
               <div className="bg-green-300 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-5 transform rotate-1">
                 <h3 className="text-lg font-black uppercase text-black mb-2">Puzzle Already Solved</h3>
                 <p className="text-sm font-bold uppercase text-black">
-                  You solved today's daily challenge. Come back after 00:00 GMT.
+                  You solved today's daily challenge. Come back tomorrow.
                 </p>
               </div>
             ) : (
