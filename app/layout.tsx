@@ -15,7 +15,7 @@ const sourceSerif4 = Source_Serif_4({
   weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
 });
 
-const FALLBACK_APP_URL = "https://example.com";
+const FALLBACK_APP_URL = "https://chesspuzzles.xyz";
 const appBaseUrl = (() => {
   const configuredUrl = process.env.NEXT_PUBLIC_APP_URL || FALLBACK_APP_URL;
   try {
