@@ -29,6 +29,8 @@ export default function DailyChallengePage() {
   const [isWrongMoveActive, setIsWrongMoveActive] = useState(false);
 
   const chessBoardRef = useRef<ChessBoardRef>(null);
+  const claimCardRef = useRef<HTMLDivElement>(null);
+  const statusMessageRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   const { address, isConnected } = useAccount();
@@ -53,6 +55,17 @@ export default function DailyChallengePage() {
 
   const logClaimFlow = (step: string, details?: Record<string, unknown>) => {
     console.info("[ClaimFlow][DailyChallengePage]", step, details || {});
+  };
+
+  const scrollElementIntoView = (element: HTMLElement | null) => {
+    if (!element) {
+      return;
+    }
+
+    element.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
   };
 
   useEffect(() => {
@@ -157,6 +170,31 @@ export default function DailyChallengePage() {
       isCancelled = true;
     };
   }, [claimTxMined, txHash, confirmClaim, refreshStatus]);
+
+  useEffect(() => {
+    if (!isCompleted) {
+      return;
+    }
+
+    // Wait for the claim section to render before scrolling.
+    const timer = setTimeout(() => {
+      scrollElementIntoView(claimCardRef.current);
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [isCompleted]);
+
+  useEffect(() => {
+    if (!(claimMessage || claimError || error)) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      scrollElementIntoView(statusMessageRef.current);
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [claimMessage, claimError, error]);
 
   const pendingSeconds = useMemo(() => {
     const expiry = status?.reservation?.pendingExpiresAt;
@@ -460,7 +498,10 @@ export default function DailyChallengePage() {
         )}
 
         {isCompleted && (
-          <div className="w-full max-w-xs bg-green-300 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-5 transform rotate-1">
+          <div
+            ref={claimCardRef}
+            className="w-full max-w-xs bg-green-300 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-5 transform rotate-1"
+          >
             <h3 className="text-xl font-black uppercase text-black mb-2">Challenge Solved</h3>
             <p className="text-sm font-bold uppercase text-black mb-4">Claim {rewardLabel} on Celo</p>
 
@@ -475,7 +516,10 @@ export default function DailyChallengePage() {
         )}
 
         {(claimMessage || claimError || error) && (
-          <div className="w-full max-w-xs bg-white border-2 border-black p-3 text-xs font-black uppercase">
+          <div
+            ref={statusMessageRef}
+            className="w-full max-w-xs bg-white border-2 border-black p-3 text-xs font-black uppercase"
+          >
             {claimMessage || claimError || error}
           </div>
         )}
