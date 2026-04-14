@@ -9,7 +9,7 @@ import {
   usePublicClient,
   useWriteContract,
   useConnect,
-  injected,
+  useSimulateContract,
 } from "wagmi";
 import { farcasterFrame } from "@farcaster/miniapp-wagmi-connector";
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
@@ -163,9 +163,11 @@ export function useCheckinClaim() {
 
       await sendTransaction({
         abi: PAYOUT_CLAIMS_ABI,
+        address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
         functionName: "claimDailyCheckIn",
         args: [BigInt(payload.day), BigInt(payload.nonce), BigInt(payload.deadline), payload.signature],
-        address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+        chainId: celo.id,
+        account: address as `0x${string}`,
         feeCurrency,
       });
 
