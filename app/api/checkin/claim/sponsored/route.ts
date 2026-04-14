@@ -16,6 +16,14 @@ const maskAddress = (address?: string) => {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 };
 
+const toJsonSafe = <T>(value: T): T => {
+  return JSON.parse(
+    JSON.stringify(value, (_, currentValue) =>
+      typeof currentValue === "bigint" ? currentValue.toString() : currentValue
+    )
+  ) as T;
+};
+
 export async function POST(request: NextRequest) {
   const requestId = request.headers.get("x-claim-debug-id") || randomUUID();
 
@@ -139,11 +147,13 @@ export async function POST(request: NextRequest) {
         "Sponsored transaction reverted"
       );
 
+      const safeReceipt = toJsonSafe(receipt);
+
       return NextResponse.json(
         {
           success: false,
           txHash,
-          receipt,
+          receipt: safeReceipt,
           message: "Sponsored transaction reverted",
         },
         { status: 400 }
@@ -165,7 +175,7 @@ export async function POST(request: NextRequest) {
       txHash,
       relayer: relayerAccount.address,
       claimedAt: claimedReservation.claimedAt,
-      receipt,
+      receipt: toJsonSafe(receipt),
     });
   } catch (error: any) {
     console.error("[ClaimFlow][API][sponsored] error", {
