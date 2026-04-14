@@ -2,11 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { encodeFunctionData } from "viem";
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt, usePublicClient, useWriteContract, useConnect } from "wagmi";
-
+import {
+  useAccount,
+  useSendTransaction,
+  useWaitForTransactionReceipt,
+  usePublicClient,
+  useWriteContract,
+  useConnect,
+  injected
+} from "wagmi";
+import { farcasterFrame } from "@farcaster/miniapp-wagmi-connector";
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
 import { isOnCorrectChain, PAYOUT_CLAIM_CONTRACT, PREFERRED_CHAIN } from "@/lib/config/wagmi";
 import { selectSupportedFeeCurrency } from "@/lib/utils/feeCurrency";
+import sdk from "@farcaster/miniapp-sdk";
+import { celo } from "viem/chains";
 
 interface ClaimPayload {
   user: `0x${string}`;
@@ -20,6 +30,7 @@ export function useCheckinClaim() {
   const { address, chainId, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const { data: txHash, isPending, mutateAsync: sendTransaction } = useWriteContract();
+  const { connect } = useConnect();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
   });
@@ -145,6 +156,8 @@ export function useCheckinClaim() {
         connectedAddress: address,
         contract: PAYOUT_CLAIM_CONTRACT,
       });
+
+      connect({ connector: (await sdk.isInMiniApp()) ? farcasterFrame() : injected(), chainId: celo.id });
 
       await sendTransaction({
         abi: PAYOUT_CLAIMS_ABI,
