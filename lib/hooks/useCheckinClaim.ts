@@ -3,11 +3,9 @@
 import { useEffect, useState } from "react";
 import {
   useAccount,
-  useSignMessage,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import { isOnCorrectChain, PAYOUT_CLAIM_CONTRACT, PREFERRED_CHAIN } from "@/lib/config/wagmi";
-import { buildSponsoredCheckinIntentMessage } from "@/lib/utils/checkinSponsoredIntent";
+import { PAYOUT_CLAIM_CONTRACT } from "@/lib/config/wagmi";
 
 interface ClaimPayload {
   user: `0x${string}`;
@@ -18,8 +16,7 @@ interface ClaimPayload {
 }
 
 export function useCheckinClaim() {
-  const { address, chainId, isConnected } = useAccount();
-  const { signMessageAsync } = useSignMessage();
+  const { address } = useAccount();
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
   const [isPending, setIsPending] = useState(false);
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
@@ -41,79 +38,29 @@ export function useCheckinClaim() {
     });
   }, [txHash, isPending, isConfirming, isSuccess, claimError]);
 
-  const sendClaim = async (payload: ClaimPayload) => {
+  const sendClaim = async () => {
     logClaimFlow("sendClaim.start", {
       connectedAddress: address,
-      chainId,
-      payloadUser: payload.user,
-      day: payload.day,
-      nonce: payload.nonce,
-      deadline: payload.deadline,
     });
 
-    if (!address || !chainId) {
+    if (!address) {
       throw new Error("Wallet not connected");
     }
-
-    if (!isOnCorrectChain(chainId)) {
-      throw new Error(`Please switch to Celo network (${PREFERRED_CHAIN.name})`);
-    }
-
-    if (payload.user.toLowerCase() !== address.toLowerCase()) {
-      throw new Error("Claim payload wallet does not match the connected wallet. Refresh and try again.");
-    }
-
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.deadline <= now) {
-      throw new Error("Claim signature expired. Please try claiming again.");
-    }
-
-    logClaimFlow("sendClaim.preflight.passed", {
-      connectedAddress: address,
-      payloadUser: payload.user,
-      chainId,
-      now,
-      deadline: payload.deadline,
-      secondsUntilExpiry: payload.deadline - now,
-    });
-
-    const intentMessage = buildSponsoredCheckinIntentMessage(payload);
     const requestId =
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `claim-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-    logClaimFlow("sendClaim.intent.payload", {
+    logClaimFlow("sendClaim.sponsored.request", {
       requestId,
       contract: PAYOUT_CLAIM_CONTRACT,
-      chainId,
       claimFunction: "claimDailyCheckIn",
-      claimArgs: {
-        user: payload.user,
-        day: payload.day,
-        nonce: payload.nonce,
-        deadline: payload.deadline,
-        signature: payload.signature,
-        signatureLength: payload.signature.length,
-      },
-      intentMessage,
     });
 
     setClaimError(null);
     setIsPending(true);
 
     try {
-      const intentSignature = await signMessageAsync({
-        account: address as `0x${string}`,
-        message: intentMessage,
-      });
-
-      logClaimFlow("sendClaim.intent.signed", {
-        requestId,
-        connectedAddress: address,
-        intentSignature,
-      });
-
       const response = await fetch("/api/checkin/claim/sponsored", {
         method: "POST",
         headers: {
@@ -121,11 +68,6 @@ export function useCheckinClaim() {
           Authorization: `Bearer ${address}`,
           "x-claim-debug-id": requestId,
         },
-        body: JSON.stringify({
-          claim: payload,
-          intentMessage,
-          intentSignature,
-        }),
       });
 
       const relayResult = await response.json();

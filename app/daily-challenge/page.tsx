@@ -40,7 +40,6 @@ export default function DailyChallengePage() {
     refreshStatus,
     reserveDailyChallenge,
     solveDailyChallenge,
-    fetchClaimPayload,
     confirmClaim,
   } = useDailyCheckin();
   const {
@@ -236,14 +235,7 @@ export default function DailyChallengePage() {
     setClaimMessage(null);
 
     try {
-      const claimPayload = await fetchClaimPayload();
-      logClaimFlow("claim.payload.received", {
-        user: claimPayload.user,
-        day: claimPayload.day,
-        deadline: claimPayload.deadline,
-        nonce: claimPayload.nonce,
-      });
-      await sendClaim(claimPayload);
+      await sendClaim();
       logClaimFlow("claim.tx.submitted", { address });
       setClaimMessage("Transaction sent. Waiting for confirmation...");
     } catch (err: any) {

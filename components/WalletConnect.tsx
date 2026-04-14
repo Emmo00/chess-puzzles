@@ -16,8 +16,7 @@ export function WalletConnect() {
 
   const farcasterConnector = connectors.find(
     (connector) =>
-      connector.id.toLowerCase().includes("farcaster") ||
-      connector.name.toLowerCase().includes("farcaster")
+      connector.id.toLowerCase().includes("farcaster") || connector.name.toLowerCase().includes("farcaster"),
   );
 
   const injectedConnector = connectors.find((connector) => connector.type === "injected");
@@ -75,9 +74,7 @@ export function WalletConnect() {
             <button
               onClick={!isOnCorrectChain ? switchToPreferredChain : undefined}
               className={`px-4 py-3 border-4 border-black font-black text-xs uppercase tracking-wider transition-all duration-200 flex items-center gap-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 ${
-                isOnCorrectChain
-                  ? ""
-                  : "bg-yellow-400 text-black hover:bg-yellow-300 cursor-pointer animate-pulse"
+                isOnCorrectChain ? "" : "bg-yellow-400 text-black hover:bg-yellow-300 cursor-pointer animate-pulse"
               }`}
             >
               {isMiniPayDetected && <span className="text-lg">📱</span>}
@@ -116,8 +113,16 @@ export function WalletConnect() {
   return (
     <div className="relative">
       <button
-        onClick={() => {
-          const connector = farcasterConnector ?? injectedConnector ?? connectors[0];
+        onClick={async () => {
+          let inMiniApp = false;
+
+          try {
+            inMiniApp = await sdk.isInMiniApp();
+          } catch {
+            inMiniApp = false;
+          }
+
+          const connector = inMiniApp ? farcasterConnector : injectedConnector;
           if (connector) {
             connect({ connector });
           }
