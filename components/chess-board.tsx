@@ -28,6 +28,7 @@ export interface ChessBoardRef {
 const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onComplete, onProgress, onWrongMove, onMoveIndexChange, onTurnChange, onWrongMoveStateChange, onHistoryChange, highlightedSquares }, ref) => {
   const [mounted, setMounted] = useState(false);
   const [game, setGame] = useState<Chess | null>(null);
+  const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w');
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [boardPosition, setBoardPosition] = useState<string>("");
   const [isPlayerTurn, setIsPlayerTurn] = useState(false);
@@ -116,6 +117,13 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
 
       // Load the FEN position (before opponent's move)
       chess.load(puzzle.fen);
+
+      // Infer the user's side from the first puzzle move sequence.
+      const preview = new Chess(puzzle.fen);
+      if (puzzle.moves.length > 0) {
+        preview.move(puzzle.moves[0]);
+      }
+      setPlayerColor(preview.turn());
 
       // Initialize history with starting position
       const initialHistory = [{ fen: chess.fen(), moveIndex: -1 }];
@@ -581,7 +589,7 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
             position: boardPosition,
             onSquareClick,
             allowDragging: false,
-            boardOrientation: "white",
+            boardOrientation: playerColor === 'b' ? "black" : "white",
             animationDurationInMs: 500,
             boardStyle: {
               borderRadius: "0px",
