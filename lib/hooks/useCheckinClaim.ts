@@ -9,7 +9,7 @@ import {
   usePublicClient,
   useWriteContract,
   useConnect,
-  injected
+  injected,
 } from "wagmi";
 import { farcasterFrame } from "@farcaster/miniapp-wagmi-connector";
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
@@ -157,7 +157,9 @@ export function useCheckinClaim() {
         contract: PAYOUT_CLAIM_CONTRACT,
       });
 
-      connect({ connector: (await sdk.isInMiniApp()) ? farcasterFrame() : injected(), chainId: celo.id });
+      if (await sdk.isInMiniApp()) {
+        connect({ connector: farcasterFrame(), chainId: celo.id });
+      }
 
       await sendTransaction({
         abi: PAYOUT_CLAIMS_ABI,
