@@ -57,7 +57,7 @@ const REVENUE_ADMIN_FUNCTIONS = new Set([
 const CLAIMS_READ_ABI = [
   {
     type: "function",
-    name: "payoutToken",
+    name: "PAYOUT_TOKEN",
     stateMutability: "view",
     inputs: [],
     outputs: [{ type: "address" }],
@@ -531,7 +531,7 @@ function PayoutFundingPanel({
         publicClient.readContract({
           address: claimsAddress.trim() as `0x${string}`,
           abi: CLAIMS_READ_ABI,
-          functionName: "payoutToken",
+          functionName: "PAYOUT_TOKEN",
         }),
         publicClient.readContract({
           address: claimsAddress.trim() as `0x${string}`,

@@ -49,6 +49,10 @@ export class CheckInSigningService {
     };
   }
 
+  public getSignerAccount() {
+    return this.resolveSigner();
+  }
+
   private resolveSigner() {
     const privateKey = process.env.CHECKIN_SIGNER_PRIVATE_KEY;
 

@@ -1,22 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { encodeFunctionData } from "viem";
 import {
   useAccount,
-  useSendTransaction,
+  useSignMessage,
   useWaitForTransactionReceipt,
-  usePublicClient,
-  useWriteContract,
-  useConnect,
-  useSimulateContract,
 } from "wagmi";
-import { farcasterFrame } from "@farcaster/miniapp-wagmi-connector";
-import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
 import { isOnCorrectChain, PAYOUT_CLAIM_CONTRACT, PREFERRED_CHAIN } from "@/lib/config/wagmi";
-import { selectSupportedFeeCurrency } from "@/lib/utils/feeCurrency";
-import sdk from "@farcaster/miniapp-sdk";
-import { celo } from "viem/chains";
+import { buildSponsoredCheckinIntentMessage } from "@/lib/utils/checkinSponsoredIntent";
 
 interface ClaimPayload {
   user: `0x${string}`;
@@ -28,9 +19,9 @@ interface ClaimPayload {
 
 export function useCheckinClaim() {
   const { address, chainId, isConnected } = useAccount();
-  const publicClient = usePublicClient();
-  const { data: txHash, isPending, mutateAsync: sendTransaction } = useWriteContract();
-  const { connect } = useConnect();
+  const { signMessageAsync } = useSignMessage();
+  const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
+  const [isPending, setIsPending] = useState(false);
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
   });
@@ -68,10 +59,6 @@ export function useCheckinClaim() {
       throw new Error(`Please switch to Celo network (${PREFERRED_CHAIN.name})`);
     }
 
-    if (!publicClient) {
-      throw new Error("Blockchain client unavailable. Please retry.");
-    }
-
     if (payload.user.toLowerCase() !== address.toLowerCase()) {
       throw new Error("Claim payload wallet does not match the connected wallet. Refresh and try again.");
     }
@@ -90,89 +77,76 @@ export function useCheckinClaim() {
       secondsUntilExpiry: payload.deadline - now,
     });
 
-    const data = encodeFunctionData({
-      abi: PAYOUT_CLAIMS_ABI,
-      functionName: "claimDailyCheckIn",
-      args: [BigInt(payload.day), BigInt(payload.nonce), BigInt(payload.deadline), payload.signature],
-    });
+    const intentMessage = buildSponsoredCheckinIntentMessage(payload);
+    const requestId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `claim-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-    console.info("[ClaimFlow][useCheckinClaim] encodedFunctionData", {
-      functionName: "claimDailyCheckIn",
-      args: {
-        day: payload.day,
-        nonce: payload.nonce,
-        deadline: payload.deadline,
-        signature: payload.signature,
-      },
-      data,
-    });
-
-    const feeCurrency = await selectSupportedFeeCurrency({
-      publicClient,
-      account: address as `0x${string}`,
-      to: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
-      data,
-    });
-
-    logClaimFlow("sendClaim.feeCurrency.selected", {
-      connectedAddress: address,
-      feeCurrency,
+    logClaimFlow("sendClaim.intent.payload", {
+      requestId,
       contract: PAYOUT_CLAIM_CONTRACT,
-      callDataLength: data.length,
-    });
-
-    const txRequest = {
-      account: address as `0x${string}`,
-      to: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
-      data,
-      feeCurrency,
-    };
-
-    logClaimFlow("sendClaim.txRequest.full", {
-      txRequest,
-      txParams: {
-        account: txRequest.account,
-        to: txRequest.to,
-        data: txRequest.data,
-        dataLength: txRequest.data.length,
-        feeCurrency: txRequest.feeCurrency,
-        chainId,
-        value: "0x0 (implicit default)",
-      },
+      chainId,
       claimFunction: "claimDailyCheckIn",
       claimArgs: {
+        user: payload.user,
         day: payload.day,
         nonce: payload.nonce,
         deadline: payload.deadline,
         signature: payload.signature,
         signatureLength: payload.signature.length,
       },
+      intentMessage,
     });
 
     setClaimError(null);
+    setIsPending(true);
 
     try {
-      logClaimFlow("sendClaim.submit", {
-        connectedAddress: address,
-        contract: PAYOUT_CLAIM_CONTRACT,
+      const intentSignature = await signMessageAsync({
+        account: address as `0x${string}`,
+        message: intentMessage,
       });
 
-      if (await sdk.isInMiniApp()) {
-        connect({ connector: farcasterFrame(), chainId: celo.id });
+      logClaimFlow("sendClaim.intent.signed", {
+        requestId,
+        connectedAddress: address,
+        intentSignature,
+      });
+
+      const response = await fetch("/api/checkin/claim/sponsored", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${address}`,
+          "x-claim-debug-id": requestId,
+        },
+        body: JSON.stringify({
+          claim: payload,
+          intentMessage,
+          intentSignature,
+        }),
+      });
+
+      const relayResult = await response.json();
+
+      logClaimFlow("sendClaim.sponsored.response", {
+        requestId,
+        status: response.status,
+        ok: response.ok,
+        relayResult,
+      });
+
+      if (!response.ok || !relayResult?.txHash) {
+        throw new Error(relayResult?.message || "Sponsored transaction submission failed");
       }
 
-      await sendTransaction({
-        abi: PAYOUT_CLAIMS_ABI,
-        address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
-        functionName: "claimDailyCheckIn",
-        args: [BigInt(payload.day), BigInt(payload.nonce), BigInt(payload.deadline), payload.signature],
-        chainId: celo.id,
-        account: address as `0x${string}`,
-        feeCurrency,
-      });
+      setTxHash(relayResult.txHash as `0x${string}`);
 
       logClaimFlow("sendClaim.submitted", {
+        requestId,
         connectedAddress: address,
+        txHash: relayResult.txHash,
         contract: PAYOUT_CLAIM_CONTRACT,
       });
     } catch (error: any) {
@@ -185,6 +159,8 @@ export function useCheckinClaim() {
       });
       setClaimError(message);
       throw new Error(message);
+    } finally {
+      setIsPending(false);
     }
   };
 

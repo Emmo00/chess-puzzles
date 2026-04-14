@@ -471,10 +471,8 @@ class CheckInService {
   }
 
   private async generateSignedPayload(walletAddress: string, utcDay: number) {
-    let retries = 0;
-
     const publicClient = this.contractService.getPublicClient();
-    const [onChainSigner, onChainDomain] = await Promise.all([
+    const [onChainSigner, onChainDomain, onChainCheckInNonce] = await Promise.all([
       publicClient.readContract({
         address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
         abi: PAYOUT_CLAIMS_ABI,
@@ -484,6 +482,12 @@ class CheckInService {
         address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
         abi: PAYOUT_CLAIMS_ABI,
         functionName: "eip712Domain",
+      }),
+      publicClient.readContract({
+        address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+        abi: PAYOUT_CLAIMS_ABI,
+        functionName: "checkInNonces",
+        args: [walletAddress as `0x${string}`],
       }),
     ]);
 
@@ -505,49 +509,38 @@ class CheckInService {
       );
     }
 
-    while (retries < 3) {
-      const nonce = this.signingService.generateNonce();
-      const deadline =
-        Math.floor(Date.now() / 1000) + CHECKIN_SIGNATURE_TTL_SECONDS;
+    const nonce = onChainCheckInNonce.toString();
+    const deadline =
+      Math.floor(Date.now() / 1000) + CHECKIN_SIGNATURE_TTL_SECONDS;
 
-      try {
-        const signed = await this.signingService.signCheckInClaim(
-          walletAddress as `0x${string}`,
-          utcDay,
-          nonce,
-          deadline
-        );
+    const signed = await this.signingService.signCheckInClaim(
+      walletAddress as `0x${string}`,
+      utcDay,
+      nonce,
+      deadline
+    );
 
-        const recoveredAddress = await recoverTypedDataAddress({
-          domain: expectedDomain,
-          types: CHECK_IN_CLAIM_TYPES,
-          primaryType: "CheckInClaim",
-          message: {
-            user: walletAddress as `0x${string}`,
-            day: BigInt(utcDay),
-            nonce: BigInt(signed.nonce),
-            deadline: BigInt(signed.deadline),
-          },
-          signature: signed.signature,
-        });
+    const recoveredAddress = await recoverTypedDataAddress({
+      domain: expectedDomain,
+      types: CHECK_IN_CLAIM_TYPES,
+      primaryType: "CheckInClaim",
+      message: {
+        user: walletAddress as `0x${string}`,
+        day: BigInt(utcDay),
+        nonce: BigInt(signed.nonce),
+        deadline: BigInt(signed.deadline),
+      },
+      signature: signed.signature,
+    });
 
-        if (recoveredAddress.toLowerCase() !== String(onChainSigner).toLowerCase()) {
-          throw new HttpException(
-            500,
-            "CHECKIN_SIGNER_PRIVATE_KEY does not match on-chain serverSigner"
-          );
-        }
-
-        return signed;
-      } catch (error: any) {
-        retries += 1;
-        if (retries >= 3) {
-          throw error;
-        }
-      }
+    if (recoveredAddress.toLowerCase() !== String(onChainSigner).toLowerCase()) {
+      throw new HttpException(
+        500,
+        "CHECKIN_SIGNER_PRIVATE_KEY does not match on-chain serverSigner"
+      );
     }
 
-    throw new HttpException(500, "Failed to create check-in signature");
+    return signed;
   }
 
   private toReservationResponse(

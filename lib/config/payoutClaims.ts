@@ -43,6 +43,13 @@ export const PAYOUT_CLAIMS_ABI = [
   },
   {
     type: "function",
+    name: "PAYOUT_TOKEN",
+    inputs: [],
+    outputs: [{ name: "", type: "address", internalType: "contract IERC20" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "checkInAmount",
     inputs: [],
     outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
@@ -50,8 +57,16 @@ export const PAYOUT_CLAIMS_ABI = [
   },
   {
     type: "function",
+    name: "checkInNonces",
+    inputs: [{ name: "user", type: "address", internalType: "address" }],
+    outputs: [{ name: "nonce", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "claimDailyCheckIn",
     inputs: [
+      { name: "user", type: "address", internalType: "address" },
       { name: "day", type: "uint256", internalType: "uint256" },
       { name: "nonce", type: "uint256", internalType: "uint256" },
       { name: "deadline", type: "uint256", internalType: "uint256" },
@@ -64,6 +79,7 @@ export const PAYOUT_CLAIMS_ABI = [
     type: "function",
     name: "claimLeaderboardPayout",
     inputs: [
+      { name: "user", type: "address", internalType: "address" },
       { name: "amount", type: "uint256", internalType: "uint256" },
       { name: "claimId", type: "bytes32", internalType: "bytes32" },
       { name: "nonce", type: "uint256", internalType: "uint256" },
@@ -77,7 +93,7 @@ export const PAYOUT_CLAIMS_ABI = [
     type: "function",
     name: "currentDay",
     inputs: [],
-    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    outputs: [{ name: "day", type: "uint256", internalType: "uint256" }],
     stateMutability: "view",
   },
   {
@@ -121,7 +137,7 @@ export const PAYOUT_CLAIMS_ABI = [
       { name: "nonce", type: "uint256", internalType: "uint256" },
       { name: "deadline", type: "uint256", internalType: "uint256" },
     ],
-    outputs: [{ name: "", type: "bytes32", internalType: "bytes32" }],
+    outputs: [{ name: "digest", type: "bytes32", internalType: "bytes32" }],
     stateMutability: "view",
   },
   {
@@ -134,7 +150,14 @@ export const PAYOUT_CLAIMS_ABI = [
       { name: "nonce", type: "uint256", internalType: "uint256" },
       { name: "deadline", type: "uint256", internalType: "uint256" },
     ],
-    outputs: [{ name: "", type: "bytes32", internalType: "bytes32" }],
+    outputs: [{ name: "digest", type: "bytes32", internalType: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "leaderboardNonces",
+    inputs: [{ name: "user", type: "address", internalType: "address" }],
+    outputs: [{ name: "nonce", type: "uint256", internalType: "uint256" }],
     stateMutability: "view",
   },
   {
@@ -160,13 +183,6 @@ export const PAYOUT_CLAIMS_ABI = [
     ],
     outputs: [],
     stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "payoutToken",
-    inputs: [],
-    outputs: [{ name: "", type: "address", internalType: "contract IERC20" }],
-    stateMutability: "view",
   },
   { type: "function", name: "renounceOwnership", inputs: [], outputs: [], stateMutability: "nonpayable" },
   {
@@ -233,6 +249,7 @@ export const PAYOUT_CLAIMS_ABI = [
     inputs: [
       { name: "day", type: "uint256", indexed: true, internalType: "uint256" },
       { name: "user", type: "address", indexed: true, internalType: "address" },
+      { name: "relayer", type: "address", indexed: true, internalType: "address" },
       { name: "amount", type: "uint256", indexed: false, internalType: "uint256" },
       { name: "nonce", type: "uint256", indexed: false, internalType: "uint256" },
       { name: "digest", type: "bytes32", indexed: false, internalType: "bytes32" },
@@ -246,6 +263,7 @@ export const PAYOUT_CLAIMS_ABI = [
     inputs: [
       { name: "claimId", type: "bytes32", indexed: true, internalType: "bytes32" },
       { name: "user", type: "address", indexed: true, internalType: "address" },
+      { name: "relayer", type: "address", indexed: true, internalType: "address" },
       { name: "amount", type: "uint256", indexed: false, internalType: "uint256" },
       { name: "nonce", type: "uint256", indexed: false, internalType: "uint256" },
       { name: "digest", type: "bytes32", indexed: false, internalType: "bytes32" },
@@ -304,6 +322,7 @@ export const PAYOUT_CLAIMS_ABI = [
   },
   { type: "error", name: "InsufficientContractBalance", inputs: [] },
   { type: "error", name: "InvalidCheckInDay", inputs: [] },
+  { type: "error", name: "InvalidNonce", inputs: [] },
   { type: "error", name: "InvalidShortString", inputs: [] },
   { type: "error", name: "InvalidSigner", inputs: [] },
   { type: "error", name: "LeaderboardClaimAlreadyUsed", inputs: [] },

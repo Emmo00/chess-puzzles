@@ -1,6 +1,5 @@
 import * as mongoose from "mongoose";
 import { WalletUser, UserStats, UserSettings } from "../types";
-import { unique } from "next/dist/build/utils";
 
 const userSchema = new mongoose.Schema({
   walletAddress: { type: String, lowercase: true, unique: true, sparse: true },
@@ -23,8 +22,6 @@ const userSchema = new mongoose.Schema({
     disabledThemes: { type: [String], default: [] },
   },
 });
-
-userSchema.index({ walletAddress: 1 });
 
 const userModel =
   mongoose.models?.User || mongoose.model<WalletUser & UserStats & { settings: UserSettings } & mongoose.Document>("User", userSchema);

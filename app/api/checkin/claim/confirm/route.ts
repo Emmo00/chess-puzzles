@@ -126,6 +126,12 @@ export async function POST(request: NextRequest) {
       hash: txHash as `0x${string}`,
     });
 
+    const onChainServerSigner = await publicClient.readContract({
+      address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+      abi: PAYOUT_CLAIMS_ABI,
+      functionName: "serverSigner",
+    });
+
     let decodedInput: {
       functionName: string;
       args: string[];
@@ -157,33 +163,50 @@ export async function POST(request: NextRequest) {
       decodedInput,
     });
 
-    const fromMatches =
-      transaction.from.toLowerCase() === user.walletAddress.toLowerCase();
+    const claimFunctionMatches = decodedInput?.functionName === "claimDailyCheckIn";
+    const decodedUser = decodedInput?.args?.[0]?.toLowerCase();
+    const decodedDay = decodedInput?.args?.[1];
+    const decodedNonce = decodedInput?.args?.[2];
+    const decodedDeadline = decodedInput?.args?.[3];
+    const decodedSignature = decodedInput?.args?.[4];
+
+    const userMatches = decodedUser === user.walletAddress.toLowerCase();
     const toMatches =
       transaction.to?.toLowerCase() === PAYOUT_CLAIM_CONTRACT.toLowerCase();
+    const senderMatchesServerSigner =
+      transaction.from.toLowerCase() === String(onChainServerSigner).toLowerCase();
 
     console.info("[ClaimFlow][API][confirm] txValidation", {
       requestId,
       txHash,
+      functionName: decodedInput?.functionName,
+      decodedUser,
+      decodedDay,
+      decodedNonce,
+      decodedDeadline,
+      decodedSignatureLength: decodedSignature?.length,
       from: transaction.from,
       to: transaction.to,
       expectedWallet: user.walletAddress,
       expectedContract: PAYOUT_CLAIM_CONTRACT,
-      fromMatches,
+      expectedServerSigner: onChainServerSigner,
+      claimFunctionMatches,
+      userMatches,
       toMatches,
+      senderMatchesServerSigner,
     });
 
-    if (!fromMatches || !toMatches) {
+    if (!claimFunctionMatches || !userMatches || !toMatches || !senderMatchesServerSigner) {
       await checkInService.markFailedClaim(
         user.walletAddress,
         txHash,
-        "Transaction sender/recipient mismatch"
+        "Transaction calldata does not match sponsored daily claim"
       );
 
       return NextResponse.json(
         {
           success: false,
-          message: "Transaction does not match daily claim contract call",
+          message: "Transaction does not match sponsored daily claim call",
         },
         { status: 400 }
       );

@@ -40,7 +40,7 @@ export class CheckInContractService {
       publicClient.readContract({
         address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
         abi: PAYOUT_CLAIMS_ABI,
-        functionName: "payoutToken",
+        functionName: "PAYOUT_TOKEN",
       }),
       publicClient.readContract({
         address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
