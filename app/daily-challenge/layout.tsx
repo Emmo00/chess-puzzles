@@ -23,7 +23,7 @@ const miniAppEmbed = {
       type: "launch_miniapp",
       name: "Chess Puzzles",
       url: buildAppUrl("/daily-challenge"),
-      splashImageUrl: buildAppUrl("/chess-puzzles.svg"),
+      splashImageUrl: buildAppUrl("/chess-puzzles-icon.png"),
       splashBackgroundColor: "#fff9ec",
     },
   },

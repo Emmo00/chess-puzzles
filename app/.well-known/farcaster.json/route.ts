@@ -23,11 +23,11 @@ export async function GET() {
     miniapp: {
       version: "1",
       name: "Chess Puzzles",
-      iconUrl: buildAppUrl("/chess-puzzles.svg"),
+      iconUrl: buildAppUrl("/chess-puzzles-icon.png"),
       homeUrl: buildAppUrl("/"),
       imageUrl: buildAppUrl("/api/og"),
       buttonTitle: "Play Chess Puzzles",
-      splashImageUrl: buildAppUrl("/chess-puzzles.svg"),
+      splashImageUrl: buildAppUrl("/chess-puzzles-icon.png"),
       splashBackgroundColor: "#fff9ec",
       webhookUrl: buildAppUrl("/api/webhooks/farcaster"),
       subtitle: "Master Your Tactics",

@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const title = searchParams.get('title') ?? 'Chess Puzzles'
     const subtitle = searchParams.get('subtitle') ?? 'Master Your Tactics'
-    const iconUrl = new URL('/chess-puzzles.svg', request.url).toString()
+    const iconUrl = new URL('/chess-puzzles-icon.png', request.url).toString()
 
     return new ImageResponse(
       (
