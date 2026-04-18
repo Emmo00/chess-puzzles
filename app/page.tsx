@@ -87,6 +87,7 @@ export default function Home() {
       id: 1,
       title: "Puzzles",
       subtitle: "Daily + Classic",
+      ribbonText: "Earn cash",
       accentColor: hasAccess ? "bg-green-400" : "bg-cyan-400",
       icon: "▲",
       onClick: handleOpenPuzzles,
@@ -158,6 +159,7 @@ export default function Home() {
                 subtitle={cta.subtitle}
                 accentColor={cta.accentColor}
                 icon={cta.icon}
+                ribbonText={cta.ribbonText}
                 href={cta.href}
                 onClick={cta.onClick}
               />

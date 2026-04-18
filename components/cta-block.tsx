@@ -8,11 +8,12 @@ interface CtaBlockProps {
   subtitle: string
   accentColor: string
   icon: string
+  ribbonText?: string
   href?: string
   onClick?: () => void
 }
 
-export default function CTABlock({ title, subtitle, accentColor, icon, href = "#", onClick }: CtaBlockProps) {
+export default function CTABlock({ title, subtitle, accentColor, icon, ribbonText, href = "#", onClick }: CtaBlockProps) {
   const [mounted, setMounted] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
 
@@ -26,7 +27,7 @@ export default function CTABlock({ title, subtitle, accentColor, icon, href = "#
     <span
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`w-full h-28 border-4 border-black ${accentColor} px-3 py-2 font-black text-xs uppercase tracking-wider text-black transition-all duration-200 flex flex-col items-center justify-center cursor-pointer text-center`}
+      className={`relative w-full h-28 overflow-hidden border-4 border-black ${accentColor} px-3 py-2 font-black text-sm uppercase tracking-wider text-black transition-all duration-200 flex flex-col items-center justify-center cursor-pointer text-center`}
       style={{
         boxShadow: isHovered
           ? "6px 6px 0px rgba(0, 0, 0, 0.3), 0px 0px 16px rgba(0, 0, 0, 0.4)"
@@ -35,6 +36,11 @@ export default function CTABlock({ title, subtitle, accentColor, icon, href = "#
         display: "flex",
       }}
     >
+      {ribbonText ? (
+        <span className="pointer-events-none absolute -right-10 top-4 w-36 rotate-45 border-y-2 border-black bg-black px-2 py-0.5 text-center text-[15px] font-black normal-case tracking-wide text-yellow-300">
+          {ribbonText}
+        </span>
+      ) : null}
       <span className="text-xl">{icon}</span>
       <div className="flex flex-col items-center gap-0.5 leading-tight">
         <span className="text-xs font-black">{title}</span>
