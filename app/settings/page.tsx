@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { UserSettings } from "../../lib/types";
 import { PUZZLE_THEMES, THEME_CATEGORIES, DEFAULT_THEMES } from "../../lib/config/puzzleThemes";
+import { isMusicEnabled, setMusicEnabled as persistMusicEnabled } from "../../lib/utils/backgroundMusic";
 
 export default function SettingsPage() {
   const [mounted, setMounted] = useState(false);
@@ -17,12 +18,14 @@ export default function SettingsPage() {
   });
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [hasChanges, setHasChanges] = useState(false);
+  const [musicEnabled, setMusicEnabled] = useState(true);
 
   const { address, isConnected } = useAccount();
   const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
+    setMusicEnabled(isMusicEnabled());
   }, []);
 
   useEffect(() => {
@@ -174,6 +177,12 @@ export default function SettingsPage() {
     return "Master";
   };
 
+  const handleMusicToggle = () => {
+    const nextValue = !musicEnabled;
+    setMusicEnabled(nextValue);
+    persistMusicEnabled(nextValue);
+  };
+
   if (!mounted) return null;
 
   if (loading) {
@@ -202,6 +211,26 @@ export default function SettingsPage() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center px-4 py-6 gap-6 pb-24">
         <div className="w-full max-w-md space-y-6">
+          {/* Music Section */}
+          <div className="bg-orange-300 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4">
+            <div className="flex justify-between items-center gap-3">
+              <div>
+                <h2 className="font-black text-xl text-black">🎵 BACKGROUND MUSIC</h2>
+                <p className="text-sm font-bold text-black/70 mt-1">
+                  _
+                </p>
+              </div>
+              <button
+                onClick={handleMusicToggle}
+                className={`px-3 py-2 font-black text-xs border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all ${
+                  musicEnabled ? "bg-green-400 text-black" : "bg-white text-black"
+                }`}
+              >
+                {musicEnabled ? "SOUND ON" : "SOUND OFF"}
+              </button>
+            </div>
+          </div>
+
           {/* Rating Range Section */}
           <div className="bg-cyan-400 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4">
             <h2 className="font-black text-xl text-black mb-4">📊 PUZZLE RATING RANGE</h2>

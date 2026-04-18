@@ -175,7 +175,7 @@ export default function Home() {
           onClose={() => setShowPuzzlesModal(false)}
           checkInAmountDisplay={checkInStatus?.checkInAmountDisplay}
           checkInTokenSymbol={checkInStatus?.payoutTokenSymbol}
-          slotsRemaining={checkInStatus?.slotsRemaining}
+          maxDailyCheckIns={checkInStatus?.maxDailyCheckIns}
         />
 
         {/* Payment Modal */}

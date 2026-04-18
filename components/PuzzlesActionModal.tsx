@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import {DollarSign, Castle} from "lucide-react";
 
 interface PuzzlesActionModalProps {
   isOpen: boolean;
   onClose: () => void;
   checkInAmountDisplay?: string;
   checkInTokenSymbol?: string;
-  slotsRemaining?: number;
+  maxDailyCheckIns?: number;
 }
 
 export function PuzzlesActionModal({
@@ -15,7 +16,7 @@ export function PuzzlesActionModal({
   onClose,
   checkInAmountDisplay,
   checkInTokenSymbol,
-  slotsRemaining,
+  maxDailyCheckIns,
 }: PuzzlesActionModalProps) {
   if (!isOpen) return null;
 
@@ -50,13 +51,10 @@ export function PuzzlesActionModal({
                   Solve Daily Challenge
                 </p>
                 <p className="font-bold text-xs uppercase text-black/80 mt-1">
-                  First users earn ~{checkInAmountDisplay || "0"} {checkInTokenSymbol || "TOKEN"} after solving
+                  First {maxDailyCheckIns || "0"} users earn {checkInAmountDisplay || "0"} {checkInTokenSymbol || "TOKEN"} after solving
                 </p>
               </div>
-              <span className="text-2xl">💰</span>
-            </div>
-            <div className="mt-2 text-[11px] font-black uppercase text-black bg-white border-2 border-black px-2 py-1 inline-block">
-              Slots left: {typeof slotsRemaining === "number" ? slotsRemaining : "--"}
+              <DollarSign className="w-16 h-16 text-green-600" />
             </div>
           </Link>
 
@@ -72,7 +70,7 @@ export function PuzzlesActionModal({
                   Classic mode with points and streak progression
                 </p>
               </div>
-              <span className="text-2xl">⚡</span>
+              <Castle className="w-16 h-16 text-gray-800" />
             </div>
           </Link>
         </div>
