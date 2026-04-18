@@ -60,7 +60,6 @@ export function BackgroundMusic() {
       audioEl.src = getSessionTrack();
     }
     audioEl.volume = 0.25;
-    audioEl.playsInline = true;
 
     if (!enabled) {
       audioEl.pause();
@@ -112,7 +111,6 @@ export function BackgroundMusic() {
       loop
       preload="auto"
       autoPlay
-      playsInline
       aria-hidden="true"
       className="hidden"
     />
