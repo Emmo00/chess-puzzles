@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+  isMusicEnabled,
+  MUSIC_PREF_EVENT,
+  setMusicEnabled,
+} from "@/lib/utils/backgroundMusic";
 
 const TRACKS = ["/goldberg.mp3", "/gymnopedie-1.mp3"] as const;
-const MUSIC_PREF_KEY = "chess-puzzles:bg-music-enabled";
 
 function getSessionTrack(): string {
   if (typeof window === "undefined") {
@@ -22,16 +26,24 @@ function getSessionTrack(): string {
 
 export function BackgroundMusic() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [enabled, setEnabled] = useState(true);
+  const [enabled, setEnabled] = useState<boolean>(true);
   const [ready, setReady] = useState(false);
-  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   useEffect(() => {
-    const savedPref = localStorage.getItem(MUSIC_PREF_KEY);
-    if (savedPref === "off") {
-      setEnabled(false);
-    }
+    setEnabled(isMusicEnabled());
+
+    const syncPreference = () => {
+      setEnabled(isMusicEnabled());
+    };
+
+    window.addEventListener("storage", syncPreference);
+    window.addEventListener(MUSIC_PREF_EVENT, syncPreference);
     setReady(true);
+
+    return () => {
+      window.removeEventListener("storage", syncPreference);
+      window.removeEventListener(MUSIC_PREF_EVENT, syncPreference);
+    };
   }, []);
 
   useEffect(() => {
@@ -48,29 +60,45 @@ export function BackgroundMusic() {
       audioEl.src = getSessionTrack();
     }
     audioEl.volume = 0.25;
+    audioEl.playsInline = true;
 
     if (!enabled) {
       audioEl.pause();
-      setAutoplayBlocked(false);
-      localStorage.setItem(MUSIC_PREF_KEY, "off");
+      setMusicEnabled(false);
       return;
     }
 
-    localStorage.setItem(MUSIC_PREF_KEY, "on");
+    setMusicEnabled(true);
 
-    const playMusic = () => {
-      audioEl
-        .play()
-        .then(() => setAutoplayBlocked(false))
-        .catch(() => setAutoplayBlocked(true));
+    const playImmediately = async () => {
+      try {
+        audioEl.muted = false;
+        await audioEl.play();
+        return;
+      } catch {
+        // Fallback path for stricter autoplay policies.
+      }
+
+      try {
+        audioEl.muted = true;
+        await audioEl.play();
+        audioEl.muted = false;
+      } catch {
+        // Some browsers still require a user gesture before audible playback.
+      }
     };
 
-    // Browsers can block autoplay with sound until a user interaction occurs.
-    playMusic();
-    const unlockOnInteraction = () => playMusic();
+    playImmediately();
 
-    window.addEventListener("pointerdown", unlockOnInteraction, { once: true });
-    window.addEventListener("keydown", unlockOnInteraction, { once: true });
+    const unlockOnInteraction = () => {
+      audioEl.muted = false;
+      audioEl.play().catch(() => {
+        // If still blocked, keep silent failure to avoid noisy errors.
+      });
+    };
+
+    window.addEventListener("pointerdown", unlockOnInteraction);
+    window.addEventListener("keydown", unlockOnInteraction);
 
     return () => {
       window.removeEventListener("pointerdown", unlockOnInteraction);
@@ -79,18 +107,14 @@ export function BackgroundMusic() {
   }, [enabled, ready]);
 
   return (
-    <>
-      <audio ref={audioRef} loop preload="auto" aria-hidden="true" className="hidden" />
-
-      <button
-        type="button"
-        onClick={() => setEnabled((curr) => !curr)}
-        className="fixed bottom-4 right-4 z-100 rounded-full border border-amber-500/50 bg-black/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-amber-200 shadow-lg backdrop-blur-sm transition hover:bg-black/85"
-        aria-label={enabled ? "Disable background music" : "Enable background music"}
-      >
-        {enabled ? "Music: On" : "Music: Off"}
-        {enabled && autoplayBlocked ? " (Tap to start)" : ""}
-      </button>
-    </>
+    <audio
+      ref={audioRef}
+      loop
+      preload="auto"
+      autoPlay
+      playsInline
+      aria-hidden="true"
+      className="hidden"
+    />
   );
 }
