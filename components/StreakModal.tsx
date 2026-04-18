@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { UserStats, StreakData } from "@/lib/types";
+import { ChartArea, Flame, FlameIcon, Trophy } from "lucide-react";
 import Link from "next/link";
 
 interface StreakModalProps {
@@ -40,8 +41,8 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
         {/* Fixed header */}
         <div className="bg-purple-400 border-b-4 border-black p-4 shrink-0">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-black uppercase tracking-wider text-black">
-              🔥 Your Streak
+            <h2 className="text-2xl font-black uppercase tracking-wider text-black flex gap-4">
+              <Flame fill="orange" className="w-8 h-8 text-orange-500" /> Your Streak
             </h2>
             <button
               onClick={handleClose}
@@ -65,7 +66,9 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
             <>
               {/* Streak Summary */}
               <div className="bg-orange-300 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1">
-                <h3 className="font-black text-lg uppercase text-black mb-3">📊 Streak Stats</h3>
+                <h3 className="font-black text-lg uppercase text-black mb-3 flex gap-1">
+                  <ChartArea fill="blue" className="w-6 h-6 text-red-500" /> Streak Stats
+                </h3>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-black">Current Streak:</span>
@@ -81,16 +84,16 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-black">Last Puzzle:</span>
-                    <span className="font-black text-black">
-                      {formatDate(userStats?.lastPuzzleDate || null)}
-                    </span>
+                    <span className="font-black text-black">{formatDate(userStats?.lastPuzzleDate || null)}</span>
                   </div>
                 </div>
               </div>
 
               {/* Points & Puzzles Summary */}
               <div className="bg-cyan-300 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1">
-                <h3 className="font-black text-lg uppercase text-black mb-3">🏆 Progress</h3>
+                <h3 className="font-black text-lg uppercase text-black mb-3 flex gap-2">
+                  <Trophy fill="gold" className="w-6 h-6 text-yellow-500" /> Progress
+                </h3>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-black">Total Points:</span>
@@ -102,9 +105,7 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-black">Puzzles Solved:</span>
-                    <span className="font-black text-black">
-                      {userStats?.totalPuzzlesSolved || 0}
-                    </span>
+                    <span className="font-black text-black">{userStats?.totalPuzzlesSolved || 0}</span>
                   </div>
                 </div>
               </div>
@@ -123,9 +124,19 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
               Privacy
             </Link>
             <span>·</span>
-            <a href="https://t.me/+qffqunjhX3c4OGVk" target="_blank" rel="noopener noreferrer" className="hover:text-black transition-colors font-bold">
+            <a
+              href="https://t.me/+qffqunjhX3c4OGVk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-black transition-colors font-bold"
+            >
               Support
             </a>
+          </div>
+          <div className="flex justify-center gap-4">
+            <Link href="https://x.com/chesspuzzlesxyz" className="hover:text-black transition-colors font-bold">
+              Twitter(X)
+            </Link>
           </div>
           <p className="text-xs">Not operated by Opera or MiniPay</p>
         </div>
