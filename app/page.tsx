@@ -9,7 +9,6 @@ import { WalletConnect } from "@/components/WalletConnect";
 import { PaymentModal } from "@/components/PaymentModal";
 import { StreakModal } from "@/components/StreakModal";
 import { PuzzlesActionModal } from "@/components/PuzzlesActionModal";
-import { EarlyAccessBadge } from "@/components/EarlyAccessBadge";
 import { useUserStats } from "../lib/hooks/useUserStats";
 import { useStreak } from "../lib/hooks/useStreak";
 import { useDailyCheckin } from "@/lib/hooks/useDailyCheckin";
@@ -131,10 +130,6 @@ export default function Home() {
         <header className="pt-6 px-6 flex justify-between items-center shrink-0 pointer-events-auto gap-3">
           <WalletConnect />
           <div className="flex items-center gap-3">
-            <EarlyAccessBadge
-              visible={showEarlyBadge}
-              slotsRemaining={checkInStatus?.slotsRemaining || 0}
-            />
             <StreakBadge
               days={streakData?.currentStreak || userStats?.currentStreak || 0}
               onClick={handleStreakClick}
