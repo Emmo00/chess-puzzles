@@ -1,27 +1,26 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
+import { Flame } from "lucide-react";
 
 interface StreakBadgeProps {
-  days: number
-  onClick?: () => void
+  days: number;
+  onClick?: () => void;
 }
 
 export default function StreakBadge({ days, onClick }: StreakBadgeProps) {
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
-  if (!mounted) return null
+  if (!mounted) return null;
 
   const getStreakEmoji = () => {
-    if (days >= 30) return "🔥"
-    if (days >= 7) return "⚡"
-    if (days >= 3) return "🎯"
-    return "🔥"
-  }
+
+    return <Flame className="w-6 h-6 text-orange-500" />;
+  };
 
   return (
     <div
@@ -55,5 +54,5 @@ export default function StreakBadge({ days, onClick }: StreakBadgeProps) {
         }
       `}</style>
     </div>
-  )
+  );
 }
