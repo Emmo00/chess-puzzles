@@ -217,7 +217,7 @@ export default function SettingsPage() {
               <div>
                 <h2 className="font-black text-xl text-black">🎵 BACKGROUND MUSIC</h2>
                 <p className="text-sm font-bold text-black/70 mt-1">
-                  Plays automatically when the app loads.
+                  _
                 </p>
               </div>
               <button
