@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { sdk } from "@farcaster/miniapp-sdk";
 import confetti from "canvas-confetti";
-import { Coins, TriangleAlert } from "lucide-react";
+import { AtSign, Coins, ExternalLink, Send, Share2, TriangleAlert } from "lucide-react";
 import { useAccount } from "wagmi";
 
 import ChessBoard, { ChessBoardRef } from "@/components/chess-board";
+import { WalletConnect } from "@/components/WalletConnect";
 import { useChainSwitching } from "@/lib/hooks/useChainSwitching";
 import { useCheckinClaim } from "@/lib/hooks/useCheckinClaim";
 import { useDailyCheckin } from "@/lib/hooks/useDailyCheckin";
@@ -28,11 +29,12 @@ export default function DailyChallengePage() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [isWrongMoveActive, setIsWrongMoveActive] = useState(false);
+  const [isFarcasterMiniApp, setIsFarcasterMiniApp] = useState(false);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
 
   const chessBoardRef = useRef<ChessBoardRef>(null);
   const claimCardRef = useRef<HTMLDivElement>(null);
   const statusMessageRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
   const { address, isConnected } = useAccount();
   const { isOnCorrectChain, switchToPreferredChain } = useChainSwitching();
@@ -74,10 +76,27 @@ export default function DailyChallengePage() {
   }, []);
 
   useEffect(() => {
-    if (mounted && !isConnected) {
-      router.push("/");
-    }
-  }, [mounted, isConnected, router]);
+    let cancelled = false;
+
+    const detectMiniApp = async () => {
+      try {
+        const inMiniApp = await sdk.isInMiniApp();
+        if (!cancelled) {
+          setIsFarcasterMiniApp(inMiniApp);
+        }
+      } catch {
+        if (!cancelled) {
+          setIsFarcasterMiniApp(false);
+        }
+      }
+    };
+
+    void detectMiniApp();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!status?.challenge) {
@@ -217,6 +236,43 @@ export default function DailyChallengePage() {
     return `${amount} ${symbol}`;
   }, [status?.checkInAmountDisplay, status?.payoutTokenSymbol]);
 
+  const challengeShareUrl = useMemo(() => {
+    const appBaseUrl =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_APP_URL || "https://chesspuzzles.xyz";
+
+    const url = new URL("/daily-challenge/share", appBaseUrl);
+    url.searchParams.set("day", new Date().toISOString().slice(0, 10));
+    url.searchParams.set("reward", rewardLabel);
+
+    if (currentPuzzle?.rating) {
+      url.searchParams.set("rating", String(currentPuzzle.rating));
+    }
+
+    return url.toString();
+  }, [currentPuzzle?.rating, rewardLabel]);
+
+  const buildFarcasterComposeUrl = (text: string, embedUrl: string) => {
+    const url = new URL("https://farcaster.xyz/~/compose");
+    url.searchParams.set("text", text);
+    url.searchParams.append("embeds[]", embedUrl);
+    return url.toString();
+  };
+
+  const openExternalUrl = async (url: string) => {
+    if (isFarcasterMiniApp) {
+      try {
+        await sdk.actions.openUrl(url);
+        return;
+      } catch {
+        // Fallback to browser navigation.
+      }
+    }
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const handleReserveChallenge = async () => {
     if (status?.reservation?.status === "claimed") {
       setClaimMessage("You already solved today's puzzle and claimed the reward. Come back after 00:00 GMT.");
@@ -288,6 +344,39 @@ export default function DailyChallengePage() {
     }
   };
 
+  const handleShareCast = async () => {
+    const castText = currentPuzzle
+      ? `I solved today's ${currentPuzzle.rating}-rated Daily Challenge on Chess Puzzles. Can you beat it?`
+      : "I solved today's Daily Challenge on Chess Puzzles. Can you beat it?";
+
+    setShareMessage(null);
+
+    if (isFarcasterMiniApp) {
+      try {
+        const embeds: [string] = [challengeShareUrl];
+        await sdk.actions.composeCast({
+          text: castText,
+          embeds,
+        });
+        setShareMessage("Opened Farcaster cast composer.");
+        return;
+      } catch (error) {
+        console.error("Failed to open Farcaster cast composer:", error);
+      }
+    }
+
+    await openExternalUrl(buildFarcasterComposeUrl(castText, challengeShareUrl));
+    setShareMessage("Opened Farcaster compose link.");
+  };
+
+  const handleShareTweet = async () => {
+    const tweetText = `I solved today's Daily Challenge on @chesspuzzlesxyz. Can you beat it? ${challengeShareUrl}`;
+    const twitterIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+
+    await openExternalUrl(twitterIntentUrl);
+    setShareMessage("Opened X compose link.");
+  };
+
   const handleShowHint = () => {
     if (hintStage === "none") {
       setHintStage("piece");
@@ -341,6 +430,33 @@ export default function DailyChallengePage() {
     return (
       <div className="w-screen h-screen bg-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen w-full bg-white text-black flex flex-col">
+        <header className="pt-4 px-4 flex justify-between items-center shrink-0">
+          <Link
+            href="/"
+            className="bg-black text-white px-2 py-1 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
+          >
+            ← BACK
+          </Link>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center px-4 py-6">
+          <div className="w-full max-w-xs text-center bg-cyan-300 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-6 transform -rotate-1">
+            <h1 className="text-xl font-black uppercase text-black mb-2">Connect Wallet</h1>
+            <p className="text-sm font-bold text-black mb-4">
+              Connect to reserve, solve, and share today's daily challenge.
+            </p>
+            <div className="flex justify-center">
+              <WalletConnect />
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -515,6 +631,45 @@ export default function DailyChallengePage() {
             >
               {isClaimed ? "REWARD CLAIMED" : claimSubmitting || claimConfirming ? "CLAIMING..." : "CLAIM REWARD"}
             </button>
+          </div>
+        )}
+
+        {isCompleted && (
+          <div className="w-full max-w-xs bg-cyan-300 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-5 transform -rotate-1 space-y-3">
+            <h3 className="text-lg font-black uppercase text-black inline-flex items-center gap-2">
+              <Share2 className="w-5 h-5" /> Share Daily Challenge
+            </h3>
+
+            <div className="bg-white border-2 border-black p-3 text-xs font-black uppercase text-black space-y-1">
+              <div>Day: {new Date().toISOString().slice(0, 10)}</div>
+              <div>Rating: {currentPuzzle?.rating ?? "N/A"}</div>
+              <div>Reward: {rewardLabel}</div>
+              <a
+                href={challengeShareUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-blue-800 hover:text-black"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Preview URL
+              </a>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => void handleShareCast()}
+                className="bg-black text-cyan-200 py-2 px-3 font-black text-xs uppercase tracking-wide border-2 border-cyan-200 hover:bg-gray-800 transition-all inline-flex items-center justify-center gap-1"
+              >
+                <Send className="w-3.5 h-3.5" /> Share Cast
+              </button>
+              <button
+                onClick={() => void handleShareTweet()}
+                className="bg-white text-black py-2 px-3 font-black text-xs uppercase tracking-wide border-2 border-black hover:bg-gray-100 transition-all inline-flex items-center justify-center gap-1"
+              >
+                <AtSign className="w-3.5 h-3.5" /> Share Tweet
+              </button>
+            </div>
+
+            {shareMessage && <p className="text-xs font-black uppercase text-black">{shareMessage}</p>}
           </div>
         )}
 
