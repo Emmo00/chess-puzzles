@@ -126,7 +126,7 @@ export default function FAQPage() {
         {/* Quick Links */}
         <div className="w-full max-w-2xl flex flex-wrap gap-3 justify-center mt-2">
           <Link
-            href="/solve-puzzles"
+            href="/?openPuzzlesModal=1"
             className="bg-yellow-400 text-black px-4 py-2 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all inline-flex items-center gap-2"
           >
             <Puzzle className="w-4 h-4" /> START SOLVING

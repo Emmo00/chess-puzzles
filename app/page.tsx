@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAccount } from "wagmi";
 import { CircleHelp, Puzzle, Settings, Trophy } from "lucide-react";
 import ChessPiecesScene from "../components/chess-pieces-scene";
@@ -19,6 +19,7 @@ export default function Home() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showPuzzlesModal, setShowPuzzlesModal] = useState(false);
+  const autoOpenHandledRef = useRef(false);
   const [paymentStatus, setPaymentStatus] = useState<{
     hasAccess: boolean;
     hasDailyAccess: boolean;
@@ -31,6 +32,25 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const queryParams = new URLSearchParams(window.location.search);
+    const shouldAutoOpen =
+      queryParams.get("openPuzzlesModal") === "1" ||
+      queryParams.get("openPuzzlesModal") === "true";
+
+    if (!mounted || autoOpenHandledRef.current || !shouldAutoOpen || !isConnected) {
+      return;
+    }
+
+    autoOpenHandledRef.current = true;
+    refreshCheckInStatus();
+    setShowPuzzlesModal(true);
+  }, [mounted, isConnected, refreshCheckInStatus]);
 
   // Check payment status when wallet connects
   useEffect(() => {
