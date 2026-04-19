@@ -8,12 +8,18 @@ export const runtime = "nodejs";
 const BOARD_SIZE = 8;
 
 const PIECE_SYMBOLS: Record<string, string> = {
-  k: "K",
-  q: "Q",
-  r: "R",
-  b: "B",
-  n: "N",
-  p: "P",
+  K: "♔",
+  Q: "♕",
+  R: "♖",
+  B: "♗",
+  N: "♘",
+  P: "♙",
+  k: "♚",
+  q: "♛",
+  r: "♜",
+  b: "♝",
+  n: "♞",
+  p: "♟",
 };
 
 const createEmptyBoard = () =>
@@ -56,8 +62,7 @@ const pieceLabel = (piece: string) => {
     return "";
   }
 
-  const mapped = PIECE_SYMBOLS[piece.toLowerCase()] || piece.toUpperCase();
-  return piece === piece.toUpperCase() ? mapped : mapped.toLowerCase();
+  return PIECE_SYMBOLS[piece] || "";
 };
 
 export async function GET(request: NextRequest) {
@@ -77,7 +82,7 @@ export async function GET(request: NextRequest) {
         <div
           style={{
             width: "1200px",
-            height: "630px",
+            height: "800px",
             display: "flex",
             flexDirection: "row",
             justifyContent: "center",
@@ -97,7 +102,7 @@ export async function GET(request: NextRequest) {
               boxShadow: "16px 16px 0 rgba(17,17,17,0.22)",
               padding: "36px 42px",
               width: "100%",
-              maxWidth: "660px",
+              maxWidth: "640px",
             }}
           >
             <div
@@ -110,19 +115,6 @@ export async function GET(request: NextRequest) {
               }}
             >
               Chess Puzzles Daily Challenge
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                fontSize: "72px",
-                fontWeight: 900,
-                lineHeight: 1,
-                marginBottom: "20px",
-              }}
-            >
-              {`Day ${shareData.dayLabel}`}
             </div>
 
             <div
@@ -169,14 +161,14 @@ export async function GET(request: NextRequest) {
                 textTransform: "uppercase",
               }}
             >
-              Solve it. Claim it. Share it.
+              Solve it. Claim it.
             </div>
           </div>
 
           <div
             style={{
-              width: "380px",
-              height: "380px",
+              width: "410px",
+              height: "410px",
               display: "flex",
               flexDirection: "column",
               border: "8px solid #111111",
@@ -203,8 +195,8 @@ export async function GET(request: NextRequest) {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        width: "47.5px",
-                        height: "47.5px",
+                        width: "51.25px",
+                        height: "51.25px",
                         backgroundColor: squareColor(rowIndex, colIndex),
                         fontSize: "26px",
                         fontWeight: 900,
@@ -222,9 +214,9 @@ export async function GET(request: NextRequest) {
         </div>
       ),
       {
-        // Farcaster large preview image dimensions.
+        // 3:2 preview image dimensions (within 600x400 to 3000x2000).
         width: 1200,
-        height: 630,
+        height: 800,
       },
     );
   } catch (error: any) {

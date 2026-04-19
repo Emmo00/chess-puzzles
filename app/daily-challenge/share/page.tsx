@@ -77,7 +77,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
         {
           url: imageUrl,
           width: 1200,
-          height: 630,
+          height: 800,
           alt: "Chess Puzzles Daily Challenge",
         },
       ],
