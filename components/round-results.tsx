@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { Check, X } from "lucide-react"
 
 interface Puzzle {
   id: number
@@ -31,7 +32,9 @@ export default function RoundResults({ puzzles }: RoundResultsProps) {
             }}
           >
             <span>Puzzle {puzzle.id}</span>
-            <span className="text-xl">{puzzle.correct ? "✓" : "✗"}</span>
+            <span className="text-xl">
+              {puzzle.correct ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
+            </span>
           </button>
         ))}
       </div>

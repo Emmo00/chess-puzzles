@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { BarChart3, Music, Save, Settings, Target } from "lucide-react";
 import { UserSettings } from "../../lib/types";
 import { PUZZLE_THEMES, THEME_CATEGORIES, DEFAULT_THEMES } from "../../lib/config/puzzleThemes";
 import { isMusicEnabled, setMusicEnabled as persistMusicEnabled } from "../../lib/utils/backgroundMusic";
@@ -204,7 +205,9 @@ export default function SettingsPage() {
           ← BACK
         </Link>
         <div className="px-4 py-2 font-black text-sm border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-lime-400 text-black">
-          ⚙ SETTINGS
+          <span className="inline-flex items-center gap-1">
+            <Settings className="w-4 h-4" /> SETTINGS
+          </span>
         </div>
       </header>
 
@@ -215,7 +218,9 @@ export default function SettingsPage() {
           <div className="bg-orange-300 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4">
             <div className="flex justify-between items-center gap-3">
               <div>
-                <h2 className="font-black text-xl text-black">🎵 BACKGROUND MUSIC</h2>
+                <h2 className="font-black text-xl text-black inline-flex items-center gap-2">
+                  <Music className="w-5 h-5" /> BACKGROUND MUSIC
+                </h2>
                 <p className="text-sm font-bold text-black/70 mt-1">
                   _
                 </p>
@@ -233,7 +238,9 @@ export default function SettingsPage() {
 
           {/* Rating Range Section */}
           <div className="bg-cyan-400 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4">
-            <h2 className="font-black text-xl text-black mb-4">📊 PUZZLE RATING RANGE</h2>
+            <h2 className="font-black text-xl text-black mb-4 inline-flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" /> PUZZLE RATING RANGE
+            </h2>
             
             <div className="space-y-4">
               {/* Min Rating */}
@@ -283,7 +290,9 @@ export default function SettingsPage() {
           {/* Themes Section */}
           <div className="bg-purple-400 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="font-black text-xl text-black">🎯 PUZZLE THEMES</h2>
+              <h2 className="font-black text-xl text-black inline-flex items-center gap-2">
+                <Target className="w-5 h-5" /> PUZZLE THEMES
+              </h2>
               <button
                 onClick={handleToggleAllThemes}
                 className="bg-black text-white px-3 py-1 font-black text-xs border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
@@ -368,9 +377,9 @@ export default function SettingsPage() {
             <button
               onClick={saveSettings}
               disabled={saving}
-              className="w-full bg-green-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50"
+              className="w-full bg-green-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {saving ? "SAVING..." : "💾 SAVE SETTINGS"}
+              {saving ? "SAVING..." : <><Save className="w-5 h-5" /> SAVE SETTINGS</>}
             </button>
           </div>
         </div>

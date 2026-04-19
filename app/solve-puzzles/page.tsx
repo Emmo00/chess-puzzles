@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Ban, Check, Circle, Lightbulb, X, Zap } from "lucide-react";
 import ChessBoard, { ChessBoardRef } from "../../components/chess-board";
 import { useUserStats } from "../../lib/hooks/useUserStats";
 import { Puzzle } from "../../lib/types";
@@ -321,7 +322,9 @@ export default function SolvePuzzlesPage() {
               paymentStatus?.hasDailyAccess ? "bg-yellow-400 text-black" : "bg-cyan-400 text-black"
             }`}
           >
-            ⚡ PUZZLES ({solvedPuzzlesCount}/{MAX_DAILY_PUZZLES})
+            <span className="inline-flex items-center gap-1">
+              <Zap className="w-4 h-4" /> PUZZLES ({solvedPuzzlesCount}/{MAX_DAILY_PUZZLES})
+            </span>
           </div>
         </div>
       </header>
@@ -333,9 +336,9 @@ export default function SolvePuzzlesPage() {
             {/* Close button */}
             <button
               onClick={handleCloseCompletionModal}
-              className="absolute top-2 right-2 w-8 h-8 bg-white border-2 border-black font-black text-black hover:bg-gray-100 transition-colors flex items-center justify-center"
+              className="absolute top-2 right-2 w-8 h-8 bg-white border-2 border-black text-black hover:bg-gray-100 transition-colors flex items-center justify-center"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
             
             <div className="text-3xl font-black text-black mb-4 transform mt-4 -rotate-2">PUZZLE SOLVED!</div>
@@ -343,8 +346,8 @@ export default function SolvePuzzlesPage() {
               <div className="bg-white border-2 border-black p-2">TIME: {formatTime(completionStats.timeElapsed)}</div>
               <div className="bg-white border-2 border-black p-2">MISTAKES: {completionStats.mistakes}</div>
               {completionStats.hintCount > 0 && (
-                <div className="bg-yellow-200 border-2 border-black p-2">
-                  HINTS USED: {completionStats.hintCount} 💡
+                <div className="bg-yellow-200 border-2 border-black p-2 inline-flex items-center gap-1 justify-center w-full">
+                  HINTS USED: {completionStats.hintCount} <Lightbulb className="w-4 h-4" />
                 </div>
               )}
               <div className="bg-white border-2 border-black p-2">POINTS: +{completionStats.points}</div>
@@ -381,7 +384,15 @@ export default function SolvePuzzlesPage() {
                     currentTurn === "w" ? "bg-white text-black" : "bg-gray-800 text-white"
                   }`}
                 >
-                  {currentTurn === "w" ? "⚪ WHITE TO MOVE" : "⚫ BLACK TO MOVE"}
+                  {currentTurn === "w" ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Circle className="w-3.5 h-3.5" /> WHITE TO MOVE
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1">
+                      <Circle className="w-3.5 h-3.5 fill-current" /> BLACK TO MOVE
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -462,7 +473,11 @@ export default function SolvePuzzlesPage() {
                   >
                     {hintStage === 'none' && `HINT${hintCount > 0 ? ` (${hintCount})` : ''}`}
                     {hintStage === 'piece' && <span className="font-black text-xs">SHOW MOVE</span>}
-                    {hintStage === 'move' && '✓ HINT SHOWN'}
+                    {hintStage === 'move' && (
+                      <span className="inline-flex items-center gap-1">
+                        <Check className="w-4 h-4" /> HINT SHOWN
+                      </span>
+                    )}
                   </button>
                 )}
                 
@@ -489,8 +504,8 @@ export default function SolvePuzzlesPage() {
               
               {/* Completed indicator */}
               {isCompleted && (
-                <div className="text-center text-sm font-bold text-green-600">
-                  ✓ Puzzle completed! Use ← → to analyze the solution.
+                <div className="text-center text-sm font-bold text-green-600 inline-flex items-center gap-1 justify-center w-full">
+                  <Check className="w-4 h-4" /> Puzzle completed! Use ← → to analyze the solution.
                 </div>
               )}
             </div>
@@ -519,7 +534,9 @@ export default function SolvePuzzlesPage() {
         {!currentPuzzle && !isCompleted && isAccessExhausted && (
           <div className="w-full max-w-xs text-center space-y-6">
             <div className="bg-red-400 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 transform rotate-1">
-              <h2 className="text-3xl font-black text-black mb-3">DAILY LIMIT REACHED! 🚫</h2>
+              <h2 className="text-3xl font-black text-black mb-3 inline-flex items-center gap-2">
+                DAILY LIMIT REACHED! <Ban className="w-8 h-8" />
+              </h2>
               <p className="text-lg font-bold text-black">You&apos;ve solved all {MAX_DAILY_PUZZLES} puzzles for today.</p>
               <p className="text-md font-bold text-black mt-2">Come back tomorrow for more puzzles!</p>
             </div>

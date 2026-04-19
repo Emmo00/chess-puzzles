@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { CircleHelp, Puzzle, Settings, Smartphone, Trophy } from "lucide-react";
 
 interface FAQItem {
   question: string;
@@ -65,7 +66,9 @@ export default function FAQPage() {
           ← BACK
         </Link>
         <div className="px-4 py-2 font-black text-sm border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-yellow-400 text-black">
-          ❓ FAQ
+          <span className="inline-flex items-center gap-1">
+            <CircleHelp className="w-4 h-4" /> FAQ
+          </span>
         </div>
       </header>
 
@@ -114,9 +117,9 @@ export default function FAQPage() {
             href="https://t.me/+qffqunjhX3c4OGVk"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block mt-3 bg-black text-white px-4 py-2 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
+            className="inline-flex items-center gap-2 mt-3 bg-black text-white px-4 py-2 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
           >
-            📱 JOIN TELEGRAM
+            <Smartphone className="w-4 h-4" /> JOIN TELEGRAM
           </a>
         </div>
 
@@ -124,21 +127,21 @@ export default function FAQPage() {
         <div className="w-full max-w-2xl flex flex-wrap gap-3 justify-center mt-2">
           <Link
             href="/solve-puzzles"
-            className="bg-yellow-400 text-black px-4 py-2 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
+            className="bg-yellow-400 text-black px-4 py-2 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all inline-flex items-center gap-2"
           >
-            🧩 START SOLVING
+            <Puzzle className="w-4 h-4" /> START SOLVING
           </Link>
           <Link
             href="/leaderboard"
-            className="bg-purple-400 text-black px-4 py-2 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
+            className="bg-purple-400 text-black px-4 py-2 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all inline-flex items-center gap-2"
           >
-            🏆 LEADERBOARD
+            <Trophy className="w-4 h-4" /> LEADERBOARD
           </Link>
           <Link
             href="/settings"
-            className="bg-gray-300 text-black px-4 py-2 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
+            className="bg-gray-300 text-black px-4 py-2 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all inline-flex items-center gap-2"
           >
-            ⚙️ SETTINGS
+            <Settings className="w-4 h-4" /> SETTINGS
           </Link>
         </div>
       </main>

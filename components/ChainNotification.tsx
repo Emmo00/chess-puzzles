@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { TriangleAlert, X } from 'lucide-react'
 import { useChainId } from 'wagmi'
 import { isOnCorrectChain, PREFERRED_CHAIN } from '../lib/config/wagmi'
 
@@ -29,7 +30,7 @@ export function ChainNotification() {
     <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
       <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-3 shadow-lg max-w-sm">
         <div className="flex items-center gap-2">
-          <span className="text-yellow-600">⚠️</span>
+          <TriangleAlert className="w-4 h-4 text-yellow-600" />
           <div className="text-sm">
             <div className="font-medium text-yellow-800">Wrong Network</div>
             <div className="text-yellow-700">
@@ -40,7 +41,7 @@ export function ChainNotification() {
             onClick={() => setShow(false)}
             className="ml-2 text-yellow-600 hover:text-yellow-800"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>

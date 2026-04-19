@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { useAccount } from "wagmi";
 import Link from "next/link";
+import { BarChart3, Medal, Puzzle, Star, Trophy } from "lucide-react";
 import { LeaderboardEntry, LeaderboardResponse } from "../../lib/services/leaderboard.service";
 
 export default function LeaderboardPage() {
@@ -57,10 +59,10 @@ export default function LeaderboardPage() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
-  const getRankEmoji = (rank: number) => {
-    if (rank === 1) return "🥇";
-    if (rank === 2) return "🥈";
-    if (rank === 3) return "🥉";
+  const getRankDisplay = (rank: number): ReactNode => {
+    if (rank === 1) return <Medal className="w-5 h-5 text-yellow-500 fill-yellow-500" />;
+    if (rank === 2) return <Medal className="w-5 h-5 text-gray-500 fill-gray-300" />;
+    if (rank === 3) return <Medal className="w-5 h-5 text-amber-700 fill-orange-400" />;
     return `#${rank}`;
   };
 
@@ -86,7 +88,9 @@ export default function LeaderboardPage() {
           ← BACK
         </Link>
         <div className="px-4 py-2 font-black text-sm border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-purple-400 text-black">
-          🏆 LEADERBOARD
+          <span className="inline-flex items-center gap-1">
+            <Trophy className="w-4 h-4" /> LEADERBOARD
+          </span>
         </div>
       </header>
 
@@ -99,7 +103,7 @@ export default function LeaderboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="bg-black text-cyan-400 px-3 py-2 font-black text-xl">
-                  {getRankEmoji(userRank.rank)}
+                  {getRankDisplay(userRank.rank)}
                 </div>
                 <div>
                   <div className="font-black text-black">{userRank.displayName}</div>
@@ -107,7 +111,9 @@ export default function LeaderboardPage() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="font-black text-black">{userRank.totalPuzzlesSolved} 🧩</div>
+                <div className="font-black text-black inline-flex items-center justify-end gap-1 w-full">
+                  {userRank.totalPuzzlesSolved} <Puzzle className="w-4 h-4" />
+                </div>
                 <div className="text-sm font-bold text-black/70">{userRank.totalPoints} pts</div>
               </div>
             </div>
@@ -162,7 +168,7 @@ export default function LeaderboardPage() {
                       }`}
                     >
                       <span className="font-black text-black">
-                        {getRankEmoji(entry.rank)}
+                        {getRankDisplay(entry.rank)}
                       </span>
                       <div className="min-w-0">
                         <div className="font-black text-black text-sm truncate">
@@ -212,10 +218,16 @@ export default function LeaderboardPage() {
 
         {/* Info Card */}
         <div className="w-full max-w-md bg-green-400 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 transform rotate-1">
-          <div className="font-black text-lg text-black mb-2">📊 RANKING SYSTEM</div>
+          <div className="font-black text-lg text-black mb-2 inline-flex items-center gap-2">
+            <BarChart3 className="w-5 h-5" /> RANKING SYSTEM
+          </div>
           <div className="space-y-1 text-sm font-bold text-black">
-            <div>🧩 Puzzles Solved (Primary)</div>
-            <div>⭐ Total Points (Secondary)</div>
+            <div className="inline-flex items-center gap-1">
+              <Puzzle className="w-4 h-4" /> Puzzles Solved (Primary)
+            </div>
+            <div className="inline-flex items-center gap-1">
+              <Star className="w-4 h-4" /> Total Points (Secondary)
+            </div>
             <div className="text-xs text-black/70 mt-2">
               Consistency matters! Solve more puzzles to climb the ranks.
             </div>
