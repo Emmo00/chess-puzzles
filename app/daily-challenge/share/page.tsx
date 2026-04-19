@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { getDailyChallengeShareData, parseUtcDayInput } from "@/lib/services/daily-challenge-share.service";
+
 type SearchParams = Record<string, string | string[] | undefined>;
 
 type PageProps = {
@@ -30,22 +32,23 @@ const pickFirst = (value: string | string[] | undefined, fallback: string) => {
 
 const getSharePayload = async (input: Promise<SearchParams> | SearchParams) => {
   const params = await Promise.resolve(input);
+  const utcDay = parseUtcDayInput(pickFirst(params.d, pickFirst(params.day, "")));
+  const shareData = await getDailyChallengeShareData(utcDay);
 
-  const rating = pickFirst(params.rating, "?");
-  const reward = pickFirst(params.reward, "0 TOKEN");
-  const day = pickFirst(params.day, new Date().toISOString().slice(0, 10));
-
-  return { rating, reward, day };
+  return {
+    utcDay,
+    day: shareData?.dayLabel || new Date(utcDay * 86400000).toISOString().slice(0, 10),
+    rating: shareData?.rating ? String(shareData.rating) : "?",
+    reward: shareData?.rewardLabel || "Reward available for early solvers",
+  };
 };
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
-  const { rating, reward, day } = await getSharePayload(searchParams);
+  const { utcDay, rating, reward, day } = await getSharePayload(searchParams);
 
   const title = `Daily Challenge ${day}`;
   const description = `Solve today's ${rating}-rated daily challenge and claim ${reward}.`;
-  const imageUrl = buildAppUrl(
-    `/api/og/daily-challenge?rating=${encodeURIComponent(rating)}&reward=${encodeURIComponent(reward)}&day=${encodeURIComponent(day)}`,
-  );
+  const imageUrl = buildAppUrl(`/api/og/daily-challenge?d=${encodeURIComponent(String(utcDay))}`);
   const launchUrl = buildAppUrl("/daily-challenge");
 
   const miniAppEmbed = {
@@ -74,7 +77,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
         {
           url: imageUrl,
           width: 1200,
-          height: 630,
+          height: 800,
           alt: "Chess Puzzles Daily Challenge",
         },
       ],

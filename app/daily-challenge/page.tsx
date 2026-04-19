@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { sdk } from "@farcaster/miniapp-sdk";
 import confetti from "canvas-confetti";
-import { AtSign, Coins, ExternalLink, Send, Share2, TriangleAlert } from "lucide-react";
+import { AtSign, Coins, Send, Share2, TriangleAlert } from "lucide-react";
 import { useAccount } from "wagmi";
 
 import ChessBoard, { ChessBoardRef } from "@/components/chess-board";
@@ -30,7 +30,6 @@ export default function DailyChallengePage() {
   const [canGoForward, setCanGoForward] = useState(false);
   const [isWrongMoveActive, setIsWrongMoveActive] = useState(false);
   const [isFarcasterMiniApp, setIsFarcasterMiniApp] = useState(false);
-  const [shareMessage, setShareMessage] = useState<string | null>(null);
 
   const chessBoardRef = useRef<ChessBoardRef>(null);
   const claimCardRef = useRef<HTMLDivElement>(null);
@@ -243,15 +242,10 @@ export default function DailyChallengePage() {
         : process.env.NEXT_PUBLIC_APP_URL || "https://chesspuzzles.xyz";
 
     const url = new URL("/daily-challenge/share", appBaseUrl);
-    url.searchParams.set("day", new Date().toISOString().slice(0, 10));
-    url.searchParams.set("reward", rewardLabel);
-
-    if (currentPuzzle?.rating) {
-      url.searchParams.set("rating", String(currentPuzzle.rating));
-    }
+    url.searchParams.set("d", String(status?.utcDay ?? Math.floor(Date.now() / 86400000)));
 
     return url.toString();
-  }, [currentPuzzle?.rating, rewardLabel]);
+  }, [status?.utcDay]);
 
   const buildFarcasterComposeUrl = (text: string, embedUrl: string) => {
     const url = new URL("https://farcaster.xyz/~/compose");
@@ -345,11 +339,10 @@ export default function DailyChallengePage() {
   };
 
   const handleShareCast = async () => {
-    const castText = currentPuzzle
-      ? `I solved today's ${currentPuzzle.rating}-rated Daily Challenge on Chess Puzzles. Can you beat it?`
+    const challengeRating = status?.challenge?.rating;
+    const castText = challengeRating
+      ? `I solved today's ${challengeRating}-rated Daily Challenge on Chess Puzzles. Can you beat it?`
       : "I solved today's Daily Challenge on Chess Puzzles. Can you beat it?";
-
-    setShareMessage(null);
 
     if (isFarcasterMiniApp) {
       try {
@@ -358,7 +351,6 @@ export default function DailyChallengePage() {
           text: castText,
           embeds,
         });
-        setShareMessage("Opened Farcaster cast composer.");
         return;
       } catch (error) {
         console.error("Failed to open Farcaster cast composer:", error);
@@ -366,7 +358,6 @@ export default function DailyChallengePage() {
     }
 
     await openExternalUrl(buildFarcasterComposeUrl(castText, challengeShareUrl));
-    setShareMessage("Opened Farcaster compose link.");
   };
 
   const handleShareTweet = async () => {
@@ -374,7 +365,6 @@ export default function DailyChallengePage() {
     const twitterIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
 
     await openExternalUrl(twitterIntentUrl);
-    setShareMessage("Opened X compose link.");
   };
 
   const handleShowHint = () => {
@@ -465,6 +455,7 @@ export default function DailyChallengePage() {
   const isClaimed = reservationStatus === "claimed";
   const isAlreadySolvedToday = isClaimed;
   const canClaim = Boolean(isCompleted) && !isClaimed;
+  const canShare = isClaimed;
 
   return (
     <div className="min-h-screen w-full bg-white text-black flex flex-col">
@@ -634,25 +625,11 @@ export default function DailyChallengePage() {
           </div>
         )}
 
-        {isCompleted && (
+        {canShare && (
           <div className="w-full max-w-xs bg-cyan-300 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-5 transform -rotate-1 space-y-3">
             <h3 className="text-lg font-black uppercase text-black inline-flex items-center gap-2">
               <Share2 className="w-5 h-5" /> Share Daily Challenge
             </h3>
-
-            <div className="bg-white border-2 border-black p-3 text-xs font-black uppercase text-black space-y-1">
-              <div>Day: {new Date().toISOString().slice(0, 10)}</div>
-              <div>Rating: {currentPuzzle?.rating ?? "N/A"}</div>
-              <div>Reward: {rewardLabel}</div>
-              <a
-                href={challengeShareUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-blue-800 hover:text-black"
-              >
-                <ExternalLink className="w-3.5 h-3.5" /> Preview URL
-              </a>
-            </div>
 
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -668,8 +645,6 @@ export default function DailyChallengePage() {
                 <AtSign className="w-3.5 h-3.5" /> Share Tweet
               </button>
             </div>
-
-            {shareMessage && <p className="text-xs font-black uppercase text-black">{shareMessage}</p>}
           </div>
         )}
 
