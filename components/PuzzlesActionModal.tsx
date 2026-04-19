@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {DollarSign, Castle} from "lucide-react";
+import { Castle, DollarSign, Puzzle, X } from "lucide-react";
 
 interface PuzzlesActionModalProps {
   isOpen: boolean;
@@ -27,14 +27,15 @@ export function PuzzlesActionModal({
       <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-md w-full transform -rotate-1">
         <div className="bg-cyan-400 border-b-4 border-black p-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-black uppercase tracking-wider text-black">
-              ♟ PUZZLES
+            <h2 className="text-2xl font-black uppercase tracking-wider text-black flex items-center gap-2">
+              <Puzzle className="w-7 h-7" />
+              PUZZLES
             </h2>
             <button
               onClick={onClose}
-              className="w-8 h-8 bg-red-500 border-2 border-black font-black text-black hover:bg-red-400 transition-colors shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+              className="w-8 h-8 bg-red-500 border-2 border-black text-black hover:bg-red-400 transition-colors shadow-[2px_2px_0px_rgba(0,0,0,1)] flex items-center justify-center"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>

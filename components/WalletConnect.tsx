@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { sdk } from "@farcaster/miniapp-sdk";
 import { useAccount, useConnect } from "wagmi";
+import { Smartphone, TriangleAlert, Zap } from "lucide-react";
 import { isMiniPay } from "@/lib/config/wagmi";
 import { useChainSwitching } from "../lib/hooks/useChainSwitching";
 
@@ -77,13 +78,15 @@ export function WalletConnect() {
                 isOnCorrectChain ? "" : "bg-yellow-400 text-black hover:bg-yellow-300 cursor-pointer animate-pulse"
               }`}
             >
-              {isMiniPayDetected && <span className="text-lg">📱</span>}
-              {!isOnCorrectChain && <span className="text-lg animate-bounce">⚠️</span>}
+              {isMiniPayDetected && <Smartphone className="w-5 h-5" />}
+              {!isOnCorrectChain && <TriangleAlert className="w-5 h-5 animate-bounce" />}
               {/* <span className="font-black">{formatAddress(address)}</span> */}
             </button>
             {!isOnCorrectChain && (
               <div className="absolute top-full mt-2 right-0 bg-red-400 border-4 border-black p-3 text-xs font-black text-black uppercase tracking-wide whitespace-nowrap z-50 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-2">
-                ⚡ CLICK TO SWITCH TO CELO!
+                <span className="inline-flex items-center gap-1">
+                  <Zap className="w-4 h-4" /> CLICK TO SWITCH TO CELO!
+                </span>
               </div>
             )}
           </div>
@@ -104,7 +107,7 @@ export function WalletConnect() {
         disabled={isPending}
         className="bg-cyan-400 border-4 border-black px-4 py-3 font-black text-xs uppercase tracking-wider text-black transition-all duration-200 flex items-center gap-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-[4px_4px_0px_rgba(0,0,0,1)]"
       >
-        <span className="text-lg">📱</span>
+        <Smartphone className="w-5 h-5" />
         {isPending ? "CONNECTING..." : "CONNECT MINIPAY"}
       </button>
     );

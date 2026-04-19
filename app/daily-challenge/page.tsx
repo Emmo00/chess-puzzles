@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
+import { Coins, TriangleAlert } from "lucide-react";
 import { useAccount } from "wagmi";
 
 import ChessBoard, { ChessBoardRef } from "@/components/chess-board";
@@ -360,7 +361,9 @@ export default function DailyChallengePage() {
         </Link>
         <div className="flex items-center gap-2">
           <div className="px-3 py-2 font-black text-xs border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-yellow-300 text-black">
-            💰 {rewardLabel}
+            <span className="inline-flex items-center gap-1">
+              <Coins className="w-3.5 h-3.5" /> {rewardLabel}
+            </span>
           </div>
           <div className="px-3 py-2 font-black text-xs border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-cyan-300 text-black">
             SLOTS {status?.slotsRemaining ?? "--"}
@@ -372,9 +375,9 @@ export default function DailyChallengePage() {
         {!isOnCorrectChain && (
           <button
             onClick={switchToPreferredChain}
-            className="bg-yellow-400 text-black px-4 py-3 font-black text-xs uppercase border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]"
+            className="bg-yellow-400 text-black px-4 py-3 font-black text-xs uppercase border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] inline-flex items-center gap-1"
           >
-            ⚠ Switch To Celo To Claim
+            <TriangleAlert className="w-4 h-4" /> Switch To Celo To Claim
           </button>
         )}
 

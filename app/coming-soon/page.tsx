@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { Construction, Hammer, Puzzle } from 'lucide-react'
 
 export default function ComingSoonPage() {
   return (
@@ -17,7 +18,7 @@ export default function ComingSoonPage() {
         {/* Main Icon */}
         <div className="flex justify-center">
           <div className="bg-orange-400 border-8 border-black p-8 transform -rotate-3 shadow-[12px_12px_0px_rgba(0,0,0,1)]">
-            <div className="text-8xl animate-bounce">🚧</div>
+            <Construction className="w-20 h-20 animate-bounce" />
           </div>
         </div>
 
@@ -38,13 +39,13 @@ export default function ComingSoonPage() {
         {/* Description Cards */}
         <div className="space-y-4">
           <div className="bg-cyan-400 border-4 border-black p-4 transform rotate-1 shadow-[4px_4px_0px_rgba(0,0,0,1)]">
-            <p className="font-black text-black uppercase tracking-wide text-sm">
-              🔨 This Feature is Under Construction!
+            <p className="font-black text-black uppercase tracking-wide text-sm inline-flex items-center gap-2">
+              <Hammer className="w-4 h-4" /> This Feature is Under Construction!
             </p>
           </div>
           <div className="bg-lime-400 border-4 border-black p-4 transform -rotate-2 shadow-[5px_5px_0px_rgba(0,0,0,1)]">
-            <p className="font-black text-black uppercase tracking-wide text-sm">
-              ♟️ Keep Solving Puzzles While You Wait!
+            <p className="font-black text-black uppercase tracking-wide text-sm inline-flex items-center gap-2">
+              <Puzzle className="w-4 h-4" /> Keep Solving Puzzles While You Wait!
             </p>
           </div>
         </div>

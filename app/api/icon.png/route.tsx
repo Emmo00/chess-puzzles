@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ImageResponse } from 'next/og'
+import { Crown } from 'lucide-react'
 
 export const runtime = 'edge'
 
@@ -54,7 +55,6 @@ export async function GET(request: NextRequest) {
             style={{
               position: 'absolute',
               bottom: '30px',
-              fontSize: '40px',
               background: 'linear-gradient(135deg, #FFD700, #B8860B)',
               borderRadius: '50px',
               width: '60px',
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
               justifyContent: 'center',
             }}
           >
-            👑
+            <Crown color="#1A0F08" fill="#FFD700" size={36} strokeWidth={2.5} />
           </div>
         </div>
       ),

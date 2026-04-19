@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
+import { CircleHelp, Puzzle, Settings, Trophy } from "lucide-react";
 import ChessPiecesScene from "../components/chess-pieces-scene";
 import StreakBadge from "../components/streak-badge";
 import CTABlock from "../components/cta-block";
@@ -89,7 +90,7 @@ export default function Home() {
       subtitle: "Daily + Classic",
       ribbonText: "Earn cash",
       accentColor: hasAccess ? "bg-green-400" : "bg-cyan-400",
-      icon: "▲",
+      icon: <Puzzle className="w-6 h-6" />,
       onClick: handleOpenPuzzles,
     },
     {
@@ -97,7 +98,7 @@ export default function Home() {
       title: "Leaderboard",
       subtitle: "Top Players",
       accentColor: "bg-purple-400",
-      icon: "★",
+      icon: <Trophy className="w-6 h-6" />,
       href: "/leaderboard",
     },
     {
@@ -105,7 +106,7 @@ export default function Home() {
       title: "Settings",
       subtitle: "Rating Range, Themes",
       accentColor: "bg-lime-400",
-      icon: "⚙",
+      icon: <Settings className="w-6 h-6" />,
       href: "/settings",
     },
     {
@@ -113,7 +114,7 @@ export default function Home() {
       title: "FAQ",
       subtitle: "How It Works",
       accentColor: "bg-yellow-400",
-      icon: "?",
+      icon: <CircleHelp className="w-6 h-6" />,
       href: "/faq",
     },
   ];

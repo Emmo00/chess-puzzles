@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { ReactNode, useEffect, useState } from "react"
 import Link from "next/link"
 
 interface CtaBlockProps {
   title: string
   subtitle: string
   accentColor: string
-  icon: string
+  icon: ReactNode
   ribbonText?: string
   href?: string
   onClick?: () => void
@@ -27,7 +27,7 @@ export default function CTABlock({ title, subtitle, accentColor, icon, ribbonTex
     <span
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative w-full h-28 overflow-hidden border-4 border-black ${accentColor} px-3 py-2 font-black text-sm uppercase tracking-wider text-black transition-all duration-200 flex flex-col items-center justify-center cursor-pointer text-center`}
+      className={`relative gap-4 w-full h-28 overflow-hidden border-4 border-black ${accentColor} px-3 py-2 font-black text-sm uppercase tracking-wider text-black transition-all duration-200 flex flex-col items-center justify-center cursor-pointer text-center`}
       style={{
         boxShadow: isHovered
           ? "6px 6px 0px rgba(0, 0, 0, 0.3), 0px 0px 16px rgba(0, 0, 0, 0.4)"
@@ -41,7 +41,7 @@ export default function CTABlock({ title, subtitle, accentColor, icon, ribbonTex
           {ribbonText}
         </span>
       ) : null}
-      <span className="text-xl">{icon}</span>
+      <span className="text-xl flex items-center justify-center">{icon}</span>
       <div className="flex flex-col items-center gap-0.5 leading-tight">
         <span className="text-xs font-black">{title}</span>
         <span className="text-[10px] font-bold opacity-75 text-center">{subtitle}</span>

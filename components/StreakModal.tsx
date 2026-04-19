@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { UserStats, StreakData } from "@/lib/types";
-import { ChartArea, Flame, FlameIcon, Trophy } from "lucide-react";
+import { ChartArea, Flame, Trophy, X } from "lucide-react";
 import Link from "next/link";
 
 interface StreakModalProps {
@@ -46,9 +46,9 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
             </h2>
             <button
               onClick={handleClose}
-              className="w-8 h-8 bg-red-500 border-2 border-black font-black text-black hover:bg-red-400 transition-colors shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+              className="w-8 h-8 bg-red-500 border-2 border-black text-black hover:bg-red-400 transition-colors shadow-[2px_2px_0px_rgba(0,0,0,1)] flex items-center justify-center"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
