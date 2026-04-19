@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAccount } from "wagmi";
 import { CircleHelp, Puzzle, Settings, Trophy } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import ChessPiecesScene from "../components/chess-pieces-scene";
 import StreakBadge from "../components/streak-badge";
 import CTABlock from "../components/cta-block";
@@ -15,10 +16,12 @@ import { useStreak } from "../lib/hooks/useStreak";
 import { useDailyCheckin } from "@/lib/hooks/useDailyCheckin";
 
 export default function Home() {
+  const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showPuzzlesModal, setShowPuzzlesModal] = useState(false);
+  const autoOpenHandledRef = useRef(false);
   const [paymentStatus, setPaymentStatus] = useState<{
     hasAccess: boolean;
     hasDailyAccess: boolean;
@@ -31,6 +34,20 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const shouldAutoOpen =
+      searchParams.get("openPuzzlesModal") === "1" ||
+      searchParams.get("openPuzzlesModal") === "true";
+
+    if (!mounted || autoOpenHandledRef.current || !shouldAutoOpen || !isConnected) {
+      return;
+    }
+
+    autoOpenHandledRef.current = true;
+    refreshCheckInStatus();
+    setShowPuzzlesModal(true);
+  }, [mounted, isConnected, refreshCheckInStatus, searchParams]);
 
   // Check payment status when wallet connects
   useEffect(() => {
