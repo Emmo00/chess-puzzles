@@ -175,6 +175,8 @@ export async function POST(request: NextRequest) {
       transaction.to?.toLowerCase() === PAYOUT_CLAIM_CONTRACT.toLowerCase();
     const senderMatchesServerSigner =
       transaction.from.toLowerCase() === String(onChainServerSigner).toLowerCase();
+    const senderMatchesUser =
+      transaction.from.toLowerCase() === user.walletAddress.toLowerCase();
 
     console.info("[ClaimFlow][API][confirm] txValidation", {
       requestId,
@@ -194,19 +196,20 @@ export async function POST(request: NextRequest) {
       userMatches,
       toMatches,
       senderMatchesServerSigner,
+      senderMatchesUser,
     });
 
-    if (!claimFunctionMatches || !userMatches || !toMatches || !senderMatchesServerSigner) {
+    if (!claimFunctionMatches || !userMatches || !toMatches || (!senderMatchesServerSigner && !senderMatchesUser)) {
       await checkInService.markFailedClaim(
         user.walletAddress,
         txHash,
-        "Transaction calldata does not match sponsored daily claim"
+        "Transaction calldata does not match daily claim"
       );
 
       return NextResponse.json(
         {
           success: false,
-          message: "Transaction does not match sponsored daily claim call",
+          message: "Transaction does not match expected daily claim call",
         },
         { status: 400 }
       );
