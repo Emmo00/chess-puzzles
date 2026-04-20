@@ -38,11 +38,11 @@ if (!global.__chessRateLimitStore) {
 const pruneExpiredRateLimits = () => {
   const now = Date.now();
 
-  for (const [key, value] of rateLimitStore.entries()) {
+  rateLimitStore.forEach((value, key) => {
     if (value.resetAt <= now) {
       rateLimitStore.delete(key);
     }
-  }
+  });
 };
 
 const normalizeFingerprint = (value?: string | null) => {
@@ -69,7 +69,7 @@ export const getClientIp = (request: NextRequest) => {
     return realIp.trim();
   }
 
-  return request.ip || "unknown";
+  return "unknown";
 };
 
 export const getDeviceFingerprintFromRequest = (request: NextRequest) => {
