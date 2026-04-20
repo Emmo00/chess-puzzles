@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     const result = await checkInService.solveDailyChallenge(user.walletAddress, puzzleId);
 
-    if (result.success) {
+    if (result.success && result.firstSolve) {
       let currentUser;
       try {
         currentUser = await userService.getUser(user.walletAddress);

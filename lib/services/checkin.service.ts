@@ -24,6 +24,7 @@ import CheckInSigningService from "@/lib/services/checkin-signing.service";
 import { recoverTypedDataAddress } from "viem";
 
 const ACTIVE_STATUSES = ["pending", "earned", "claiming", "claimed"];
+const CLAIMABLE_STATUSES = ["earned", "claiming"];
 
 class CheckInService {
   private puzzleApi = new PuzzleAPIClient();
@@ -57,6 +58,8 @@ class CheckInService {
       });
     }
 
+    const canClaimReward = this.canClaimReward(reservation);
+
     return {
       utcDay,
       maxDailyCheckIns: contractValues.maxDailyCheckIns,
@@ -68,6 +71,7 @@ class CheckInService {
       activeReservations,
       slotsRemaining,
       hasSlots: slotsRemaining > 0,
+      canClaimReward,
       challenge: refreshedChallenge
         ? {
             puzzleId: refreshedChallenge.puzzle.puzzleId,
@@ -81,6 +85,8 @@ class CheckInService {
       reservation: reservation
         ? {
             status: reservation.status,
+            rewardEligible: this.isRewardEligible(reservation),
+            canClaimReward,
             pendingExpiresAt: reservation.pendingExpiresAt,
             claimTxHash: reservation.claimTxHash,
             claimedAt: reservation.claimedAt,
@@ -126,6 +132,19 @@ class CheckInService {
 
         existingReservation.status = "expired";
         await existingReservation.save();
+        if (this.countsTowardSlots(existingReservation)) {
+          const decrementedChallenge = await DailyChallenge.findByIdAndUpdate(
+            challenge._id,
+            {
+              $inc: { activeReservationCount: -1 },
+            },
+            { new: true }
+          );
+
+          if (decrementedChallenge) {
+            challenge = decrementedChallenge;
+          }
+        }
       } else if (ACTIVE_STATUSES.includes(existingReservation.status)) {
         return this.toReservationResponse(
           challenge,
@@ -136,6 +155,8 @@ class CheckInService {
       }
     }
 
+    let rewardEligible = true;
+    let countsTowardSlots = true;
     const incrementedChallenge = await DailyChallenge.findOneAndUpdate(
       {
         _id: challenge._id,
@@ -147,11 +168,12 @@ class CheckInService {
       { new: true }
     );
 
-    if (!incrementedChallenge) {
-      throw new HttpException(409, "Daily check-in slots are already full");
+    if (incrementedChallenge) {
+      challenge = incrementedChallenge;
+    } else {
+      rewardEligible = false;
+      countsTowardSlots = false;
     }
-
-    challenge = incrementedChallenge;
 
     const pendingExpiresAt = getDateAfterMinutes(CHECKIN_RESERVATION_TTL_MINUTES);
 
@@ -161,6 +183,8 @@ class CheckInService {
       dailyChallengeId: challenge._id,
       puzzleId: challenge.puzzle.puzzleId,
       status: "pending" as const,
+      rewardEligible,
+      countsTowardSlots,
       checkInAmountWei: contractValues.checkInAmountWei,
       pendingExpiresAt,
       solvedAt: undefined,
@@ -181,9 +205,11 @@ class CheckInService {
       );
 
       if (!updatedReservation) {
-        await DailyChallenge.findByIdAndUpdate(challenge._id, {
-          $inc: { activeReservationCount: -1 },
-        });
+        if (countsTowardSlots) {
+          await DailyChallenge.findByIdAndUpdate(challenge._id, {
+            $inc: { activeReservationCount: -1 },
+          });
+        }
         throw new HttpException(500, "Failed to refresh daily challenge reservation");
       }
 
@@ -192,17 +218,21 @@ class CheckInService {
       try {
         reservation = await CheckInReservation.create(reservationData);
       } catch (error) {
-        await DailyChallenge.findByIdAndUpdate(challenge._id, {
-          $inc: { activeReservationCount: -1 },
-        });
+        if (countsTowardSlots) {
+          await DailyChallenge.findByIdAndUpdate(challenge._id, {
+            $inc: { activeReservationCount: -1 },
+          });
+        }
         throw error;
       }
     }
 
     if (!reservation) {
-      await DailyChallenge.findByIdAndUpdate(challenge._id, {
-        $inc: { activeReservationCount: -1 },
-      });
+      if (countsTowardSlots) {
+        await DailyChallenge.findByIdAndUpdate(challenge._id, {
+          $inc: { activeReservationCount: -1 },
+        });
+      }
       throw new HttpException(500, "Failed to reserve daily challenge slot");
     }
 
@@ -247,12 +277,27 @@ class CheckInService {
     }
 
     const currentReservation = refreshedReservation;
+    const rewardEligible = this.isRewardEligible(currentReservation);
 
     if (currentReservation.status === "claimed") {
       return {
         alreadyClaimed: true,
         status: currentReservation.status,
         puzzleId: challenge.puzzle.puzzleId,
+        rewardEligible,
+        canClaimReward: false,
+      };
+    }
+
+    if (currentReservation.status === "earned" || currentReservation.status === "claiming") {
+      return {
+        success: true,
+        firstSolve: false,
+        alreadySolved: true,
+        status: currentReservation.status,
+        checkInAmountWei: currentReservation.checkInAmountWei,
+        rewardEligible,
+        canClaimReward: this.canClaimReward(currentReservation),
       };
     }
 
@@ -263,12 +308,17 @@ class CheckInService {
       );
     }
 
-    if (currentReservation.pendingExpiresAt.getTime() <= Date.now()) {
+    if (
+      rewardEligible &&
+      currentReservation.pendingExpiresAt.getTime() <= Date.now()
+    ) {
       currentReservation.status = "expired";
       await currentReservation.save();
-      await DailyChallenge.findByIdAndUpdate(challenge._id, {
-        $inc: { activeReservationCount: -1 },
-      });
+      if (this.countsTowardSlots(currentReservation)) {
+        await DailyChallenge.findByIdAndUpdate(challenge._id, {
+          $inc: { activeReservationCount: -1 },
+        });
+      }
       throw new HttpException(409, "Reservation expired. Please reserve again.");
     }
 
@@ -276,12 +326,60 @@ class CheckInService {
       throw new HttpException(400, "Submitted puzzle does not match today's challenge");
     }
 
-    currentReservation.status = "earned";
-    currentReservation.solvedAt = new Date();
-    currentReservation.claimNonce = undefined;
-    currentReservation.claimDeadline = undefined;
-    currentReservation.claimSignature = undefined;
-    await currentReservation.save();
+    const solvedAt = new Date();
+    const updatedReservation = await CheckInReservation.findOneAndUpdate(
+      {
+        _id: currentReservation._id,
+        status: "pending",
+      },
+      {
+        $set: {
+          status: "earned",
+          solvedAt,
+          claimNonce: undefined,
+          claimDeadline: undefined,
+          claimSignature: undefined,
+        },
+      },
+      { new: true }
+    );
+
+    if (!updatedReservation) {
+      const latestReservation = await CheckInReservation.findById(currentReservation._id);
+
+      if (!latestReservation) {
+        throw new HttpException(404, "Daily challenge reservation no longer exists");
+      }
+
+      const latestRewardEligible = this.isRewardEligible(latestReservation);
+
+      if (latestReservation.status === "claimed") {
+        return {
+          alreadyClaimed: true,
+          status: latestReservation.status,
+          puzzleId: challenge.puzzle.puzzleId,
+          rewardEligible: latestRewardEligible,
+          canClaimReward: false,
+        };
+      }
+
+      if (latestReservation.status === "earned" || latestReservation.status === "claiming") {
+        return {
+          success: true,
+          firstSolve: false,
+          alreadySolved: true,
+          status: latestReservation.status,
+          checkInAmountWei: latestReservation.checkInAmountWei,
+          rewardEligible: latestRewardEligible,
+          canClaimReward: this.canClaimReward(latestReservation),
+        };
+      }
+
+      throw new HttpException(
+        409,
+        `Daily challenge is not solvable in '${latestReservation.status}' state`
+      );
+    }
 
     await userPuzzlesModel.findOneAndUpdate(
       { userWalletAddress: normalizedWallet, puzzleId },
@@ -290,15 +388,18 @@ class CheckInService {
         attempts: 1,
         points: 0,
         type: "daily",
-        solvedAt: new Date(),
+        solvedAt,
       },
       { new: true }
     );
 
     return {
       success: true,
-      status: currentReservation.status,
-      checkInAmountWei: currentReservation.checkInAmountWei,
+      firstSolve: true,
+      status: updatedReservation.status,
+      checkInAmountWei: updatedReservation.checkInAmountWei,
+      rewardEligible,
+      canClaimReward: this.canClaimReward(updatedReservation),
     };
   }
 
@@ -319,7 +420,11 @@ class CheckInService {
       throw new HttpException(409, "Daily challenge reward already claimed");
     }
 
-    if (!["earned", "claiming"].includes(reservation.status)) {
+    if (!this.isRewardEligible(reservation)) {
+      throw new HttpException(409, "Today's reward slots are already taken up");
+    }
+
+    if (!CLAIMABLE_STATUSES.includes(reservation.status)) {
       throw new HttpException(
         409,
         `Cannot claim reward while reservation is '${reservation.status}'`
@@ -353,7 +458,11 @@ class CheckInService {
       throw new HttpException(404, "No daily check-in reservation found");
     }
 
-    if (!["earned", "claiming", "claimed"].includes(reservation.status)) {
+    if (!this.isRewardEligible(reservation)) {
+      throw new HttpException(409, "Today's reward slots are already taken up");
+    }
+
+    if (![...CLAIMABLE_STATUSES, "claimed"].includes(reservation.status)) {
       throw new HttpException(409, `Cannot claim in '${reservation.status}' state`);
     }
 
@@ -452,20 +561,37 @@ class CheckInService {
   private async expirePendingReservations(challenge: IDailyChallenge) {
     const now = new Date();
 
-    const result = await CheckInReservation.updateMany(
+    const expiringReservations = await CheckInReservation.find(
       {
         dailyChallengeId: challenge._id,
         status: "pending",
         pendingExpiresAt: { $lte: now },
+      },
+      { _id: 1, countsTowardSlots: 1 }
+    );
+
+    if (expiringReservations.length === 0) {
+      return;
+    }
+
+    const expiringIds = expiringReservations.map((reservation) => reservation._id);
+
+    await CheckInReservation.updateMany(
+      {
+        _id: { $in: expiringIds },
       },
       {
         $set: { status: "expired", errorMessage: "Reservation expired" },
       }
     );
 
-    if (result.modifiedCount > 0) {
+    const countedExpirations = expiringReservations.filter((reservation) =>
+      this.countsTowardSlots(reservation)
+    ).length;
+
+    if (countedExpirations > 0) {
       await DailyChallenge.findByIdAndUpdate(challenge._id, {
-        $inc: { activeReservationCount: -result.modifiedCount },
+        $inc: { activeReservationCount: -countedExpirations },
       });
     }
   }
@@ -570,8 +696,11 @@ class CheckInService {
         0,
         contractValues.maxDailyCheckIns - challenge.activeReservationCount
       ),
+      hasSlots: challenge.activeReservationCount < contractValues.maxDailyCheckIns,
       reservation: {
         status: reservation.status,
+        rewardEligible: this.isRewardEligible(reservation),
+        canClaimReward: this.canClaimReward(reservation),
         pendingExpiresAt: reservation.pendingExpiresAt,
       },
       puzzle: {
@@ -583,6 +712,28 @@ class CheckInService {
         themes: challenge.puzzle.themes,
       },
     };
+  }
+
+  private isRewardEligible(
+    reservation?: Pick<ICheckInReservation, "rewardEligible"> | null
+  ) {
+    return reservation?.rewardEligible !== false;
+  }
+
+  private countsTowardSlots(
+    reservation?: Pick<ICheckInReservation, "countsTowardSlots"> | null
+  ) {
+    return reservation?.countsTowardSlots !== false;
+  }
+
+  private canClaimReward(
+    reservation?: Pick<ICheckInReservation, "status" | "rewardEligible"> | null
+  ) {
+    if (!reservation || !this.isRewardEligible(reservation)) {
+      return false;
+    }
+
+    return CLAIMABLE_STATUSES.includes(reservation.status);
   }
 }
 
