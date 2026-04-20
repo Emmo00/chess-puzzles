@@ -502,9 +502,11 @@ export default function DailyChallengePage() {
               <p className="text-sm font-bold uppercase text-black">
                 Solve one high-rated puzzle.
               </p>
-              <p className="text-xs font-black uppercase text-black mt-3 bg-white border-2 border-black py-1">
-                Reward: {rewardLabel}
-              </p>
+              {status?.hasSlots && (
+                <p className="text-xs font-black uppercase text-black mt-3 bg-white border-2 border-black py-1">
+                  Reward: {rewardLabel}
+                </p>
+              )}
             </div>
 
             {isAlreadySolvedToday ? (
