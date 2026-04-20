@@ -95,9 +95,10 @@ class CheckInService {
     };
   }
 
-  public async reserveDailyChallenge(walletAddress: string) {
+  public async reserveDailyChallenge(walletAddress: string, deviceFingerprint?: string) {
     const utcDay: number = getUtcDayNumber();
     const normalizedWallet = walletAddress.toLowerCase();
+    const normalizedFingerprint = this.normalizeDeviceFingerprint(deviceFingerprint);
 
     const contractValues = await this.contractService.getCheckInContractValues();
     let challenge = await this.ensureDailyChallenge(
@@ -146,6 +147,11 @@ class CheckInService {
           }
         }
       } else if (ACTIVE_STATUSES.includes(existingReservation.status)) {
+        if (normalizedFingerprint && !existingReservation.deviceFingerprint) {
+          existingReservation.deviceFingerprint = normalizedFingerprint;
+          await existingReservation.save();
+        }
+
         return this.toReservationResponse(
           challenge,
           existingReservation,
@@ -155,21 +161,37 @@ class CheckInService {
       }
     }
 
-    let rewardEligible = true;
-    let countsTowardSlots = true;
-    const incrementedChallenge = await DailyChallenge.findOneAndUpdate(
-      {
-        _id: challenge._id,
-        activeReservationCount: { $lt: contractValues.maxDailyCheckIns },
-      },
-      {
-        $inc: { activeReservationCount: 1 },
-      },
-      { new: true }
-    );
+    const deviceHasRewardReservation = normalizedFingerprint
+      ? await CheckInReservation.exists({
+          utcDay,
+          deviceFingerprint: normalizedFingerprint,
+          rewardEligible: true,
+          status: { $in: ACTIVE_STATUSES },
+          walletAddress: { $ne: normalizedWallet },
+        })
+      : false;
 
-    if (incrementedChallenge) {
-      challenge = incrementedChallenge;
+    let rewardEligible = !deviceHasRewardReservation;
+    let countsTowardSlots = !deviceHasRewardReservation;
+
+    if (countsTowardSlots) {
+      const incrementedChallenge = await DailyChallenge.findOneAndUpdate(
+        {
+          _id: challenge._id,
+          activeReservationCount: { $lt: contractValues.maxDailyCheckIns },
+        },
+        {
+          $inc: { activeReservationCount: 1 },
+        },
+        { new: true }
+      );
+
+      if (incrementedChallenge) {
+        challenge = incrementedChallenge;
+      } else {
+        rewardEligible = false;
+        countsTowardSlots = false;
+      }
     } else {
       rewardEligible = false;
       countsTowardSlots = false;
@@ -181,6 +203,7 @@ class CheckInService {
       walletAddress: normalizedWallet,
       utcDay,
       dailyChallengeId: challenge._id,
+      deviceFingerprint: normalizedFingerprint,
       puzzleId: challenge.puzzle.puzzleId,
       status: "pending" as const,
       rewardEligible,
@@ -217,13 +240,36 @@ class CheckInService {
     } else {
       try {
         reservation = await CheckInReservation.create(reservationData);
-      } catch (error) {
+      } catch (error: any) {
+        if (this.isDuplicateDeviceRewardSlotError(error) && countsTowardSlots) {
+          await DailyChallenge.findByIdAndUpdate(challenge._id, {
+            $inc: { activeReservationCount: -1 },
+          });
+
+          const downgradedReservationData = {
+            ...reservationData,
+            rewardEligible: false,
+            countsTowardSlots: false,
+          };
+
+          reservation = await CheckInReservation.create(downgradedReservationData);
+        } else {
+          if (countsTowardSlots) {
+            await DailyChallenge.findByIdAndUpdate(challenge._id, {
+              $inc: { activeReservationCount: -1 },
+            });
+          }
+          throw error;
+        }
+      }
+
+      if (!reservation) {
         if (countsTowardSlots) {
           await DailyChallenge.findByIdAndUpdate(challenge._id, {
             $inc: { activeReservationCount: -1 },
           });
         }
-        throw error;
+        throw new HttpException(500, "Failed to reserve daily challenge slot");
       }
     }
 
@@ -403,9 +449,10 @@ class CheckInService {
     };
   }
 
-  public async getFreshClaimPayload(walletAddress: string) {
+  public async getFreshClaimPayload(walletAddress: string, deviceFingerprint?: string) {
     const utcDay: number = getUtcDayNumber();
     const normalizedWallet = walletAddress.toLowerCase();
+    const normalizedFingerprint = this.normalizeDeviceFingerprint(deviceFingerprint);
 
     const reservation = await CheckInReservation.findOne({
       walletAddress: normalizedWallet,
@@ -431,6 +478,13 @@ class CheckInService {
       );
     }
 
+    await this.assertClaimAllowedForDevice(
+      reservation,
+      normalizedWallet,
+      utcDay,
+      normalizedFingerprint
+    );
+
     const signedPayload = await this.generateSignedPayload(normalizedWallet, utcDay);
 
     if (signedPayload.deadline <= Math.floor(Date.now() / 1000)) {
@@ -446,11 +500,17 @@ class CheckInService {
     };
   }
 
-  public async markClaiming(walletAddress: string, txHash: string) {
+  public async markClaiming(
+    walletAddress: string,
+    txHash: string,
+    deviceFingerprint?: string
+  ) {
     const utcDay: number = getUtcDayNumber();
+    const normalizedWallet = walletAddress.toLowerCase();
+    const normalizedFingerprint = this.normalizeDeviceFingerprint(deviceFingerprint);
 
     const reservation = await CheckInReservation.findOne({
-      walletAddress: walletAddress.toLowerCase(),
+      walletAddress: normalizedWallet,
       utcDay,
     });
 
@@ -465,6 +525,13 @@ class CheckInService {
     if (![...CLAIMABLE_STATUSES, "claimed"].includes(reservation.status)) {
       throw new HttpException(409, `Cannot claim in '${reservation.status}' state`);
     }
+
+    await this.assertClaimAllowedForDevice(
+      reservation,
+      normalizedWallet,
+      utcDay,
+      normalizedFingerprint
+    );
 
     if (reservation.status === "claimed") {
       return reservation;
@@ -734,6 +801,57 @@ class CheckInService {
     }
 
     return CLAIMABLE_STATUSES.includes(reservation.status);
+  }
+
+  private normalizeDeviceFingerprint(deviceFingerprint?: string) {
+    const normalized = deviceFingerprint?.trim().toLowerCase();
+    if (!normalized) {
+      return undefined;
+    }
+
+    return normalized;
+  }
+
+  private isDuplicateDeviceRewardSlotError(error: any) {
+    return (
+      error?.code === 11000 &&
+      (error?.keyPattern?.deviceFingerprint ||
+        String(error?.message || "").includes("unique_reward_slot_per_device_per_day"))
+    );
+  }
+
+  private async assertClaimAllowedForDevice(
+    reservation: ICheckInReservation,
+    walletAddress: string,
+    utcDay: number,
+    deviceFingerprint?: string
+  ) {
+    const storedFingerprint = this.normalizeDeviceFingerprint(
+      reservation.deviceFingerprint
+    );
+
+    if (storedFingerprint && deviceFingerprint && storedFingerprint !== deviceFingerprint) {
+      throw new HttpException(
+        409,
+        "Claim must be completed from the same device fingerprint used for reservation"
+      );
+    }
+
+    const claimFingerprint = deviceFingerprint || storedFingerprint;
+    if (!claimFingerprint) {
+      return;
+    }
+
+    const alreadyClaimedFromDevice = await CheckInReservation.exists({
+      utcDay,
+      deviceFingerprint: claimFingerprint,
+      status: "claimed",
+      walletAddress: { $ne: walletAddress },
+    });
+
+    if (alreadyClaimedFromDevice) {
+      throw new HttpException(409, "Only one claim is allowed per device fingerprint each day");
+    }
   }
 }
 

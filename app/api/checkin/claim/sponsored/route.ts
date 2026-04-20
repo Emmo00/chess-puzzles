@@ -5,6 +5,11 @@ import { authenticateWalletUser } from "@/lib/auth";
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
 import { PAYOUT_CLAIM_CONTRACT } from "@/lib/config/wagmi";
 import dbConnect from "@/lib/db";
+import { enforceRateLimitOrResponse } from "@/lib/security/rateLimitResponse";
+import {
+  getClientIp,
+  getDeviceFingerprintFromRequest,
+} from "@/lib/security/requestProtection";
 import CheckInContractService from "@/lib/services/checkin-contract.service";
 import CheckInService from "@/lib/services/checkin.service";
 import CheckInSigningService from "@/lib/services/checkin-signing.service";
@@ -30,9 +35,24 @@ export async function POST(request: NextRequest) {
   try {
     console.info("[ClaimFlow][API][sponsored] start", { requestId });
 
-    await dbConnect();
-
     const user = await authenticateWalletUser(request);
+    const deviceFingerprint = getDeviceFingerprintFromRequest(request);
+    const clientIp = getClientIp(request);
+
+    const rateLimitResponse = enforceRateLimitOrResponse({
+      endpoint: "checkin.claim.sponsored",
+      rules: [
+        { scopeSuffix: "ip", key: clientIp, maxRequests: 12, windowMs: 60_000 },
+        { scopeSuffix: "wallet", key: user.walletAddress, maxRequests: 6, windowMs: 60_000 },
+        { scopeSuffix: "device", key: deviceFingerprint, maxRequests: 4, windowMs: 60_000 },
+      ],
+    });
+
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    await dbConnect();
 
     console.info("[ClaimFlow][API][sponsored] input", {
       requestId,
@@ -42,7 +62,10 @@ export async function POST(request: NextRequest) {
     const normalizedWallet = user.walletAddress.toLowerCase();
 
     const checkInService = new CheckInService();
-    const claim = await checkInService.getFreshClaimPayload(normalizedWallet);
+    const claim = await checkInService.getFreshClaimPayload(
+      normalizedWallet,
+      deviceFingerprint
+    );
 
     const contractService = new CheckInContractService();
     const publicClient = contractService.getPublicClient();
@@ -112,7 +135,11 @@ export async function POST(request: NextRequest) {
 
     const txHash = await walletClient.writeContract(relayTxRequest);
 
-    await checkInService.markClaiming(normalizedWallet, txHash);
+    await checkInService.markClaiming(
+      normalizedWallet,
+      txHash,
+      deviceFingerprint
+    );
 
     let receipt: Awaited<
       ReturnType<ReturnType<CheckInContractService["getPublicClient"]>["waitForTransactionReceipt"]>

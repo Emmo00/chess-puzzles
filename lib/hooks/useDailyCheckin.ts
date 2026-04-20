@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAccount } from "wagmi";
+import {
+  DEVICE_FINGERPRINT_HEADER,
+  getDeviceFingerprint,
+} from "@/lib/utils/deviceFingerprint";
 
 interface DailyChallengePuzzle {
   puzzleid: string;
@@ -119,6 +123,7 @@ export function useDailyCheckin() {
       const response = await fetch(`/api/checkin/status?walletAddress=${address}`, {
         headers: {
           Authorization: `Bearer ${address}`,
+          [DEVICE_FINGERPRINT_HEADER]: getDeviceFingerprint(),
         },
       });
 
@@ -147,6 +152,7 @@ export function useDailyCheckin() {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${address}`,
+        [DEVICE_FINGERPRINT_HEADER]: getDeviceFingerprint(),
       },
     });
 
@@ -170,6 +176,7 @@ export function useDailyCheckin() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${address}`,
+          [DEVICE_FINGERPRINT_HEADER]: getDeviceFingerprint(),
         },
         body: JSON.stringify({ puzzleId }),
       });
@@ -202,6 +209,7 @@ export function useDailyCheckin() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${address}`,
           "x-claim-debug-id": getOrCreateClaimDebugId(),
+          [DEVICE_FINGERPRINT_HEADER]: getDeviceFingerprint(),
         },
         body: JSON.stringify({ txHash }),
       });
@@ -254,6 +262,7 @@ export function useDailyCheckin() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${address}`,
         "x-claim-debug-id": getOrCreateClaimDebugId(),
+        [DEVICE_FINGERPRINT_HEADER]: getDeviceFingerprint(),
       },
     });
 

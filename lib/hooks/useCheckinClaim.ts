@@ -9,6 +9,10 @@ import {
 } from "wagmi";
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
 import { PAYOUT_CLAIM_CONTRACT } from "@/lib/config/wagmi";
+import {
+  DEVICE_FINGERPRINT_HEADER,
+  getDeviceFingerprint,
+} from "@/lib/utils/deviceFingerprint";
 
 interface ClaimPayload {
   user: `0x${string}`;
@@ -56,6 +60,7 @@ export function useCheckinClaim() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${address}`,
         "x-claim-debug-id": requestId,
+        [DEVICE_FINGERPRINT_HEADER]: getDeviceFingerprint(),
       },
     });
 
@@ -125,6 +130,7 @@ export function useCheckinClaim() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${address}`,
         "x-claim-debug-id": requestId,
+        [DEVICE_FINGERPRINT_HEADER]: getDeviceFingerprint(),
       },
     });
 
