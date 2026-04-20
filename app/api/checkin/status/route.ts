@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authenticateWalletUser } from "@/lib/auth";
 import dbConnect from "@/lib/db";
+import { enforceRateLimitOrResponse } from "@/lib/security/rateLimitResponse";
+import { getClientIp } from "@/lib/security/requestProtection";
 import CheckInService from "@/lib/services/checkin.service";
 
 const ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
 export async function GET(request: NextRequest) {
   try {
-    await dbConnect();
+    const clientIp = getClientIp(request);
 
     const checkInService = new CheckInService();
     let walletAddress: string | undefined;
@@ -26,6 +28,25 @@ export async function GET(request: NextRequest) {
         walletAddress = undefined;
       }
     }
+
+    const rateLimitResponse = enforceRateLimitOrResponse({
+      endpoint: "checkin.status",
+      rules: [
+        { scopeSuffix: "ip", key: clientIp, maxRequests: 90, windowMs: 60_000 },
+        {
+          scopeSuffix: "wallet",
+          key: walletAddress || `anonymous:${clientIp}`,
+          maxRequests: 60,
+          windowMs: 60_000,
+        },
+      ],
+    });
+
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    await dbConnect();
 
     const status = await checkInService.getDailyStatus(walletAddress);
 

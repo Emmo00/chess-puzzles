@@ -5,6 +5,11 @@ import { authenticateWalletUser } from "@/lib/auth";
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
 import { PAYOUT_CLAIM_CONTRACT } from "@/lib/config/wagmi";
 import dbConnect from "@/lib/db";
+import { enforceRateLimitOrResponse } from "@/lib/security/rateLimitResponse";
+import {
+  getClientIp,
+  getDeviceFingerprintFromRequest,
+} from "@/lib/security/requestProtection";
 import CheckInContractService from "@/lib/services/checkin-contract.service";
 import CheckInService from "@/lib/services/checkin.service";
 import { decodeFunctionData } from "viem";
@@ -22,9 +27,25 @@ export async function POST(request: NextRequest) {
   try {
     console.info("[ClaimFlow][API][confirm] start", { requestId });
 
+    const user = await authenticateWalletUser(request);
+    const deviceFingerprint = getDeviceFingerprintFromRequest(request);
+    const clientIp = getClientIp(request);
+
+    const rateLimitResponse = enforceRateLimitOrResponse({
+      endpoint: "checkin.claim.confirm",
+      rules: [
+        { scopeSuffix: "ip", key: clientIp, maxRequests: 20, windowMs: 60_000 },
+        { scopeSuffix: "wallet", key: user.walletAddress, maxRequests: 12, windowMs: 60_000 },
+        { scopeSuffix: "device", key: deviceFingerprint, maxRequests: 10, windowMs: 60_000 },
+      ],
+    });
+
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     await dbConnect();
 
-    const user = await authenticateWalletUser(request);
     const { txHash } = await request.json();
 
     console.info("[ClaimFlow][API][confirm] input", {
@@ -47,7 +68,11 @@ export async function POST(request: NextRequest) {
     const checkInService = new CheckInService();
     const contractService = new CheckInContractService();
 
-    const reservation = await checkInService.markClaiming(user.walletAddress, txHash);
+    const reservation = await checkInService.markClaiming(
+      user.walletAddress,
+      txHash,
+      deviceFingerprint
+    );
     console.info("[ClaimFlow][API][confirm] markClaiming", {
       requestId,
       wallet: maskAddress(user.walletAddress),

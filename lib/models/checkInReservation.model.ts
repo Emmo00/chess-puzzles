@@ -16,6 +16,7 @@ export interface ICheckInReservation extends Document {
   walletAddress: string;
   utcDay: number;
   dailyChallengeId: mongoose.Types.ObjectId;
+  deviceFingerprint?: string;
   puzzleId: string;
   status: CheckInReservationStatus;
   rewardEligible: boolean;
@@ -49,6 +50,12 @@ const CheckInReservationSchema = new Schema<ICheckInReservation>(
       type: Schema.Types.ObjectId,
       required: true,
       ref: "DailyChallenge",
+    },
+    deviceFingerprint: {
+      type: String,
+      required: false,
+      lowercase: true,
+      match: /^[a-z0-9:_-]{8,128}$/,
     },
     puzzleId: {
       type: String,
@@ -119,6 +126,18 @@ const CheckInReservationSchema = new Schema<ICheckInReservation>(
 CheckInReservationSchema.index({ walletAddress: 1, utcDay: 1 }, { unique: true });
 CheckInReservationSchema.index({ utcDay: 1, status: 1 });
 CheckInReservationSchema.index({ pendingExpiresAt: 1, status: 1 });
+CheckInReservationSchema.index({ utcDay: 1, deviceFingerprint: 1 });
+CheckInReservationSchema.index(
+  { utcDay: 1, deviceFingerprint: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      rewardEligible: true,
+      deviceFingerprint: { $exists: true, $type: "string" },
+    },
+    name: "unique_reward_slot_per_device_per_day",
+  }
+);
 
 export const CheckInReservation =
   mongoose.models.CheckInReservation ||

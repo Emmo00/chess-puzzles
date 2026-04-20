@@ -2,14 +2,35 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authenticateWalletUser } from "@/lib/auth";
 import dbConnect from "@/lib/db";
+import { enforceRateLimitOrResponse } from "@/lib/security/rateLimitResponse";
+import {
+  getClientIp,
+  getDeviceFingerprintFromRequest,
+} from "@/lib/security/requestProtection";
 import CheckInService from "@/lib/services/checkin.service";
 import UserService from "@/lib/services/users.service";
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await authenticateWalletUser(request);
+    const deviceFingerprint = getDeviceFingerprintFromRequest(request);
+    const clientIp = getClientIp(request);
+
+    const rateLimitResponse = enforceRateLimitOrResponse({
+      endpoint: "checkin.solve",
+      rules: [
+        { scopeSuffix: "ip", key: clientIp, maxRequests: 30, windowMs: 60_000 },
+        { scopeSuffix: "wallet", key: user.walletAddress, maxRequests: 20, windowMs: 60_000 },
+        { scopeSuffix: "device", key: deviceFingerprint, maxRequests: 20, windowMs: 60_000 },
+      ],
+    });
+
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     await dbConnect();
 
-    const user = await authenticateWalletUser(request);
     const { puzzleId } = await request.json();
 
     if (!puzzleId || typeof puzzleId !== "string") {

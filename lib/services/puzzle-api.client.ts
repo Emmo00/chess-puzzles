@@ -98,9 +98,19 @@ class PuzzleAPIClient {
     ratingRange?: { min: number; max: number },
     themes?: string[]
   ): Promise<Puzzle> {
+    const puzzles = await this.fetchRandomPuzzles(moves, ratingRange, themes, 1);
+    return puzzles[0];
+  }
+
+  public async fetchRandomPuzzles(
+    moves: number = 2,
+    ratingRange?: { min: number; max: number },
+    themes?: string[],
+    count: number = 12
+  ): Promise<Puzzle[]> {
     const options: FetchPuzzleOptions = {
       playerMoves: moves.toString(),
-      count: 1,
+      count,
     };
 
     // Add rating filter if provided - use range format "min-max"
@@ -115,8 +125,7 @@ class PuzzleAPIClient {
       options.themesType = "ANY";
     }
 
-    const puzzles = await this.fetchPuzzles(options);
-    return puzzles[0];
+    return this.fetchPuzzles(options);
   }
 }
 

@@ -30,7 +30,14 @@ export async function POST(request: NextRequest) {
     const userSettings = await userService.getUserSettings(user.walletAddress);
 
     // Get puzzle with user's settings applied
-    const puzzle: Puzzle & { oldAttempt?: boolean } = await puzzleService.fetchNewSolvePuzzle(userSettings);
+    const puzzle: Puzzle & { oldAttempt?: boolean } = await puzzleService.fetchNewSolvePuzzle(
+      userSettings,
+      {
+        userWalletAddress: user.walletAddress,
+        puzzleType: "solve",
+        reuseIncomplete: false,
+      }
+    );
 
     // Store user puzzle attempt in database with appropriate type
     if (!puzzle.oldAttempt) {
