@@ -18,6 +18,8 @@ export interface ICheckInReservation extends Document {
   dailyChallengeId: mongoose.Types.ObjectId;
   puzzleId: string;
   status: CheckInReservationStatus;
+  rewardEligible: boolean;
+  countsTowardSlots: boolean;
   checkInAmountWei: string;
   pendingExpiresAt: Date;
   solvedAt?: Date;
@@ -57,6 +59,16 @@ const CheckInReservationSchema = new Schema<ICheckInReservation>(
       enum: CHECKIN_RESERVATION_STATUSES,
       required: true,
       default: "pending",
+    },
+    rewardEligible: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
+    countsTowardSlots: {
+      type: Boolean,
+      required: true,
+      default: true,
     },
     checkInAmountWei: {
       type: String,

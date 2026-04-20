@@ -301,7 +301,13 @@ export default function DailyChallengePage() {
     try {
       const result = await solveDailyChallenge(currentPuzzle.puzzleid);
       if (result.success) {
-        setClaimMessage("Challenge solved. Claim your reward on-chain.");
+        if (result.canClaimReward === false) {
+          setClaimMessage(
+            "Challenge solved. Today's reward slots are taken up, come back tomorrow."
+          );
+        } else {
+          setClaimMessage("Challenge solved. Claim your reward on-chain.");
+        }
         fireConfetti();
       }
     } catch (err: any) {
@@ -454,7 +460,8 @@ export default function DailyChallengePage() {
   const reservationStatus = status?.reservation?.status;
   const isClaimed = reservationStatus === "claimed";
   const isAlreadySolvedToday = isClaimed;
-  const canClaim = Boolean(isCompleted) && !isClaimed;
+  const canClaimReward = Boolean(status?.canClaimReward);
+  const canClaim = Boolean(isCompleted) && !isClaimed && canClaimReward;
   const canShare = isClaimed;
 
   return (
@@ -493,11 +500,13 @@ export default function DailyChallengePage() {
             <div className="bg-orange-300 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 transform -rotate-1">
               <h1 className="text-2xl font-black text-black uppercase mb-2">Daily Challenge</h1>
               <p className="text-sm font-bold uppercase text-black">
-                Solve one high-rated puzzle. No points, streak still counts.
+                Solve one high-rated puzzle.
               </p>
-              <p className="text-xs font-black uppercase text-black mt-3 bg-white border-2 border-black py-1">
-                Reward: {rewardLabel}
-              </p>
+              {status?.hasSlots && (
+                <p className="text-xs font-black uppercase text-black mt-3 bg-white border-2 border-black py-1">
+                  Reward: {rewardLabel}
+                </p>
+              )}
             </div>
 
             {isAlreadySolvedToday ? (
@@ -511,13 +520,19 @@ export default function DailyChallengePage() {
               <>
                 <button
                   onClick={handleReserveChallenge}
-                  disabled={puzzleLoading || !status?.hasSlots}
+                  disabled={puzzleLoading}
                   className="w-full bg-green-400 text-black py-4 px-6 font-black text-lg border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50 disabled:hover:translate-x-0 disabled:hover:translate-y-0"
                 >
-                  {puzzleLoading ? "RESERVING..." : status?.hasSlots ? "START CHALLENGE" : "SLOTS FULL"}
+                  {puzzleLoading ? "RESERVING..." : "START CHALLENGE"}
                 </button>
 
-                {status?.reservation?.pendingExpiresAt && (
+                {status && !status.hasSlots && (
+                  <p className="text-xs font-black uppercase text-gray-700">
+                    Today's reward slots are taken up. You can still solve for streak and stats.
+                  </p>
+                )}
+
+                {status?.reservation?.rewardEligible !== false && status?.reservation?.pendingExpiresAt && (
                   <p className="text-xs font-black uppercase text-gray-700">Reservation expires in {pendingSeconds}s</p>
                 )}
               </>
@@ -607,7 +622,7 @@ export default function DailyChallengePage() {
           </>
         )}
 
-        {isCompleted && (
+        {isCompleted && canClaimReward && (
           <div
             ref={claimCardRef}
             className="w-full max-w-xs bg-green-300 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-5 transform rotate-1"
@@ -622,6 +637,15 @@ export default function DailyChallengePage() {
             >
               {isClaimed ? "REWARD CLAIMED" : claimSubmitting || claimConfirming ? "CLAIMING..." : "CLAIM REWARD"}
             </button>
+          </div>
+        )}
+
+        {isCompleted && !canClaimReward && !isClaimed && (
+          <div className="w-full max-w-xs bg-cyan-200 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-5 transform rotate-1">
+            <h3 className="text-xl font-black uppercase text-black mb-2">Challenge Solved</h3>
+            <p className="text-sm font-bold uppercase text-black">
+              Today's reward slots are taken up. Your streak and stats still counted.
+            </p>
           </div>
         )}
 

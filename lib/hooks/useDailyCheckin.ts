@@ -14,6 +14,8 @@ interface DailyChallengePuzzle {
 
 interface ReservationData {
   status: string;
+  rewardEligible?: boolean;
+  canClaimReward?: boolean;
   pendingExpiresAt?: string;
   claimTxHash?: string;
   claimedAt?: string;
@@ -38,6 +40,7 @@ export interface DailyCheckinStatus {
   activeReservations: number;
   slotsRemaining: number;
   hasSlots: boolean;
+  canClaimReward: boolean;
   challenge: {
     puzzleId: string;
     fen: string;
@@ -61,8 +64,11 @@ interface ReserveResponse {
   maxDailyCheckIns: number;
   activeReservations: number;
   slotsRemaining: number;
+  hasSlots: boolean;
   reservation: {
     status: string;
+    rewardEligible: boolean;
+    canClaimReward: boolean;
     pendingExpiresAt: string;
   };
   puzzle: DailyChallengePuzzle;
@@ -70,6 +76,10 @@ interface ReserveResponse {
 
 interface SolveResponse {
   success: boolean;
+  firstSolve?: boolean;
+  alreadySolved?: boolean;
+  rewardEligible?: boolean;
+  canClaimReward?: boolean;
   status: string;
   checkInAmountWei: string;
 }
