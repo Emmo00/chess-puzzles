@@ -30,6 +30,7 @@ export default function DailyChallengePage() {
   const [canGoForward, setCanGoForward] = useState(false);
   const [isWrongMoveActive, setIsWrongMoveActive] = useState(false);
   const [isFarcasterMiniApp, setIsFarcasterMiniApp] = useState(false);
+  const [isSolving, setIsSolving] = useState(false);
 
   const chessBoardRef = useRef<ChessBoardRef>(null);
   const claimCardRef = useRef<HTMLDivElement>(null);
@@ -297,6 +298,7 @@ export default function DailyChallengePage() {
     }
 
     setIsCompleted(true);
+    setIsSolving(true);
 
     try {
       const result = await solveDailyChallenge(currentPuzzle.puzzleid);
@@ -312,6 +314,8 @@ export default function DailyChallengePage() {
       }
     } catch (err: any) {
       setClaimMessage(err.message || "Failed to submit solved challenge");
+    } finally {
+      setIsSolving(false);
     }
   };
 
@@ -622,7 +626,14 @@ export default function DailyChallengePage() {
           </>
         )}
 
-        {isCompleted && canClaimReward && (
+        {isSolving && (
+          <div className="w-full max-w-xs bg-yellow-200 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-5 transform rotate-1 flex items-center justify-center gap-3">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
+            <h3 className="text-lg font-black uppercase text-black">Verifying...</h3>
+          </div>
+        )}
+
+        {isCompleted && canClaimReward && !isSolving && (
           <div
             ref={claimCardRef}
             className="w-full max-w-xs bg-green-300 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-5 transform rotate-1"
@@ -640,7 +651,7 @@ export default function DailyChallengePage() {
           </div>
         )}
 
-        {isCompleted && !canClaimReward && !isClaimed && (
+        {isCompleted && !canClaimReward && !isClaimed && !isSolving && (
           <div className="w-full max-w-xs bg-cyan-200 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-5 transform rotate-1">
             <h3 className="text-xl font-black uppercase text-black mb-2">Challenge Solved</h3>
             <p className="text-sm font-bold uppercase text-black">
