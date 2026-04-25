@@ -7,8 +7,9 @@ import {
   useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
+import { erc20Abi } from "viem";
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
-import { PAYOUT_CLAIM_CONTRACT } from "@/lib/config/wagmi";
+import { PAYOUT_CLAIM_CONTRACT, isMiniPay, SUPPORTED_CURRENCIES } from "@/lib/config/wagmi";
 import {
   DEVICE_FINGERPRINT_HEADER,
   getDeviceFingerprint,
@@ -73,9 +74,9 @@ export function useCheckinClaim() {
     return data.claim as ClaimPayload;
   };
 
-  const hasEnoughCeloForClaimTx = async (claim: ClaimPayload): Promise<boolean> => {
+  const checkPaymentOptions = async (claim: ClaimPayload): Promise<{ canSendFromWallet: boolean; feeCurrency?: `0x${string}` }> => {
     if (!address || !publicClient) {
-      return false;
+      return { canSendFromWallet: false };
     }
 
     try {
@@ -103,6 +104,43 @@ export function useCheckinClaim() {
       // Add 20% headroom to reduce false positives on volatile gas.
       const requiredCost = (estimatedCost * BigInt(12)) / BigInt(10);
 
+      if (isMiniPay()) {
+        for (const currency of SUPPORTED_CURRENCIES) {
+          try {
+            const tokenBalance = await publicClient.readContract({
+              address: currency.tokenAddress as `0x${string}`,
+              abi: erc20Abi,
+              functionName: "balanceOf",
+              args: [address],
+            });
+
+            // Adjust required cost for decimal differences
+            const scaleFactor = BigInt(10) ** BigInt(18 - currency.decimals);
+            const tokenRequiredCost = requiredCost / scaleFactor;
+
+            if (tokenBalance >= tokenRequiredCost) {
+              logClaimFlow("sendClaim.feeAbstraction", {
+                token: currency.symbol,
+                balance: tokenBalance.toString(),
+                required: tokenRequiredCost.toString(),
+              });
+              return {
+                canSendFromWallet: true,
+                feeCurrency: currency.feeCurrencyAddress as `0x${string}`,
+              };
+            }
+          } catch (e) {
+            console.error(`[ClaimFlow] Error checking balance for ${currency.symbol}`, e);
+          }
+        }
+        
+        // If we reach here, they don't have enough stablecoins
+        logClaimFlow("sendClaim.minipay.insufficientFunds", {
+          reason: "no_sufficient_stablecoin_balance",
+        });
+        return { canSendFromWallet: false };
+      }
+
       logClaimFlow("sendClaim.balanceCheck", {
         balanceWei: balance.toString(),
         gasPriceWei: gasPrice.toString(),
@@ -110,12 +148,12 @@ export function useCheckinClaim() {
         requiredCostWei: requiredCost.toString(),
       });
 
-      return balance >= requiredCost;
+      return { canSendFromWallet: balance >= requiredCost };
     } catch (error: any) {
       logClaimFlow("sendClaim.balanceCheck.error", {
         message: error?.message,
       });
-      return false;
+      return { canSendFromWallet: false };
     }
   };
 
@@ -175,11 +213,11 @@ export function useCheckinClaim() {
 
     try {
       const claim = await fetchClaimPayload(requestId);
-      const canSendFromWallet = await hasEnoughCeloForClaimTx(claim);
+      const paymentOption = await checkPaymentOptions(claim);
 
       let submittedTxHash: `0x${string}`;
 
-      if (canSendFromWallet) {
+      if (paymentOption.canSendFromWallet) {
         setSubmissionMode("wallet");
         logClaimFlow("sendClaim.wallet.request", {
           requestId,
@@ -187,9 +225,11 @@ export function useCheckinClaim() {
           day: claim.day,
           nonce: claim.nonce,
           deadline: claim.deadline,
+          feeCurrency: paymentOption.feeCurrency,
         });
 
-        submittedTxHash = await writeContractAsync({
+        // Use standard transaction or fee abstraction depending on feeCurrency
+        const txArgs: any = {
           address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
           abi: PAYOUT_CLAIMS_ABI,
           functionName: "claimDailyCheckIn",
@@ -200,7 +240,13 @@ export function useCheckinClaim() {
             BigInt(claim.deadline),
             claim.signature,
           ],
-        });
+        };
+
+        if (paymentOption.feeCurrency) {
+          txArgs.feeCurrency = paymentOption.feeCurrency;
+        }
+
+        submittedTxHash = await writeContractAsync(txArgs);
 
         logClaimFlow("sendClaim.wallet.submitted", {
           requestId,
@@ -210,7 +256,7 @@ export function useCheckinClaim() {
         setSubmissionMode("sponsored");
         logClaimFlow("sendClaim.sponsored.request", {
           requestId,
-          reason: "insufficient_celo_for_gas",
+          reason: "insufficient_funds_for_gas",
         });
         submittedTxHash = await submitSponsoredClaim(requestId);
       }
@@ -222,7 +268,7 @@ export function useCheckinClaim() {
         connectedAddress: address,
         txHash: submittedTxHash,
         contract: PAYOUT_CLAIM_CONTRACT,
-        mode: canSendFromWallet ? "wallet" : "sponsored",
+        mode: paymentOption.canSendFromWallet ? "wallet" : "sponsored",
       });
     } catch (error: any) {
       const message = error?.shortMessage || error?.message || "Claim transaction failed";
@@ -249,3 +295,4 @@ export function useCheckinClaim() {
     isSuccess,
   };
 }
+
