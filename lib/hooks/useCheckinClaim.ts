@@ -74,7 +74,7 @@ export function useCheckinClaim() {
     return data.claim as ClaimPayload;
   };
 
-  const checkPaymentOptions = async (claim: ClaimPayload): Promise<{ canSendFromWallet: boolean; feeCurrency?: `0x${string}` }> => {
+  const checkPaymentOptions = async (claim: ClaimPayload): Promise<{ canSendFromWallet: boolean; feeCurrency?: `0x${string}`; gas?: bigint }> => {
     if (!address || !publicClient) {
       return { canSendFromWallet: false };
     }
@@ -105,7 +105,17 @@ export function useCheckinClaim() {
       const requiredCost = (estimatedCost * BigInt(12)) / BigInt(10);
 
       if (isMiniPay()) {
-        for (const currency of SUPPORTED_CURRENCIES) {
+        // Prioritize cUSD for fee abstraction as it's the most reliable in MiniPay
+        const feeCurrencies = [...SUPPORTED_CURRENCIES].sort((a, b) => {
+          if (a.symbol === "cUSD") return -1;
+          if (b.symbol === "cUSD") return 1;
+          return 0;
+        });
+
+        for (const currency of feeCurrencies) {
+          // Only use known Celo native fee currencies
+          if (!["cUSD", "cEUR", "cREAL"].includes(currency.symbol)) continue;
+
           try {
             const tokenBalance = await publicClient.readContract({
               address: currency.tokenAddress as `0x${string}`,
@@ -114,19 +124,21 @@ export function useCheckinClaim() {
               args: [address],
             });
 
-            // Adjust required cost for decimal differences
-            const scaleFactor = BigInt(10) ** BigInt(18 - currency.decimals);
-            const tokenRequiredCost = requiredCost / scaleFactor;
+            // For cUSD/cEUR/cREAL, they all have 18 decimals, same as CELO
+            // So we can compare directly with requiredCost (with a small safety buffer)
+            const tokenRequiredCost = (requiredCost * BigInt(15)) / BigInt(10); // 50% buffer for stablecoins
 
             if (tokenBalance >= tokenRequiredCost) {
               logClaimFlow("sendClaim.feeAbstraction", {
                 token: currency.symbol,
                 balance: tokenBalance.toString(),
                 required: tokenRequiredCost.toString(),
+                gasLimit: gasEstimate.toString(),
               });
               return {
                 canSendFromWallet: true,
                 feeCurrency: currency.feeCurrencyAddress as `0x${string}`,
+                gas: (gasEstimate * BigInt(15)) / BigInt(10), // Provide explicit gas limit with buffer
               };
             }
           } catch (e) {
@@ -244,6 +256,10 @@ export function useCheckinClaim() {
 
         if (paymentOption.feeCurrency) {
           txArgs.feeCurrency = paymentOption.feeCurrency;
+        }
+
+        if (paymentOption.gas) {
+          txArgs.gas = paymentOption.gas;
         }
 
         submittedTxHash = await writeContractAsync(txArgs);
