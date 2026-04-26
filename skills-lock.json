@@ -5,6 +5,11 @@
       "source": "emmo00/chess-puzzles-contracts",
       "sourceType": "github",
       "computedHash": "2880c5ce2056d3c559a881ffdb4cadb584789dd2c8545ebb57388f9983d94375"
+    },
+    "chess-puzzles-store": {
+      "source": "emmo00/chess-puzzles-contracts",
+      "sourceType": "github",
+      "computedHash": "834c51d9cbd0536ac50aed4cdb4fe55828f414c62dd857504beb9d89fc5d7bff"
     }
   }
 }
