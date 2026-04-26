@@ -16,8 +16,9 @@ export function FarcasterMiniAppReady() {
 
         await sdk.actions.ready();
 
+        const context = await sdk.context;
         // Prompt user to add the MiniApp if not already added
-        if (sdk.context?.client.added === false) {
+        if (context?.client?.added === false) {
           try {
             await sdk.actions.addMiniApp();
           } catch (addError) {
