@@ -64,6 +64,9 @@ export const PAYMENT_RECIPIENT = "0xEA22ca862C3AFDA79Ef7Fb5Ae8f13D245354f05b";
 // Payout Claim Contract
 export const PAYOUT_CLAIM_CONTRACT = "0x4DF823F6A36b35A3983afc41f7c3584C1DCBFDf1";
 
+// Chess Puzzles Store Contract
+export const STORE_CONTRACT = "0x5f23E64A2228F9a5f54527E62755203bC6D9F305";
+
 // MiniPay detection helper
 export const isMiniPay = (): boolean => {
   if (typeof window !== "undefined" && window.ethereum) {

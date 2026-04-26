@@ -18,6 +18,7 @@ import revenueCollectorAbiJson from "@/abis/revenue-receiver.json";
 import { useChainSwitching } from "@/lib/hooks/useChainSwitching";
 import { CUSD_ADDRESSES, PAYOUT_CLAIM_CONTRACT } from "@/lib/config/wagmi";
 import { selectSupportedFeeCurrency } from "@/lib/utils/feeCurrency";
+import { FrontendErrorsPanel } from "@/components/FrontendErrorsPanel";
 
 const ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
@@ -907,6 +908,8 @@ export default function HiddenAdminOpsPage() {
                 adminFunctionNames={REVENUE_ADMIN_FUNCTIONS}
               />
             </div>
+
+            <FrontendErrorsPanel adminAccessKey={adminAccessKey} />
           </>
         )}
       </div>

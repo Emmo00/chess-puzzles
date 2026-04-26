@@ -6,6 +6,7 @@ import "./globals.css";
 import { WalletProvider } from "../lib/providers/WalletProvider";
 import { FarcasterMiniAppReady } from "@/components/FarcasterMiniAppReady";
 import { BackgroundMusic } from "@/components/BackgroundMusic";
+import { GlobalErrorListener } from "@/components/GlobalErrorListener";
 import { Inter, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 
 // Initialize fonts
@@ -112,6 +113,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} antialiased`}>
         <WalletProvider>
+          <GlobalErrorListener />
           <FarcasterMiniAppReady />
           <BackgroundMusic />
           {children}
