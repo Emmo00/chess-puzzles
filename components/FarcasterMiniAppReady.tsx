@@ -15,6 +15,16 @@ export function FarcasterMiniAppReady() {
         }
 
         await sdk.actions.ready();
+
+        // Prompt user to add the MiniApp if not already added
+        if (sdk.context?.client.added === false) {
+          try {
+            await sdk.actions.addMiniApp();
+          } catch (addError) {
+            // Silently fail if addMiniApp fails (e.g. user rejects or dev environment)
+            console.warn("Farcaster addMiniApp prompt failed or rejected", addError);
+          }
+        }
       } catch (error) {
         console.error("Farcaster ready signal failed", error);
       }
