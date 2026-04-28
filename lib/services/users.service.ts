@@ -201,6 +201,20 @@ class UserService {
       disabledThemes: updatedUser.settings?.disabledThemes || DEFAULT_SETTINGS.disabledThemes,
     };
   }
+
+  public async linkFarcasterFid(walletAddress: string, fid: number) {
+    const updatedUser = await this.users.findOneAndUpdate(
+      { walletAddress: walletAddress.toLowerCase() },
+      { $set: { fid } },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      throw new HttpException(404, "User not found");
+    }
+
+    return updatedUser;
+  }
 }
 
 export default UserService;

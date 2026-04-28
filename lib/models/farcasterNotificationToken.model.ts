@@ -4,6 +4,7 @@ export interface IFarcasterNotificationToken extends Document {
   token: string;
   notificationUrl?: string;
   fid?: number;
+  walletAddress?: string;
   lastEvent: string;
   enabled: boolean;
   lastPayload?: Record<string, unknown>;
@@ -30,6 +31,12 @@ const FarcasterNotificationTokenSchema = new Schema<IFarcasterNotificationToken>
     fid: {
       type: Number,
       required: false,
+      index: true,
+    },
+    walletAddress: {
+      type: String,
+      required: false,
+      lowercase: true,
       index: true,
     },
     lastEvent: {

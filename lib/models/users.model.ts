@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
   username: { type: String },
   displayName: { type: String, required: true },
   pfpUrl: { type: String },
+  fid: { type: Number, index: true },
   totalPoints: { type: Number, default: 0 },
   puzzlesSolved: { type: Number, default: 0 },
   lastLogin: { type: Date, default: Date.now },
