@@ -1,0 +1,27 @@
+name: Scheduled Notifications
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 12 AM GMT - Daily Notifications
+    - cron: '0 13 * * *' # 1 PM GMT - Reminders
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  notifications:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Daily Notifications
+        if: github.event.schedule == '0 0 * * *' || github.event_name == 'workflow_dispatch'
+        run: |
+          echo "Triggering Daily Notifications..."
+          curl -f -X GET "${{ secrets.APP_URL }}/api/admin/notifications/daily" \
+               -H "x-admin-key: ${{ secrets.ADMIN_API_KEY }}" \
+               -H "Content-Type: application/json"
+
+      - name: Send Reminder Notifications
+        if: github.event.schedule == '0 13 * * *' || github.event_name == 'workflow_dispatch'
+        run: |
+          echo "Triggering Reminders..."
+          curl -f -X GET "${{ secrets.APP_URL }}/api/admin/notifications/reminders?days=3" \
+               -H "x-admin-key: ${{ secrets.ADMIN_API_KEY }}" \
+               -H "Content-Type: application/json"
