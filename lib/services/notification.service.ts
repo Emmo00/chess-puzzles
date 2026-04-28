@@ -122,8 +122,7 @@ export class NotificationService {
 
     // Find users who haven't played in inactiveDays
     // We use the User model to find inactive users who have an FID
-    const mongoose = await import("mongoose");
-    const User = mongoose.models.User;
+    const User = (await import("@/lib/models/users.model")).default;
     
     if (!User) {
         return { success: false, message: "User model not found" };
