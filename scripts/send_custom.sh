@@ -10,7 +10,7 @@ if [ -z "$ADMIN_API_KEY" ]; then
   exit 1
 fi
 
-APP_URL=${NEXT_PUBLIC_APP_URL:-"http://localhost:3000"}
+APP_URL=${NEXT_PUBLIC_APP_URL:-"https://chesspuzzles.xyz"}
 
 TITLE=$1
 DESCRIPTION=$2
