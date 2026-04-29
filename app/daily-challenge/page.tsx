@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { sdk } from "@farcaster/miniapp-sdk";
 import confetti from "canvas-confetti";
-import { AtSign, Coins, Send, Share2, TriangleAlert } from "lucide-react";
+import { ArrowUpRight, AtSign, Coins, Send, Share2, TriangleAlert } from "lucide-react";
 import { useAccount } from "wagmi";
+import { celo } from "wagmi/chains";
 
 import ChessBoard, { ChessBoardRef } from "@/components/chess-board";
 import { WalletConnect } from "@/components/WalletConnect";
@@ -247,6 +248,8 @@ export default function DailyChallengePage() {
 
     return url.toString();
   }, [status?.utcDay]);
+
+  const displayTxHash = status?.reservation?.claimTxHash || txHash;
 
   const buildFarcasterComposeUrl = (text: string, embedUrl: string) => {
     const url = new URL("https://farcaster.xyz/~/compose");
@@ -648,6 +651,15 @@ export default function DailyChallengePage() {
             >
               {isClaimed ? "REWARD CLAIMED" : claimSubmitting || claimConfirming ? "CLAIMING..." : "CLAIM REWARD"}
             </button>
+
+            {isClaimed && displayTxHash && (
+              <button
+                onClick={() => void openExternalUrl(`${celo.blockExplorers.default.url}/tx/${displayTxHash}`)}
+                className="mt-3 w-full flex items-center justify-center gap-1 text-black font-black text-xs uppercase hover:underline decoration-2 underline-offset-2"
+              >
+                View Transaction <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         )}
 
@@ -686,9 +698,17 @@ export default function DailyChallengePage() {
         {(claimMessage || claimError || error) && (
           <div
             ref={statusMessageRef}
-            className="w-full max-w-xs bg-white border-2 border-black p-3 text-xs font-black uppercase"
+            className="w-full max-w-xs bg-white border-2 border-black p-3 text-xs font-black uppercase flex flex-col"
           >
-            {claimMessage || claimError || error}
+            <div className="flex-1">{claimMessage || claimError || error}</div>
+            {displayTxHash && (
+              <button
+                onClick={() => void openExternalUrl(`${celo.blockExplorers.default.url}/tx/${displayTxHash}`)}
+                className="mt-2 flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors lowercase font-bold border-t border-black/10 pt-2"
+              >
+                view transaction <ArrowUpRight className="w-3 h-3" />
+              </button>
+            )}
           </div>
         )}
       </main>
