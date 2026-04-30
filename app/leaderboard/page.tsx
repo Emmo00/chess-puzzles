@@ -6,7 +6,7 @@ import { useAccount } from "wagmi";
 import Link from "next/link";
 import { LeaderboardEntry, LeaderboardResponse } from "../../lib/services/leaderboard.service";
 import { TelegramSupportLink } from "@/components/TelegramSupportLink";
-import { TriangleAlert } from "lucide-react";
+import { TriangleAlert, Medal, Trophy, Puzzle, BarChart3, Star } from "lucide-react";
 
 export default function LeaderboardPage() {
   const [mounted, setMounted] = useState(false);
