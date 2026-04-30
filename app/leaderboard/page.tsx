@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useAccount } from "wagmi";
 import Link from "next/link";
-import { BarChart3, Medal, Puzzle, Star, Trophy } from "lucide-react";
 import { LeaderboardEntry, LeaderboardResponse } from "../../lib/services/leaderboard.service";
+import { TelegramSupportLink } from "@/components/TelegramSupportLink";
+import { TriangleAlert } from "lucide-react";
 
 export default function LeaderboardPage() {
   const [mounted, setMounted] = useState(false);
@@ -14,6 +15,7 @@ export default function LeaderboardPage() {
   const [userRank, setUserRank] = useState<LeaderboardEntry | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const limit = 20;
 
   const { address, isConnected } = useAccount();
@@ -46,9 +48,13 @@ export default function LeaderboardPage() {
         setLeaderboard(data.leaderboard);
         setTotal(data.total);
         setUserRank(data.userRank || null);
+        setErrorMsg(null);
+      } else {
+        setErrorMsg("Failed to fetch leaderboard");
       }
     } catch (error) {
       console.error("Failed to fetch leaderboard:", error);
+      setErrorMsg("Failed to fetch leaderboard");
     } finally {
       setLoading(false);
     }
@@ -96,6 +102,14 @@ export default function LeaderboardPage() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center px-4 py-6 gap-4">
+        {errorMsg && (
+          <div className="w-full max-w-md bg-red-400 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 transform -rotate-1 text-left">
+            <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
+              <TriangleAlert className="w-5 h-5 shrink-0" /> {errorMsg}
+            </div>
+            <TelegramSupportLink />
+          </div>
+        )}
         {/* User's Rank Card (if connected and ranked) */}
         {isConnected && userRank && (
           <div className="w-full max-w-md bg-cyan-400 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 transform -rotate-1">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { TelegramSupportLink } from "./TelegramSupportLink";
 
 interface ErrorLog {
   _id: string;
@@ -84,7 +85,7 @@ export function FrontendErrorsPanel({ adminAccessKey }: { adminAccessKey: string
         fetchErrors(pagination.page, statusFilter);
       }
     } catch (err: any) {
-      alert("Error resolving: " + err.message);
+      setErrorMsg("Error resolving: " + err.message);
     }
   };
 
@@ -118,7 +119,8 @@ export function FrontendErrorsPanel({ adminAccessKey }: { adminAccessKey: string
 
       {errorMsg && (
         <div className="bg-red-300 border-2 border-black p-2 text-xs font-black uppercase text-black mb-4">
-          {errorMsg}
+          <div>{errorMsg}</div>
+          <TelegramSupportLink />
         </div>
       )}
 

@@ -8,6 +8,8 @@ import { BarChart3, Music, Save, Settings, Target } from "lucide-react";
 import { UserSettings } from "../../lib/types";
 import { PUZZLE_THEMES, THEME_CATEGORIES, DEFAULT_THEMES } from "../../lib/config/puzzleThemes";
 import { isMusicEnabled, setMusicEnabled as persistMusicEnabled } from "../../lib/utils/backgroundMusic";
+import { TelegramSupportLink } from "@/components/TelegramSupportLink";
+import { TriangleAlert } from "lucide-react";
 
 export default function SettingsPage() {
   const [mounted, setMounted] = useState(false);
@@ -20,6 +22,7 @@ export default function SettingsPage() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [hasChanges, setHasChanges] = useState(false);
   const [musicEnabled, setMusicEnabled] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { address, isConnected } = useAccount();
   const router = useRouter();
@@ -74,11 +77,11 @@ export default function SettingsPage() {
         setHasChanges(false);
       } else {
         const error = await response.json();
-        alert(error.message || "Failed to save settings");
+        setErrorMsg(error.message || "Failed to save settings");
       }
     } catch (error) {
       console.error("Failed to save settings:", error);
-      alert("Failed to save settings");
+      setErrorMsg("Failed to save settings");
     } finally {
       setSaving(false);
     }
@@ -214,6 +217,14 @@ export default function SettingsPage() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center px-4 py-6 gap-6 pb-24">
         <div className="w-full max-w-md space-y-6">
+          {errorMsg && (
+            <div className="bg-red-400 border-4 border-black p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
+              <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
+                <TriangleAlert className="w-5 h-5 shrink-0" /> {errorMsg}
+              </div>
+              <TelegramSupportLink />
+            </div>
+          )}
           {/* Music Section */}
           <div className="bg-orange-300 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4">
             <div className="flex justify-between items-center gap-3">

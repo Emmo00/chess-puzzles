@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { usePayment } from '../lib/hooks/usePayment'
 import { PaymentType } from '../lib/types/payment'
+import { TelegramSupportLink } from './TelegramSupportLink'
 
 interface PaymentModalProps {
   isOpen: boolean
@@ -120,10 +121,11 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
 
         <div className="p-6 bg-white">
           {error && (
-            <div className="bg-red-400 border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1">
-              <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2">
-                <OctagonAlert className="w-4 h-4" /> {error}
+            <div className="bg-red-400 border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
+              <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
+                <OctagonAlert className="w-4 h-4 shrink-0" /> {error}
               </div>
+              <TelegramSupportLink />
             </div>
           )}
 

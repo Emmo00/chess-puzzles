@@ -14,6 +14,7 @@ import { useChainSwitching } from "@/lib/hooks/useChainSwitching";
 import { useCheckinClaim } from "@/lib/hooks/useCheckinClaim";
 import { useDailyCheckin } from "@/lib/hooks/useDailyCheckin";
 import { Puzzle } from "@/lib/types";
+import { TelegramSupportLink } from "@/components/TelegramSupportLink";
 
 type HintStage = "none" | "piece" | "move";
 
@@ -709,6 +710,7 @@ export default function DailyChallengePage() {
                 view transaction <ArrowUpRight className="w-3 h-3" />
               </button>
             )}
+            <TelegramSupportLink />
           </div>
         )}
       </main>

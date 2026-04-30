@@ -10,6 +10,7 @@ import { useUserStats } from "../../lib/hooks/useUserStats";
 import { Puzzle } from "../../lib/types";
 import { getBasePoints, getHintMultiplier } from "../../lib/utils/points";
 import { getThemeById } from "../../lib/config/puzzleThemes";
+import { TelegramSupportLink } from "@/components/TelegramSupportLink";
 
 type HintStage = 'none' | 'piece' | 'move';
 
@@ -533,12 +534,13 @@ export default function SolvePuzzlesPage() {
         {/* Show daily limit reached message */}
         {!currentPuzzle && !isCompleted && isAccessExhausted && (
           <div className="w-full max-w-xs text-center space-y-6">
-            <div className="bg-red-400 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 transform rotate-1">
-              <h2 className="text-3xl font-black text-black mb-3 inline-flex items-center gap-2">
-                DAILY LIMIT REACHED! <Ban className="w-8 h-8" />
+            <div className="bg-red-400 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 transform rotate-1 text-left">
+              <h2 className="text-3xl font-black text-black mb-3 inline-flex items-center gap-2 uppercase">
+                Daily Limit Reached! <Ban className="w-8 h-8 shrink-0" />
               </h2>
-              <p className="text-lg font-bold text-black">You&apos;ve solved all {MAX_DAILY_PUZZLES} puzzles for today.</p>
-              <p className="text-md font-bold text-black mt-2">Come back tomorrow for more puzzles!</p>
+              <p className="text-lg font-bold text-black uppercase">You&apos;ve solved all {MAX_DAILY_PUZZLES} puzzles for today.</p>
+              <p className="text-md font-bold text-black mt-2 uppercase">Come back tomorrow for more puzzles!</p>
+              <TelegramSupportLink />
             </div>
 
             <Link
