@@ -21,6 +21,9 @@ export async function POST(request: NextRequest) {
       errors: [] as string[],
     };
 
+    let currentNonce = await onchainStore.getTransactionCount();
+    console.log(`Starting sync with initial nonce: ${currentNonce}`);
+
     // 1. Sync Daily Challenges
     const unsyncedChallenges = await DailyChallenge.find({ onChainSynced: { $ne: true } });
     console.log(`Found ${unsyncedChallenges.length} unsynced daily challenges.`);
@@ -30,7 +33,8 @@ export async function POST(request: NextRequest) {
           challenge.utcDay,
           challenge.puzzle.puzzleId,
           challenge.checkInAmountWeiSnapshot,
-          challenge.maxDailyCheckInsSnapshot
+          challenge.maxDailyCheckInsSnapshot,
+          currentNonce++
         );
         challenge.onChainSynced = true;
         await challenge.save();
@@ -51,7 +55,8 @@ export async function POST(request: NextRequest) {
           res.walletAddress,
           status,
           res.checkInAmountWei,
-          res.solvedAt ? Math.floor(res.solvedAt.getTime() / 1000) : 0
+          res.solvedAt ? Math.floor(res.solvedAt.getTime() / 1000) : 0,
+          currentNonce++
         );
         res.onChainSynced = true;
         await res.save();
@@ -72,7 +77,8 @@ export async function POST(request: NextRequest) {
           attempt.completed,
           attempt.attempts,
           attempt.points,
-          attempt.solvedAt ? Math.floor(attempt.solvedAt.getTime() / 1000) : 0
+          attempt.solvedAt ? Math.floor(attempt.solvedAt.getTime() / 1000) : 0,
+          currentNonce++
         );
         attempt.onChainSynced = true;
         await attempt.save();

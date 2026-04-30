@@ -35,11 +35,11 @@ export class OnchainStoreService {
     utcDay: number,
     puzzleId: string,
     rewardAmountWei: string,
-    maxCheckIns: number
+    maxCheckIns: number,
+    nonce?: number
   ) {
     if (!walletClient || !account) {
-      console.warn("OnchainStoreService: No wallet client or account configured.");
-      return null;
+      throw new Error("OnchainStoreService: No wallet client or account configured. Check ONCHAIN_STORE_SIGNER_PRIVATE_KEY.");
     }
 
     try {
@@ -50,6 +50,7 @@ export class OnchainStoreService {
         abi: STORE_ABI,
         functionName: "setDailyPuzzle",
         args: [BigInt(utcDay), puzzleId, BigInt(rewardAmountWei), BigInt(maxCheckIns)],
+        nonce,
       });
 
       const hash = await walletClient.writeContract(request);
@@ -69,7 +70,8 @@ export class OnchainStoreService {
     user: string,
     status: ReservationStatus,
     rewardAmountWei: string,
-    solvedAt: number = 0
+    solvedAt: number = 0,
+    nonce?: number
   ) {
     if (!walletClient || !account) {
       throw new Error("OnchainStoreService: No wallet client or account configured. Check ONCHAIN_STORE_SIGNER_PRIVATE_KEY.");
@@ -89,6 +91,7 @@ export class OnchainStoreService {
           BigInt(rewardAmountWei),
           BigInt(solvedAt),
         ],
+        nonce,
       });
 
       const hash = await walletClient.writeContract(request);
@@ -109,11 +112,11 @@ export class OnchainStoreService {
     completed: boolean,
     attempts: number,
     points: number,
-    solvedAt: number = 0
+    solvedAt: number = 0,
+    nonce?: number
   ) {
     if (!walletClient || !account) {
-      console.warn("OnchainStoreService: No wallet client or account configured.");
-      return null;
+      throw new Error("OnchainStoreService: No wallet client or account configured. Check ONCHAIN_STORE_SIGNER_PRIVATE_KEY.");
     }
 
     try {
@@ -131,6 +134,7 @@ export class OnchainStoreService {
           BigInt(points),
           BigInt(solvedAt),
         ],
+        nonce,
       });
 
       const hash = await walletClient.writeContract(request);
@@ -140,6 +144,15 @@ export class OnchainStoreService {
       console.error("Error in recordPuzzleAttempt:", error);
       throw error;
     }
+  }
+
+  public async getTransactionCount() {
+    const PRIVATE_KEY = process.env.ONCHAIN_STORE_SIGNER_PRIVATE_KEY as `0x${string}`;
+    if (!PRIVATE_KEY) return 0;
+    const account = privateKeyToAccount(PRIVATE_KEY);
+    return await publicClient.getTransactionCount({
+      address: account.address,
+    });
   }
 
   /**
