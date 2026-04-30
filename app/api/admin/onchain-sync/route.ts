@@ -29,16 +29,22 @@ export async function POST(request: NextRequest) {
     console.log(`Found ${unsyncedChallenges.length} unsynced daily challenges.`);
     for (const challenge of unsyncedChallenges) {
       try {
-        await onchainStore.setDailyPuzzle(
+        const hash = await onchainStore.setDailyPuzzle(
           challenge.utcDay,
           challenge.puzzle.puzzleId,
           challenge.checkInAmountWeiSnapshot,
           challenge.maxDailyCheckInsSnapshot,
           currentNonce++
         );
-        challenge.onChainSynced = true;
-        await challenge.save();
-        results.dailyChallenges++;
+        
+        const receipt = await onchainStore.waitForReceipt(hash);
+        if (receipt.status === "success") {
+          challenge.onChainSynced = true;
+          await challenge.save();
+          results.dailyChallenges++;
+        } else {
+          throw new Error(`Transaction failed with status: ${receipt.status}`);
+        }
       } catch (err: any) {
         results.errors.push(`DailyChallenge ${challenge.utcDay}: ${err.message}`);
       }
@@ -50,7 +56,7 @@ export async function POST(request: NextRequest) {
     for (const res of unsyncedReservations) {
       try {
         const status = onchainStore.mapStatusToEnum(res.status);
-        await onchainStore.setReservation(
+        const hash = await onchainStore.setReservation(
           res.utcDay,
           res.walletAddress,
           status,
@@ -58,9 +64,15 @@ export async function POST(request: NextRequest) {
           res.solvedAt ? Math.floor(res.solvedAt.getTime() / 1000) : 0,
           currentNonce++
         );
-        res.onChainSynced = true;
-        await res.save();
-        results.reservations++;
+        
+        const receipt = await onchainStore.waitForReceipt(hash);
+        if (receipt.status === "success") {
+          res.onChainSynced = true;
+          await res.save();
+          results.reservations++;
+        } else {
+          throw new Error(`Transaction failed with status: ${receipt.status}`);
+        }
       } catch (err: any) {
         results.errors.push(`Reservation ${res.walletAddress}/${res.utcDay}: ${err.message}`);
       }
@@ -71,7 +83,7 @@ export async function POST(request: NextRequest) {
     console.log(`Found ${unsyncedAttempts.length} unsynced puzzle attempts.`);
     for (const attempt of unsyncedAttempts) {
       try {
-        await onchainStore.recordPuzzleAttempt(
+        const hash = await onchainStore.recordPuzzleAttempt(
           attempt.userWalletAddress,
           attempt.puzzleId,
           attempt.completed,
@@ -80,9 +92,15 @@ export async function POST(request: NextRequest) {
           attempt.solvedAt ? Math.floor(attempt.solvedAt.getTime() / 1000) : 0,
           currentNonce++
         );
-        attempt.onChainSynced = true;
-        await attempt.save();
-        results.puzzleAttempts++;
+        
+        const receipt = await onchainStore.waitForReceipt(hash);
+        if (receipt.status === "success") {
+          attempt.onChainSynced = true;
+          await attempt.save();
+          results.puzzleAttempts++;
+        } else {
+          throw new Error(`Transaction failed with status: ${receipt.status}`);
+        }
       } catch (err: any) {
         results.errors.push(`PuzzleAttempt ${attempt.userWalletAddress}/${attempt.puzzleId}: ${err.message}`);
       }

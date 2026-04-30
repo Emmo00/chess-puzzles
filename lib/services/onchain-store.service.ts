@@ -146,6 +146,16 @@ export class OnchainStoreService {
     }
   }
 
+  /**
+   * Waits for a transaction receipt.
+   */
+  public async waitForReceipt(hash: `0x${string}`) {
+    console.log(`Waiting for receipt for tx: ${hash}`);
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    console.log(`Receipt received for tx: ${hash}. Status: ${receipt.status}`);
+    return receipt;
+  }
+
   public async getTransactionCount() {
     const PRIVATE_KEY = process.env.ONCHAIN_STORE_SIGNER_PRIVATE_KEY as `0x${string}`;
     if (!PRIVATE_KEY) return 0;
