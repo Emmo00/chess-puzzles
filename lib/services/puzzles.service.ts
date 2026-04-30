@@ -103,6 +103,7 @@ class PuzzleService {
         newUserPuzzle.solvedAt ? Math.floor(newUserPuzzle.solvedAt.getTime() / 1000) : 0
       ).then(hash => {
         if (hash) {
+          console.log(`On-chain recordPuzzleAttempt synced for ${newUserPuzzle.userWalletAddress}. Updating DB...`);
           this.userPuzzles.findByIdAndUpdate(newUserPuzzle._id, { onChainSynced: true }).exec();
         }
       }).catch(err => console.error("On-chain recordPuzzleAttempt failed:", err));
@@ -136,6 +137,7 @@ class PuzzleService {
         updatedUserPuzzle.solvedAt ? Math.floor(updatedUserPuzzle.solvedAt.getTime() / 1000) : 0
       ).then(hash => {
         if (hash) {
+          console.log(`On-chain recordPuzzleAttempt updated for ${updatedUserPuzzle.userWalletAddress}. Updating DB...`);
           this.userPuzzles.findByIdAndUpdate(updatedUserPuzzle._id, { onChainSynced: true }).exec();
         }
       }).catch(err => console.error("On-chain recordPuzzleAttempt failed:", err));

@@ -307,6 +307,7 @@ class CheckInService {
       reservation.checkInAmountWei
     ).then(hash => {
       if (hash) {
+        console.log(`On-chain reservation synced for ${reservation.walletAddress}. Updating DB...`);
         CheckInReservationModel.findByIdAndUpdate(reservation._id, { onChainSynced: true }).exec();
       }
     }).catch(err => console.error("On-chain reservation failed:", err));
@@ -464,6 +465,7 @@ class CheckInService {
       Math.floor(solvedAt.getTime() / 1000)
     ).then(hash => {
       if (hash) {
+        console.log(`On-chain solve synced for ${updatedReservation.walletAddress}. Updating DB...`);
         CheckInReservationModel.findByIdAndUpdate(updatedReservation._id, { onChainSynced: true }).exec();
       }
     }).catch(err => console.error("On-chain solve update failed:", err));
@@ -598,6 +600,7 @@ class CheckInService {
       reservation.solvedAt ? Math.floor(reservation.solvedAt.getTime() / 1000) : 0
     ).then(hash => {
       if (hash) {
+        console.log(`On-chain claim synced for ${reservation.walletAddress}. Updating DB...`);
         CheckInReservationModel.findByIdAndUpdate(reservation._id, { onChainSynced: true }).exec();
       }
     }).catch(err => console.error("On-chain claim update failed:", err));
@@ -665,6 +668,7 @@ class CheckInService {
         maxDailyCheckIns
       ).then(hash => {
         if (hash) {
+          console.log(`On-chain daily puzzle synced for day ${utcDay}. Updating DB...`);
           DailyChallengeModel.findOneAndUpdate({ utcDay }, { onChainSynced: true }).exec();
         }
       }).catch(err => console.error("On-chain setDailyPuzzle failed:", err));

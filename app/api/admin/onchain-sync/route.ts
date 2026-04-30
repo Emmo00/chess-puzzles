@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Sync Daily Challenges
     const unsyncedChallenges = await DailyChallenge.find({ onChainSynced: { $ne: true } });
+    console.log(`Found ${unsyncedChallenges.length} unsynced daily challenges.`);
     for (const challenge of unsyncedChallenges) {
       try {
         await onchainStore.setDailyPuzzle(
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Sync Reservations
     const unsyncedReservations = await CheckInReservation.find({ onChainSynced: { $ne: true } });
+    console.log(`Found ${unsyncedReservations.length} unsynced reservations.`);
     for (const res of unsyncedReservations) {
       try {
         const status = onchainStore.mapStatusToEnum(res.status);
@@ -61,6 +63,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Sync Puzzle Attempts
     const unsyncedAttempts = await userPuzzlesModel.find({ onChainSynced: { $ne: true } });
+    console.log(`Found ${unsyncedAttempts.length} unsynced puzzle attempts.`);
     for (const attempt of unsyncedAttempts) {
       try {
         await onchainStore.recordPuzzleAttempt(
@@ -78,6 +81,8 @@ export async function POST(request: NextRequest) {
         results.errors.push(`PuzzleAttempt ${attempt.userWalletAddress}/${attempt.puzzleId}: ${err.message}`);
       }
     }
+    
+    console.log(`Sync complete. Results: ${JSON.stringify(results)}`);
 
     return NextResponse.json({
       success: true,

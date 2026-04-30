@@ -43,6 +43,7 @@ export class OnchainStoreService {
     }
 
     try {
+      console.log(`Preparing setDailyPuzzle: day=${utcDay}, puzzle=${puzzleId}, reward=${rewardAmountWei}, max=${maxCheckIns}`);
       const { request } = await publicClient.simulateContract({
         account,
         address: STORE_CONTRACT as Address,
@@ -52,7 +53,7 @@ export class OnchainStoreService {
       });
 
       const hash = await walletClient.writeContract(request);
-      console.log(`setDailyPuzzle tx sent: ${hash}`);
+      console.log(`setDailyPuzzle tx sent successfully. Hash: ${hash}`);
       return hash;
     } catch (error) {
       console.error("Error in setDailyPuzzle:", error);
@@ -76,6 +77,7 @@ export class OnchainStoreService {
     }
 
     try {
+      console.log(`Preparing setReservation: day=${utcDay}, user=${user}, status=${status}, solvedAt=${solvedAt}`);
       const { request } = await publicClient.simulateContract({
         account,
         address: STORE_CONTRACT as Address,
@@ -91,7 +93,7 @@ export class OnchainStoreService {
       });
 
       const hash = await walletClient.writeContract(request);
-      console.log(`setReservation tx sent: ${hash}`);
+      console.log(`setReservation tx sent successfully. Hash: ${hash}`);
       return hash;
     } catch (error) {
       console.error("Error in setReservation:", error);
@@ -116,6 +118,7 @@ export class OnchainStoreService {
     }
 
     try {
+      console.log(`Preparing recordPuzzleAttempt: user=${user}, puzzle=${puzzleId}, completed=${completed}, points=${points}`);
       const { request } = await publicClient.simulateContract({
         account,
         address: STORE_CONTRACT as Address,
@@ -132,7 +135,7 @@ export class OnchainStoreService {
       });
 
       const hash = await walletClient.writeContract(request);
-      console.log(`recordPuzzleAttempt tx sent: ${hash}`);
+      console.log(`recordPuzzleAttempt tx sent successfully. Hash: ${hash}`);
       return hash;
     } catch (error) {
       console.error("Error in recordPuzzleAttempt:", error);
