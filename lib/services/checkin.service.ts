@@ -22,6 +22,10 @@ import PuzzleAPIClient from "@/lib/services/puzzle-api.client";
 import CheckInContractService from "@/lib/services/checkin-contract.service";
 import CheckInSigningService from "@/lib/services/checkin-signing.service";
 import { recoverTypedDataAddress } from "viem";
+import onchainStore from "@/lib/services/onchain-store.service";
+import { ReservationStatus } from "@/lib/config/onchainStore";
+import { DailyChallenge as DailyChallengeModel } from "@/lib/models/dailyChallenge.model";
+import { CheckInReservation as CheckInReservationModel } from "@/lib/models/checkInReservation.model";
 
 const ACTIVE_STATUSES = ["pending", "earned", "claiming", "claimed"];
 const CLAIMABLE_STATUSES = ["earned", "claiming"];
@@ -295,6 +299,18 @@ class CheckInService {
       });
     }
 
+    // Fire and forget on-chain reservation
+    onchainStore.setReservation(
+      reservation.utcDay,
+      reservation.walletAddress,
+      ReservationStatus.Pending,
+      reservation.checkInAmountWei
+    ).then(hash => {
+      if (hash) {
+        CheckInReservationModel.findByIdAndUpdate(reservation._id, { onChainSynced: true }).exec();
+      }
+    }).catch(err => console.error("On-chain reservation failed:", err));
+
     return this.toReservationResponse(challenge, reservation, contractValues, false);
   }
 
@@ -439,6 +455,19 @@ class CheckInService {
       { new: true }
     );
 
+    // Fire and forget on-chain solve
+    onchainStore.setReservation(
+      updatedReservation.utcDay,
+      updatedReservation.walletAddress,
+      ReservationStatus.Earned,
+      updatedReservation.checkInAmountWei,
+      Math.floor(solvedAt.getTime() / 1000)
+    ).then(hash => {
+      if (hash) {
+        CheckInReservationModel.findByIdAndUpdate(updatedReservation._id, { onChainSynced: true }).exec();
+      }
+    }).catch(err => console.error("On-chain solve update failed:", err));
+
     return {
       success: true,
       firstSolve: true,
@@ -560,6 +589,19 @@ class CheckInService {
     reservation.claimedAt = new Date();
     await reservation.save();
 
+    // Fire and forget on-chain claim update
+    onchainStore.setReservation(
+      reservation.utcDay,
+      reservation.walletAddress,
+      ReservationStatus.Claimed,
+      reservation.checkInAmountWei,
+      reservation.solvedAt ? Math.floor(reservation.solvedAt.getTime() / 1000) : 0
+    ).then(hash => {
+      if (hash) {
+        CheckInReservationModel.findByIdAndUpdate(reservation._id, { onChainSynced: true }).exec();
+      }
+    }).catch(err => console.error("On-chain claim update failed:", err));
+
     return reservation;
   }
 
@@ -599,7 +641,7 @@ class CheckInService {
     });
 
     try {
-      return await DailyChallenge.create({
+      const challenge = await DailyChallenge.create({
         utcDay,
         puzzle: {
           puzzleId: puzzle.puzzleid,
@@ -614,6 +656,20 @@ class CheckInService {
         checkInAmountWeiSnapshot: checkInAmountWei,
         createdByWallet,
       });
+
+      // Fire and forget on-chain daily puzzle
+      onchainStore.setDailyPuzzle(
+        utcDay,
+        puzzle.puzzleid,
+        checkInAmountWei,
+        maxDailyCheckIns
+      ).then(hash => {
+        if (hash) {
+          DailyChallengeModel.findOneAndUpdate({ utcDay }, { onChainSynced: true }).exec();
+        }
+      }).catch(err => console.error("On-chain setDailyPuzzle failed:", err));
+
+      return challenge;
     } catch (error: any) {
       if (error?.code === 11000) {
         const duplicated = await DailyChallenge.findOne({ utcDay });

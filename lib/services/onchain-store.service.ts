@@ -1,0 +1,166 @@
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  Address,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { celo } from "viem/chains";
+import { STORE_ABI, ReservationStatus } from "../config/onchainStore";
+import { STORE_CONTRACT } from "../config/wagmi";
+
+const RPC_URL = process.env.CELO_RPC_URL || undefined;
+const PRIVATE_KEY = process.env.ONCHAIN_STORE_SIGNER_PRIVATE_KEY as `0x${string}`;
+
+const account = PRIVATE_KEY ? privateKeyToAccount(PRIVATE_KEY) : null;
+
+const publicClient = createPublicClient({
+  chain: celo,
+  transport: http(RPC_URL),
+});
+
+const walletClient = account
+  ? createWalletClient({
+      account,
+      chain: celo,
+      transport: http(RPC_URL),
+    })
+  : null;
+
+export class OnchainStoreService {
+  /**
+   * Sets the daily puzzle on-chain.
+   */
+  public async setDailyPuzzle(
+    utcDay: number,
+    puzzleId: string,
+    rewardAmountWei: string,
+    maxCheckIns: number
+  ) {
+    if (!walletClient || !account) {
+      console.warn("OnchainStoreService: No wallet client or account configured.");
+      return null;
+    }
+
+    try {
+      const { request } = await publicClient.simulateContract({
+        account,
+        address: STORE_CONTRACT as Address,
+        abi: STORE_ABI,
+        functionName: "setDailyPuzzle",
+        args: [BigInt(utcDay), puzzleId, BigInt(rewardAmountWei), BigInt(maxCheckIns)],
+      });
+
+      const hash = await walletClient.writeContract(request);
+      console.log(`setDailyPuzzle tx sent: ${hash}`);
+      return hash;
+    } catch (error) {
+      console.error("Error in setDailyPuzzle:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sets a user reservation status on-chain.
+   */
+  public async setReservation(
+    utcDay: number,
+    user: string,
+    status: ReservationStatus,
+    rewardAmountWei: string,
+    solvedAt: number = 0
+  ) {
+    if (!walletClient || !account) {
+      console.warn("OnchainStoreService: No wallet client or account configured.");
+      return null;
+    }
+
+    try {
+      const { request } = await publicClient.simulateContract({
+        account,
+        address: STORE_CONTRACT as Address,
+        abi: STORE_ABI,
+        functionName: "setReservation",
+        args: [
+          BigInt(utcDay),
+          user as Address,
+          status,
+          BigInt(rewardAmountWei),
+          BigInt(solvedAt),
+        ],
+      });
+
+      const hash = await walletClient.writeContract(request);
+      console.log(`setReservation tx sent: ${hash}`);
+      return hash;
+    } catch (error) {
+      console.error("Error in setReservation:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Records a puzzle attempt on-chain.
+   */
+  public async recordPuzzleAttempt(
+    user: string,
+    puzzleId: string,
+    completed: boolean,
+    attempts: number,
+    points: number,
+    solvedAt: number = 0
+  ) {
+    if (!walletClient || !account) {
+      console.warn("OnchainStoreService: No wallet client or account configured.");
+      return null;
+    }
+
+    try {
+      const { request } = await publicClient.simulateContract({
+        account,
+        address: STORE_CONTRACT as Address,
+        abi: STORE_ABI,
+        functionName: "recordPuzzleAttempt",
+        args: [
+          user as Address,
+          puzzleId,
+          completed,
+          BigInt(attempts),
+          BigInt(points),
+          BigInt(solvedAt),
+        ],
+      });
+
+      const hash = await walletClient.writeContract(request);
+      console.log(`recordPuzzleAttempt tx sent: ${hash}`);
+      return hash;
+    } catch (error) {
+      console.error("Error in recordPuzzleAttempt:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper to convert string status to ReservationStatus enum
+   */
+  public mapStatusToEnum(status: string): ReservationStatus {
+    switch (status.toLowerCase()) {
+      case "pending":
+        return ReservationStatus.Pending;
+      case "earned":
+        return ReservationStatus.Earned;
+      case "claiming":
+        return ReservationStatus.Claiming;
+      case "claimed":
+        return ReservationStatus.Claimed;
+      case "expired":
+        return ReservationStatus.Expired;
+      case "failed":
+        return ReservationStatus.Failed;
+      default:
+        return ReservationStatus.None;
+    }
+  }
+}
+
+export default new OnchainStoreService();

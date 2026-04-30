@@ -4,6 +4,7 @@ import userPuzzlesModel from "../models/userPuzzles.model";
 import { randomInt } from "crypto";
 import PuzzleAPIClient from "./puzzle-api.client";
 import { DEFAULT_THEMES } from "../config/puzzleThemes";
+import onchainStore from "./onchain-store.service";
 
 type FetchPuzzleOptions = {
   userWalletAddress?: string;
@@ -90,6 +91,23 @@ class PuzzleService {
 
   public async createUserPuzzle(userPuzzleData: Partial<UserPuzzle>): Promise<UserPuzzle> {
     const newUserPuzzle = await this.userPuzzles.create(userPuzzleData);
+    
+    // Fire and forget on-chain record
+    if (newUserPuzzle.userWalletAddress && newUserPuzzle.puzzleId) {
+      onchainStore.recordPuzzleAttempt(
+        newUserPuzzle.userWalletAddress,
+        newUserPuzzle.puzzleId,
+        newUserPuzzle.completed || false,
+        newUserPuzzle.attempts || 0,
+        newUserPuzzle.points || 0,
+        newUserPuzzle.solvedAt ? Math.floor(newUserPuzzle.solvedAt.getTime() / 1000) : 0
+      ).then(hash => {
+        if (hash) {
+          this.userPuzzles.findByIdAndUpdate(newUserPuzzle._id, { onChainSynced: true }).exec();
+        }
+      }).catch(err => console.error("On-chain recordPuzzleAttempt failed:", err));
+    }
+
     return newUserPuzzle;
   }
 
@@ -106,6 +124,23 @@ class PuzzleService {
       { completed, attempts, type, points, solvedAt: completed ? new Date() : undefined },
       { new: true }
     );
+
+    // Fire and forget on-chain record
+    if (updatedUserPuzzle && updatedUserPuzzle.userWalletAddress && updatedUserPuzzle.puzzleId) {
+      onchainStore.recordPuzzleAttempt(
+        updatedUserPuzzle.userWalletAddress,
+        updatedUserPuzzle.puzzleId,
+        updatedUserPuzzle.completed || false,
+        updatedUserPuzzle.attempts || 0,
+        updatedUserPuzzle.points || 0,
+        updatedUserPuzzle.solvedAt ? Math.floor(updatedUserPuzzle.solvedAt.getTime() / 1000) : 0
+      ).then(hash => {
+        if (hash) {
+          this.userPuzzles.findByIdAndUpdate(updatedUserPuzzle._id, { onChainSynced: true }).exec();
+        }
+      }).catch(err => console.error("On-chain recordPuzzleAttempt failed:", err));
+    }
+
     return updatedUserPuzzle;
   }
 
