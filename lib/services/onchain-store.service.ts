@@ -72,8 +72,7 @@ export class OnchainStoreService {
     solvedAt: number = 0
   ) {
     if (!walletClient || !account) {
-      console.warn("OnchainStoreService: No wallet client or account configured.");
-      return null;
+      throw new Error("OnchainStoreService: No wallet client or account configured. Check ONCHAIN_STORE_SIGNER_PRIVATE_KEY.");
     }
 
     try {
