@@ -3,7 +3,7 @@ import dbConnect from "@/lib/db";
 import { NotificationService } from "@/lib/services/notification.service";
 import { verifyAdminKey, unauthorizedResponse } from "@/lib/security/admin";
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   if (!verifyAdminKey(request)) {
     return unauthorizedResponse();
   }
