@@ -7,7 +7,7 @@ import onchainStore from "@/lib/services/onchain-store.service";
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = request.headers.get("x-admin-api-key");
+    const apiKey = request.headers.get("x-admin-key");
     if (apiKey !== process.env.ADMIN_API_KEY) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     let currentNonce = await onchainStore.getTransactionCount();
     console.log(`Starting sync with initial nonce: ${currentNonce}`);
 
-    const MAX_SYNC_LIMIT = 60;
+    const MAX_SYNC_LIMIT = 30;
     let processedCount = 0;
 
     // 1. Sync Daily Challenges
