@@ -1,0 +1,19 @@
+name: Sync Records Onchain
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 12 AM GMT - Daily Notifications
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  notifications:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync Onchain
+        if: github.event.schedule == '0 0 * * *' || github.event_name == 'workflow_dispatch'
+        run: |
+          echo "Triggering Daily Notifications..."
+          curl -f -X GET "${{ secrets.APP_URL }}/api/admin/onchain-sync" \
+               -H "x-admin-key: ${{ secrets.ADMIN_API_KEY }}" \
+               -H "Content-Type: application/json" \
+               -vvv
