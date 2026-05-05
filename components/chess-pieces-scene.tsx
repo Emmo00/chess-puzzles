@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 
@@ -74,34 +76,53 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // 1. Scene Setup
-    const scene = new THREE.Scene();
-    sceneRef.current = scene;
-    scene.background = null;
+    try {
+      // Check if WebGL is available
+      const canvas = document.createElement("canvas");
+      const context =
+        canvas.getContext("webgl2") || canvas.getContext("webgl");
+      if (!context) {
+        console.error(
+          "WebGL is not available in this environment. This is likely due to browser sandboxing or disabled graphics acceleration."
+        );
+        const errorDiv = document.createElement("div");
+        errorDiv.className =
+          "flex items-center justify-center w-full h-full bg-gray-900 text-white";
+        errorDiv.innerHTML =
+          "<p>WebGL is not available. Please check your browser settings or try a different browser.</p>";
+        containerRef.current.appendChild(errorDiv);
+        return;
+      }
 
-    const width = containerRef.current.clientWidth;
-    const height = containerRef.current.clientHeight;
+      // 1. Scene Setup
+      const scene = new THREE.Scene();
+      sceneRef.current = scene;
+      scene.background = null;
 
-    // 2. Camera
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-    camera.position.set(0, 0, 20);
-    cameraRef.current = camera;
+      const width = containerRef.current.clientWidth;
+      const height = containerRef.current.clientHeight;
 
-    // 3. Renderer
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: "high-performance",
-    });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+      // 2. Camera
+      const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+      camera.position.set(0, 0, 20);
+      cameraRef.current = camera;
 
-    containerRef.current.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
+      // 3. Renderer
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: "high-performance",
+        failIfMajorPerformanceCaveat: false,
+      });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.1;
+
+      containerRef.current.appendChild(renderer.domElement);
+      rendererRef.current = renderer;
 
     // 4. Lighting (Simple, flat neo-brutalism style)
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -213,11 +234,27 @@ const ChessPiecesScene: React.FC<ChessPiecesSceneProps> = ({ className }) => {
     return () => {
       window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animationRef.current);
-      renderer.dispose();
-      if (containerRef.current) {
-        containerRef.current.removeChild(renderer.domElement);
+      if (rendererRef.current) {
+        rendererRef.current.dispose();
+        if (containerRef.current && containerRef.current.contains(rendererRef.current.domElement)) {
+          containerRef.current.removeChild(rendererRef.current.domElement);
+        }
       }
     };
+    } catch (error) {
+      console.error("Failed to initialize Three.js scene:", error);
+      if (containerRef.current) {
+        const errorDiv = document.createElement("div");
+        errorDiv.className =
+          "flex items-center justify-center w-full h-full bg-gray-900 text-white";
+        errorDiv.innerHTML =
+          "<p>Failed to render 3D scene. Your browser or environment may not support WebGL.</p>";
+        containerRef.current.appendChild(errorDiv);
+      }
+      return () => {
+        // Cleanup for error state
+      };
+    }
   }, []);
 
   return (
