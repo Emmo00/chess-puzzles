@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { UserStats, StreakData } from "@/lib/types";
 import { ChartArea, Flame, Trophy, X } from "lucide-react";
 import Link from "next/link";
+import { PaymentModal } from "./PaymentModal";
+import { useState } from "react";
 
 interface StreakModalProps {
   isOpen: boolean;
@@ -20,9 +22,14 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
     }
   }, [isOpen, userStats]);
 
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
   const handleClose = () => {
     onClose();
   };
+
+  const openPayment = () => setShowPaymentModal(true);
+  const closePayment = () => setShowPaymentModal(false);
 
   if (!isOpen) return null;
 
@@ -109,6 +116,33 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
                   </div>
                 </div>
               </div>
+
+              {/* Go Premium Section */}
+              <div className="bg-amber-100 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1">
+                <h3 className="font-black text-lg uppercase text-black mb-3 flex gap-2">
+                  ⭐ Go Premium
+                </h3>
+                <div className="space-y-2 mb-4 text-sm">
+                  <div className="flex items-start gap-2">
+                    <span className="font-black text-black">✓</span>
+                    <span className="font-bold text-black">Unlimited Puzzles</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="font-black text-black">✓</span>
+                    <span className="font-bold text-black">Golden Badge on Leaderboard</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="font-black text-black">✓</span>
+                    <span className="font-bold text-black">More perks coming soon</span>
+                  </div>
+                </div>
+                <button
+                  onClick={openPayment}
+                  className="w-full bg-black text-amber-100 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-black hover:bg-gray-800 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+                >
+                  Unlock Premium
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -141,6 +175,16 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
           <p className="text-xs">Not operated by Opera or MiniPay</p>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      <PaymentModal 
+        isOpen={showPaymentModal} 
+        onClose={closePayment} 
+        onSuccess={() => {
+          closePayment();
+          handleClose();
+        }} 
+      />
     </div>
   );
 }

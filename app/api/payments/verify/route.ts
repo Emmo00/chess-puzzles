@@ -4,6 +4,7 @@ import { celo } from "viem/chains";
 import { Payment } from "../../../../lib/models/payment.model";
 import { PaymentType } from "../../../../lib/types/payment";
 import { PAYMENT_RECIPIENT, CUSD_ADDRESSES } from "../../../../lib/config/wagmi";
+import { SUPPORTED_STABLES } from "../../../../lib/utils/payment";
 import dbConnect from "../../../../lib/db";
 
 // Create client for Celo mainnet only
@@ -15,7 +16,7 @@ const celoClient = createPublicClient({
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
-    const { transactionHash, walletAddress, paymentType, chainId } = await request.json();
+    const { transactionHash, walletAddress, paymentType, chainId, tokenAddress } = await request.json();
 
     // Log the incoming request for debugging
     console.log("Payment verification request:", {
@@ -23,6 +24,7 @@ export async function POST(request: NextRequest) {
       walletAddress,
       paymentType,
       chainId,
+      tokenAddress,
     });
 
     // Validate inputs
@@ -121,98 +123,118 @@ export async function POST(request: NextRequest) {
       hash: transactionHash as `0x${string}`,
     });
 
-    // Verify transaction details
-    const cusdAddress = CUSD_ADDRESSES[celo.id];
-    if (!cusdAddress) {
-      console.error("cUSD address not found for Celo mainnet");
-      return NextResponse.json({ error: "cUSD not supported on this chain" }, { status: 400 });
-    }
-
-    console.log("Using cUSD address:", cusdAddress);
-
     // Determine expected amount and recipient based on payment type
-    let expectedAmount = "100000000000000000"; // default 0.1 cUSD for daily access
-    let expectedRecipient = PAYMENT_RECIPIENT;
-    let expiresAt: Date = new Date(Date.now() + 24 * 60 * 60 * 1000); // default 24 hours
-
-    // PAYMENT_AMOUNTS and REVENUE_COLLECTOR_CONTRACT are exported from lib/utils/payment
     const { PAYMENT_AMOUNTS, REVENUE_COLLECTOR_CONTRACT } = await import('../../../../lib/utils/payment');
 
+    let expectedAmount: string;
+    let expectedRecipient: string;
+    let expiresAt: Date;
+    let selectedToken: typeof SUPPORTED_STABLES[0] | null = null;
+
     if (paymentType === PaymentType.DAILY_ACCESS) {
-      expectedAmount = PAYMENT_AMOUNTS.DAILY_ACCESS.toString();
-      expectedRecipient = PAYMENT_RECIPIENT;
+      expectedAmount = "100000000000000000"; // 0.1 in wei
+      expectedRecipient = PAYMENT_RECIPIENT.toLowerCase();
       expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     } else if (paymentType === PaymentType.PREMIUM_MONTHLY) {
       expectedAmount = PAYMENT_AMOUNTS[PaymentType.PREMIUM_MONTHLY].toString();
       expectedRecipient = (REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT).toLowerCase();
-      expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     } else if (paymentType === PaymentType.PREMIUM_YEARLY) {
       expectedAmount = PAYMENT_AMOUNTS[PaymentType.PREMIUM_YEARLY].toString();
       expectedRecipient = (REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT).toLowerCase();
-      expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 365 days
+      expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
     } else {
       return NextResponse.json({ error: 'Unknown payment type' }, { status: 400 });
     }
 
+    // Find supported token by address or use provided tokenAddress
+    let tokenToCheck = tokenAddress ? SUPPORTED_STABLES.find(t => t.tokenAddress.toLowerCase() === tokenAddress.toLowerCase()) : null;
+    
+    // If no token specified, check all supported tokens
+    if (!tokenToCheck && !tokenAddress) {
+      console.log("No token address provided, checking all supported stables");
+      // Will check below
+    } else if (!tokenToCheck && tokenAddress) {
+      console.error("Token address not in supported list:", tokenAddress);
+      return NextResponse.json({ error: "Unsupported token" }, { status: 400 });
+    }
+
     // For ERC20 transfers, we need to check the logs
     // Transfer event signature: keccak256("Transfer(address,address,uint256)") = 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
-    const transferEventSignature =
-      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+    const transferEventSignature = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 
     console.log("Looking for transfer logs in transaction, total logs:", receipt.logs.length);
-    const transferLog = receipt.logs.find(
-      (log) =>
-        log.address.toLowerCase() === cusdAddress.toLowerCase() &&
-        log.topics[0] === transferEventSignature &&
-        log.topics[2] &&
-        `0x${log.topics[2].slice(-40)}`.toLowerCase() === expectedRecipient.toLowerCase()
-    );
+    
+    // If token was specified, check only that token
+    // Otherwise, check all supported stablecoins
+    const tokensToCheck = tokenToCheck ? [tokenToCheck] : SUPPORTED_STABLES;
+    let transferLog = null;
+    let usedToken = null;
 
-    if (!transferLog) {
-      console.error(
-        "cUSD Transfer event not found. Available logs from cUSD contract:",
-        receipt.logs
-          .filter((log) => log.address.toLowerCase() === cusdAddress.toLowerCase())
-          .map((log, index) => ({ index, topics: log.topics, address: log.address }))
+    for (const token of tokensToCheck) {
+      const log = receipt.logs.find(
+        (log) =>
+          log.address.toLowerCase() === token.tokenAddress.toLowerCase() &&
+          log.topics[0] === transferEventSignature &&
+          log.topics[2] &&
+          `0x${log.topics[2].slice(-40)}`.toLowerCase() === expectedRecipient.toLowerCase()
       );
-      console.error("Expected cUSD address:", cusdAddress);
-      console.error("Expected Transfer event signature:", transferEventSignature);
+
+      if (log) {
+        transferLog = log;
+        usedToken = token;
+        console.log("Found transfer log for token:", token.symbol);
+        break;
+      }
+    }
+
+    if (!transferLog || !usedToken) {
+      console.error(
+        "Transfer event not found for any supported token. Available logs:",
+        receipt.logs
+          .filter((log) => SUPPORTED_STABLES.some(t => t.tokenAddress.toLowerCase() === log.address.toLowerCase()))
+          .map((log, index) => ({ index, address: log.address, topics: log.topics }))
+      );
       return NextResponse.json(
-        { error: "cUSD Transfer event not found in transaction" },
+        { error: "ERC20 Transfer event not found in transaction" },
         { status: 400 }
       );
     }
 
     console.log("Transfer log found:", transferLog);
 
-    // Decode transfer log (simplified - in production use proper ABI decoding)
+    // Decode transfer log
     // Transfer event: Transfer(address indexed from, address indexed to, uint256 value)
     const fromAddress = `0x${transferLog.topics[1]?.slice(-40)}`;
     const toAddress = `0x${transferLog.topics[2]?.slice(-40)}`;
     const amount = BigInt(transferLog.data).toString();
 
-    console.log("Decoded transfer:", { fromAddress, toAddress, amount, expectedAmount });
+    // Convert expected amount to the token's smallest units
+    const expectedAmountInTokenUnits = (BigInt(expectedAmount) / BigInt(10 ** (18 - usedToken.decimals))).toString();
+
+    console.log("Decoded transfer:", { fromAddress, toAddress, amount, expectedAmountInTokenUnits, tokenSymbol: usedToken.symbol });
     console.log("Verification params:", {
       walletAddress: walletAddress.toLowerCase(),
       expectedRecipient: expectedRecipient.toLowerCase(),
+      tokenDecimals: usedToken.decimals,
     });
 
     // Verify the transfer details
     if (
       fromAddress.toLowerCase() !== walletAddress.toLowerCase() ||
       toAddress.toLowerCase() !== expectedRecipient.toLowerCase() ||
-      amount !== expectedAmount
+      amount !== expectedAmountInTokenUnits
     ) {
       console.error("Transaction verification failed:", {
         fromMatch: fromAddress.toLowerCase() === walletAddress.toLowerCase(),
         toMatch: toAddress.toLowerCase() === expectedRecipient.toLowerCase(),
-        amountMatch: amount === expectedAmount,
+        amountMatch: amount === expectedAmountInTokenUnits,
         fromAddress: fromAddress.toLowerCase(),
         expectedFrom: walletAddress.toLowerCase(),
         toAddress: toAddress.toLowerCase(),
         expectedTo: expectedRecipient.toLowerCase(),
         amount,
-        expectedAmount,
+        expectedAmountInTokenUnits,
       });
       return NextResponse.json(
         { error: "Transaction details do not match payment requirements" },
@@ -230,6 +252,8 @@ export async function POST(request: NextRequest) {
       amount,
       chainId,
       recipient: expectedRecipient.toLowerCase(),
+      tokenAddress: usedToken.tokenAddress,
+      tokenSymbol: usedToken.symbol,
       verified: true,
       expiresAt,
     });

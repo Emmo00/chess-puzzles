@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAccount, usePublicClient, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
-import { encodeFunctionData, erc20Abi } from "viem";
+import { encodeFunctionData, erc20Abi, parseUnits } from "viem";
 
 import revenueCollectorAbiJson from "@/abis/revenue-receiver.json";
 import { FREE_DAILY_PUZZLE_LIMIT, getPremiumPlan } from "../config/premium";
@@ -10,8 +10,8 @@ import { isOnCorrectChain } from "../config/wagmi";
 import { PaymentType } from "../types/payment";
 import {
   CUSD_ABI,
-  getCUSDAddress,
-  PAYMENT_AMOUNTS,
+  PAYMENT_PRICES,
+  SUPPORTED_STABLES,
   PAYMENT_RECIPIENT,
   REVENUE_COLLECTOR_CONTRACT,
 } from "../utils/payment";
@@ -30,6 +30,7 @@ export function usePayment() {
   const [paymentType, setPaymentType] = useState<PaymentType | null>(null);
   const [paymentPhase, setPaymentPhase] = useState<PaymentPhase>("idle");
   const [submittedHash, setSubmittedHash] = useState<`0x${string}` | undefined>(undefined);
+  const [usedTokenAddress, setUsedTokenAddress] = useState<string | undefined>(undefined);
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: submittedHash,
@@ -39,6 +40,31 @@ export function usePayment() {
     setPaymentType(null);
     setPaymentPhase("idle");
     setSubmittedHash(undefined);
+    setUsedTokenAddress(undefined);
+  };
+
+  // Return the preferred token (highest balance) without performing payment
+  const getPreferredToken = async () => {
+    if (!address || !publicClient) return null;
+    const balances: Array<{ token: any; balance: bigint; normalized: number }> = [];
+
+    for (const token of SUPPORTED_STABLES) {
+      try {
+        const bal: bigint = await publicClient.readContract({
+          address: token.tokenAddress as `0x${string}`,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [address as `0x${string}`],
+        });
+        const normalized = Number(bal) / Math.pow(10, token.decimals);
+        balances.push({ token, balance: bal, normalized });
+      } catch (e) {
+        balances.push({ token, balance: BigInt(0), normalized: 0 });
+      }
+    }
+
+    balances.sort((a, b) => b.normalized - a.normalized);
+    return balances[0]?.token ?? null;
   };
 
   const makePayment = async (type: PaymentType) => {
@@ -58,37 +84,82 @@ export function usePayment() {
       setPaymentType(type);
       setSubmittedHash(undefined);
 
-      const cusdAddress = getCUSDAddress(chainId);
+      // Helper: find token with the highest balance for the connected user
+      const balances: Array<{ token: any; balance: bigint; normalized: number }> = [];
 
+      for (const token of SUPPORTED_STABLES) {
+        try {
+          const bal: bigint = await publicClient.readContract({
+            address: token.tokenAddress as `0x${string}`,
+            abi: erc20Abi,
+            functionName: "balanceOf",
+            args: [address as `0x${string}`],
+          });
+          const normalized = Number(bal) / Math.pow(10, token.decimals);
+          balances.push({ token, balance: bal, normalized });
+        } catch (e) {
+          // ignore read errors and treat as zero
+          balances.push({ token, balance: BigInt(0), normalized: 0 });
+        }
+      }
+
+      // pick token with highest normalized balance
+      balances.sort((a, b) => b.normalized - a.normalized);
+      const preferred = balances[0];
+
+      // Determine required amount (smallest units) for this payment type
+      const price = PAYMENT_PRICES[type === PaymentType.DAILY_ACCESS ? 'DAILY_ACCESS' : type];
+      const decimals = preferred?.token?.decimals ?? 18;
+      const requiredAmount = parseUnits(String(price), decimals);
+
+      if (!preferred || BigInt(preferred.balance) < BigInt(requiredAmount)) {
+        // if user doesn't have sufficient balance in their top token, check others
+        const sufficient = balances.find((b) => BigInt(b.balance) >= BigInt(parseUnits(String(price), b.token.decimals)));
+        if (sufficient) {
+          // use the sufficient token
+          preferred.token = sufficient.token;
+        } else {
+          throw new Error("INSUFFICIENT_BALANCE: Please top up one of the supported stable coins (USDT, USDC, cUSD).");
+        }
+      }
+
+      const tokenAddress = preferred.token.tokenAddress as `0x${string}`;
+      const tokenDecimals = preferred.token.decimals;
+      const smallestAmount = parseUnits(String(price), tokenDecimals);
+      
+      // Store the token address for verification
+      setUsedTokenAddress(tokenAddress);
+
+      // Daily access: simple ERC20 transfer to PAYMENT_RECIPIENT
       if (type === PaymentType.DAILY_ACCESS) {
-        const amount = PAYMENT_AMOUNTS.DAILY_ACCESS;
         const data = encodeFunctionData({
-          abi: CUSD_ABI,
+          abi: erc20Abi,
           functionName: "transfer",
-          args: [PAYMENT_RECIPIENT, amount],
+          args: [PAYMENT_RECIPIENT, smallestAmount],
         });
 
         const feeCurrency = await selectSupportedFeeCurrency({
           publicClient,
           account: address as `0x${string}`,
-          to: cusdAddress as `0x${string}`,
+          to: tokenAddress,
           data,
         });
 
         setPaymentPhase("confirming");
         const hash = await writeContractAsync({
           account: address,
-          address: cusdAddress as `0x${string}`,
-          abi: CUSD_ABI,
+          address: tokenAddress,
+          abi: erc20Abi,
           functionName: "transfer",
-          args: [PAYMENT_RECIPIENT as `0x${string}`, amount],
-          feeCurrency,
+          args: [PAYMENT_RECIPIENT as `0x${string}`, smallestAmount],
+          feeCurrency: preferred.token.feeCurrencyAddress as `0x${string}`,
         });
 
         setSubmittedHash(hash);
         return hash;
       }
 
+      // Premium plans: approve + deposit to revenue collector
       const plan = getPremiumPlan(type);
       if (!plan) {
         throw new Error("Unsupported payment plan");
@@ -98,17 +169,15 @@ export function usePayment() {
         throw new Error("Revenue collector contract is not configured");
       }
 
-      const amount = plan.amount;
       const collectorAddress = REVENUE_COLLECTOR_CONTRACT as `0x${string}`;
-      const cusdContract = cusdAddress as `0x${string}`;
 
       setPaymentPhase("approving");
       const approvalHash = await writeContractAsync({
         account: address,
-        address: cusdContract,
+        address: tokenAddress,
         abi: erc20Abi,
         functionName: "approve",
-        args: [collectorAddress, amount],
+        args: [collectorAddress, smallestAmount],
       });
 
       await publicClient.waitForTransactionReceipt({
@@ -119,7 +188,7 @@ export function usePayment() {
       const depositData = encodeFunctionData({
         abi: revenueCollectorAbi,
         functionName: "deposit",
-        args: [cusdContract, amount],
+        args: [tokenAddress, smallestAmount],
       });
 
       const feeCurrency = await selectSupportedFeeCurrency({
@@ -134,8 +203,8 @@ export function usePayment() {
         address: collectorAddress,
         abi: revenueCollectorAbi,
         functionName: "deposit",
-        args: [cusdContract, amount],
-        feeCurrency,
+        args: [tokenAddress, smallestAmount],
+        feeCurrency: preferred.token.feeCurrencyAddress as `0x${string}`,
       });
 
       setPaymentPhase("confirming");
@@ -166,6 +235,7 @@ export function usePayment() {
             walletAddress: address,
             paymentType,
             chainId,
+            tokenAddress: usedTokenAddress,
           }),
         });
 
@@ -209,6 +279,7 @@ export function usePayment() {
   return {
     makePayment,
     verifyPayment,
+    getPreferredToken,
     isPaymentPending: paymentPhase === "approving" || paymentPhase === "depositing",
     isConfirming,
     isSuccess,

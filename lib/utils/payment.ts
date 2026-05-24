@@ -1,29 +1,43 @@
 import { parseUnits } from "viem";
-import { CUSD_ADDRESSES, PAYMENT_RECIPIENT, REVENUE_COLLECTOR_CONTRACT } from "../config/wagmi";
+import { PAYMENT_RECIPIENT, REVENUE_COLLECTOR_CONTRACT } from "../config/wagmi";
 import { PREMIUM_PLANS } from "../config/premium";
 import { stableTokenABI } from "@celo/abis";
 import { PaymentType } from "../types/payment";
 
-// Payment amounts in cUSD (18 decimals)
-export const PAYMENT_AMOUNTS = {
-  DAILY_ACCESS: parseUnits("0.1", 18), // 0.1 cUSD
-  [PaymentType.PREMIUM_MONTHLY]: PREMIUM_PLANS[PaymentType.PREMIUM_MONTHLY].amount,
-  [PaymentType.PREMIUM_YEARLY]: PREMIUM_PLANS[PaymentType.PREMIUM_YEARLY].amount,
+// Supported stable coins on Sollar (addresses and decimals)
+export const SUPPORTED_STABLES = [
+  {
+    symbol: "USDT",
+    tokenAddress: "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e",
+    feeCurrencyAddress: "0x0e2a3e05bc9a16f5292a6170456a710cb89c6f72",
+    decimals: 6,
+  },
+  {
+    symbol: "USDC",
+    tokenAddress: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
+    feeCurrencyAddress: "0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B",
+    decimals: 6,
+  },
+  {
+    symbol: "cUSD",
+    tokenAddress: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+    feeCurrencyAddress: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+    decimals: 18,
+  },
+];
+
+// Human-readable prices
+export const PAYMENT_PRICES = {
+  DAILY_ACCESS: "0.1",
+  [PaymentType.PREMIUM_MONTHLY]: "2",
+  [PaymentType.PREMIUM_YEARLY]: "20",
 } as const;
 
-// Use Celo's stable token ABI for cUSD
+// ERC20 ABI helper (use Celo stable token ABI where appropriate)
 export const CUSD_ABI = stableTokenABI;
 
-export function getCUSDAddress(chainId: number): string {
-  const address = CUSD_ADDRESSES[chainId as keyof typeof CUSD_ADDRESSES];
-  if (!address) {
-    throw new Error(`cUSD not supported on chain ${chainId}`);
-  }
-  return address;
-}
-
-export function formatCUSD(amount: bigint): string {
-  return (Number(amount) / 1e18).toFixed(2);
+export function formatAmount(amount: bigint, decimals = 18): string {
+  return (Number(amount) / Math.pow(10, decimals)).toFixed(decimals === 18 ? 2 : 6);
 }
 
 // MiniPay auto-connect helper
@@ -37,7 +51,6 @@ export async function autoConnectMiniPay(): Promise<string | null> {
       method: "eth_requestAccounts",
       params: [],
     });
-    
     return accounts[0] || null;
   } catch (error) {
     console.error('Failed to auto-connect MiniPay:', error);
@@ -45,5 +58,5 @@ export async function autoConnectMiniPay(): Promise<string | null> {
   }
 }
 
-export { PAYMENT_RECIPIENT };
-export { REVENUE_COLLECTOR_CONTRACT };
+export { PAYMENT_RECIPIENT, REVENUE_COLLECTOR_CONTRACT };
+

@@ -29,10 +29,22 @@ interface PaymentModalProps {
 
 export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) {
   const { address } = useAccount()
-  const { makePayment, verifyPayment, isPaymentPending, isConfirming, isSuccess, transactionHash } = usePayment()
+  const { makePayment, verifyPayment, getPreferredToken, isPaymentPending, isConfirming, isSuccess, transactionHash } = usePayment()
   const [selectedPayment, setSelectedPayment] = useState<PaymentType | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isVerifying, setIsVerifying] = useState(false)
+  const [preferredToken, setPreferredToken] = useState<any | null>(null)
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const t = await getPreferredToken()
+        setPreferredToken(t)
+      } catch (e) {
+        // ignore
+      }
+    })()
+  }, [address])
 
   // Auto-verify payment when transaction is successful
   useEffect(() => {
@@ -147,7 +159,6 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                   <div className="p-3 bg-white border-2 border-black text-center">
                     <div className="font-black">Monthly</div>
                     <div className="font-bold text-xl">$2</div>
-                    <div className="text-xs mt-1">Billed monthly · Cancel anytime</div>
                     <button
                       onClick={() => handlePayment(PaymentType.PREMIUM_MONTHLY)}
                       className="mt-3 w-full bg-black text-white py-2 px-3 font-black text-sm border-2 border-black hover:bg-gray-800 transition-all"
@@ -185,16 +196,16 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                   </span>
                 </div>
                 <p className="text-black font-bold text-sm mb-2 uppercase tracking-wide flex items-center gap-1">
-                  <Zap className="w-4 h-4" /> 3 Puzzles Today!
+                  <Zap className="w-4 h-4" /> Unlimited puzzles today!
                 </p>
                 <p className="text-black font-bold text-xs mb-4 opacity-80">
-                  Solve 3 chess puzzles today
+                  Solve unlimited chess puzzles for 24 hours
                 </p>
                 <button
                   onClick={() => handlePayment(PaymentType.DAILY_ACCESS)}
                   className="w-full bg-black text-cyan-300 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-cyan-300 hover:bg-gray-800 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 flex items-center justify-center gap-2"
                 >
-                  <Smartphone className="w-4 h-4" /> PAY $0.10 cUSD
+                  <Smartphone className="w-4 h-4" /> {preferredToken ? `PAY with ${preferredToken.symbol}` : 'PAY'}
                 </button>
               </div>
 
