@@ -10,6 +10,12 @@
       "source": "emmo00/chess-puzzles-contracts",
       "sourceType": "github",
       "computedHash": "834c51d9cbd0536ac50aed4cdb4fe55828f414c62dd857504beb9d89fc5d7bff"
+    },
+    "neobrutalist-web-designer": {
+      "source": "erichowens/some_claude_skills",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/neobrutalist-web-designer/SKILL.md",
+      "computedHash": "3d892d7fa39233e72045c3858e49d3f57999d5eb7a551ce4c2f5c66a983b32e7"
     }
   }
 }

@@ -28,18 +28,18 @@ export function ChainNotification() {
 
   return (
     <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
-      <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-3 shadow-lg max-w-sm">
+      <div className="bg-yellow-300 border-4 border-black p-3 shadow-[8px_8px_0px_#000000] max-w-sm">
         <div className="flex items-center gap-2">
-          <TriangleAlert className="w-4 h-4 text-yellow-600" />
+          <TriangleAlert className="w-4 h-4 text-black" />
           <div className="text-sm">
-            <div className="font-medium text-yellow-800">Wrong Network</div>
-            <div className="text-yellow-700">
+            <div className="font-black uppercase text-black">Wrong Network</div>
+            <div className="text-black">
               Please switch to {PREFERRED_CHAIN.name} for the best experience.
             </div>
           </div>
           <button
             onClick={() => setShow(false)}
-            className="ml-2 text-yellow-600 hover:text-yellow-800"
+            className="ml-2 bg-black text-white border-2 border-black px-2 py-1 font-black uppercase"
           >
             <X className="w-4 h-4" />
           </button>

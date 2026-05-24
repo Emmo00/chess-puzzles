@@ -1,6 +1,16 @@
 @import 'tailwindcss';
 
 :root {
+  --neo-cream: #f7f0e1;
+  --neo-paper: #fffdf7;
+  --neo-ink: #000000;
+  --neo-blue: #2196f3;
+  --neo-cyan: #22d3ee;
+  --neo-yellow: #facc15;
+  --neo-orange: #fb923c;
+  --neo-green: #4ade80;
+  --neo-purple: #c084fc;
+  --neo-red: #f87171;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -144,8 +154,29 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    background: var(--neo-cream);
+  }
   body {
     @apply bg-background text-foreground;
+    background: var(--neo-cream);
+    color: var(--neo-ink);
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+  }
+
+  button {
+    font-family: var(--font-display);
+  }
+
+  ::selection {
+    background: var(--neo-yellow);
+    color: var(--neo-ink);
   }
 }
 

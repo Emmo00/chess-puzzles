@@ -17,10 +17,7 @@ export default function StreakBadge({ days, onClick }: StreakBadgeProps) {
 
   if (!mounted) return null;
 
-  const getStreakEmoji = () => {
-
-    return <Flame className="w-6 h-6 text-orange-500" />;
-  };
+  const getStreakEmoji = () => <Flame className="w-6 h-6 text-orange-500" />;
 
   return (
     <div
@@ -31,7 +28,7 @@ export default function StreakBadge({ days, onClick }: StreakBadgeProps) {
     >
       <button
         onClick={onClick}
-        className="border-4 border-black px-4 py-2 font-black text-sm tracking-wider uppercase transition-all duration-200 transform hover:scale-105 hover:rotate-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] bg-white text-black"
+        className="border-4 border-black px-4 py-2 font-black text-sm tracking-wider uppercase transition-all duration-150 transform hover:translate-x-[-2px] hover:translate-y-[-2px] hover:rotate-1 shadow-[5px_5px_0px_#000000] hover:shadow-[7px_7px_0px_#000000] bg-yellow-100 text-black"
       >
         <div className="flex items-center gap-2">
           <span className="text-lg">{getStreakEmoji()}</span>

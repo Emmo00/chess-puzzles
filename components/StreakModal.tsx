@@ -43,7 +43,7 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
       <div className="absolute inset-0 bg-black/80" onClick={handleClose} />
 
       {/* Neo-brutalist modal */}
-      <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-md w-full max-h-[85vh] transform rotate-1 flex flex-col">
+      <div className="relative bg-white border-4 border-black shadow-[10px_10px_0px_#000000] max-w-md w-full max-h-[85vh] transform rotate-1 flex flex-col">
         {/* Fixed header */}
         <div className="bg-purple-400 border-b-4 border-black p-4 shrink-0">
           <div className="flex justify-between items-center">
@@ -52,7 +52,7 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
             </h2>
             <button
               onClick={handleClose}
-              className="w-8 h-8 bg-red-500 border-2 border-black text-black hover:bg-red-400 transition-colors shadow-[2px_2px_0px_rgba(0,0,0,1)] flex items-center justify-center"
+              className="w-8 h-8 bg-red-500 border-2 border-black text-black hover:bg-red-400 transition-colors shadow-[2px_2px_0px_#000000] flex items-center justify-center"
             >
               <X className="w-4 h-4" />
             </button>
@@ -63,7 +63,7 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
         <div className="p-6 bg-white space-y-6 overflow-y-auto flex-1 min-h-0">
           {isLoading ? (
             <div className="text-center py-8">
-              <div className="w-16 h-16 mx-auto mb-4 bg-black border-4 border-purple-400 animate-bounce">
+              <div className="w-16 h-16 mx-auto mb-4 bg-black border-4 border-purple-400 animate-bounce shadow-[4px_4px_0px_#000000]">
                 <div className="w-full h-full bg-purple-400 border-2 border-black animate-pulse"></div>
               </div>
               <p className="font-black text-black uppercase tracking-wide">Loading...</p>
@@ -71,7 +71,7 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
           ) : (
             <>
               {/* Streak Summary */}
-              <div className="bg-orange-300 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1">
+              <div className="bg-orange-300 border-4 border-black p-4 shadow-[6px_6px_0px_#000000] transform -rotate-1">
                 <h3 className="font-black text-lg uppercase text-black mb-3 flex gap-1">
                   <ChartArea fill="blue" className="w-6 h-6 text-red-500" /> Streak Stats
                 </h3>
@@ -96,7 +96,7 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
               </div>
 
               {/* Points & Puzzles Summary */}
-              <div className="bg-cyan-300 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1">
+              <div className="bg-cyan-300 border-4 border-black p-4 shadow-[6px_6px_0px_#000000] transform rotate-1">
                 <h3 className="font-black text-lg uppercase text-black mb-3 flex gap-2">
                   <Trophy fill="gold" className="w-6 h-6 text-yellow-500" /> Progress
                 </h3>
@@ -117,7 +117,7 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
               </div>
 
               {/* Go Premium Section */}
-              <div className="bg-amber-100 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1">
+              <div className="bg-amber-100 border-4 border-black p-4 shadow-[6px_6px_0px_#000000] transform -rotate-1">
                 <h3 className="font-black text-lg uppercase text-black mb-3 flex gap-2">
                   ⭐ Go Premium
                 </h3>
@@ -137,7 +137,7 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
                 </div>
                 <button
                   onClick={openPayment}
-                  className="w-full bg-black text-amber-100 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-black hover:bg-gray-800 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+                  className="w-full bg-black text-amber-100 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-black hover:bg-gray-800 transition-all shadow-[3px_3px_0px_#000000]"
                 >
                   Unlock Premium
                 </button>
@@ -147,7 +147,7 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
         </div>
 
         {/* Subtle footer */}
-        <div className="border-t-4 border-black bg-gray-50 px-4 py-3 text-xs text-gray-600 space-y-1 text-center shrink-0">
+        <div className="border-t-4 border-black bg-yellow-100 px-4 py-3 text-xs text-black space-y-1 text-center shrink-0">
           <div className="flex justify-center gap-4">
             <Link href="/terms-of-service" className="hover:text-black transition-colors font-bold">
               Terms

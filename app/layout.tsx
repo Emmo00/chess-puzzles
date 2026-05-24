@@ -7,15 +7,18 @@ import { WalletProvider } from "../lib/providers/WalletProvider";
 import { FarcasterMiniAppReady } from "@/components/FarcasterMiniAppReady";
 import { BackgroundMusic } from "@/components/BackgroundMusic";
 import { GlobalErrorListener } from "@/components/GlobalErrorListener";
-import { Inter, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
+import { Archivo_Black, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 
 // Initialize fonts
-const inter = Inter({ subsets: ["latin"] });
+const displayFont = Archivo_Black({ subsets: ["latin"], weight: "400" });
+const bodyFont = Space_Grotesk({ subsets: ["latin"], weight: ["400", "500", "700"] });
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] });
-const sourceSerif4 = Source_Serif_4({
-  subsets: ["latin"],
-  weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
-});
+
+const bodyStyle = {
+  ["--font-display" as "--font-display"]: displayFont.style.fontFamily,
+  ["--font-body" as "--font-body"]: bodyFont.style.fontFamily,
+  ["--font-mono" as "--font-mono"]: jetbrainsMono.style.fontFamily,
+} as React.CSSProperties;
 
 const FALLBACK_APP_URL = "https://chesspuzzles.xyz";
 const appBaseUrl = (() => {
@@ -111,7 +114,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className={`${inter.className} antialiased`}>
+      <body className={`${bodyFont.className} antialiased bg-[var(--neo-cream)] text-black`} style={bodyStyle}>
         <WalletProvider>
           <GlobalErrorListener />
           <FarcasterMiniAppReady />

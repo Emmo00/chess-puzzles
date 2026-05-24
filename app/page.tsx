@@ -140,7 +140,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="relative w-full h-screen bg-gray-50 text-black overflow-hidden font-sans selection:bg-orange-100 flex flex-col">
+    <div className="relative w-full h-screen bg-[var(--neo-cream)] text-black overflow-hidden font-sans selection:bg-yellow-300 flex flex-col">
       {/* Background 3D Scene */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <ChessPiecesScene />
@@ -163,9 +163,9 @@ export default function Home() {
         <main className="flex-1 flex flex-col items-center px-4 overflow-hidden w-full max-w-md mx-auto">
           {/* Headline */}
           <div className="mt-12 mb-auto flex flex-col items-center justify-center">
-            <h1 className="text-5xl md:text-6xl font-black text-center leading-[1.1] text-gray-900 tracking-tight drop-shadow-sm">
+            <h1 className="text-5xl md:text-6xl font-black text-center leading-[0.95] text-black tracking-[-0.05em] uppercase">
               Be the King of{" "}
-              <span className="text-orange-400 bg-black px-2 inline-block transform -rotate-2 shadow-lg">
+              <span className="text-yellow-300 bg-black px-3 inline-block transform -rotate-2 shadow-[6px_6px_0px_#000000] border-4 border-black">
                 Chess
               </span>
             </h1>

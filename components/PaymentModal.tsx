@@ -63,16 +63,17 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
       setError(null)
       setSelectedPayment(type)
       await makePayment(type)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Payment error:', error)
-      setError(error instanceof Error ? error.message : 'Payment failed')
+      const short = error?.shortMessage || error?.short || (error instanceof Error ? error.message : String(error))
+      setError(short || 'Payment failed')
       setSelectedPayment(null)
     }
   }
 
   const handleVerifyPayment = async () => {
     if (isVerifying) return
-    
+
     try {
       setIsVerifying(true)
       setError(null) // Clear any previous errors
@@ -92,7 +93,8 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
       }
     } catch (error) {
       console.error('Verification error:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Failed to verify payment'
+      const errAny = error as any
+      const errorMessage = errAny?.shortMessage || errAny?.short || (error instanceof Error ? error.message : 'Failed to verify payment')
       setError(errorMessage)
       setIsVerifying(false)
     }
@@ -105,22 +107,26 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
     setError(null)
   }
 
+  const monthlyLoading = selectedPayment === PaymentType.PREMIUM_MONTHLY && (isPaymentPending || isConfirming || isVerifying)
+  const yearlyLoading = selectedPayment === PaymentType.PREMIUM_YEARLY && (isPaymentPending || isConfirming || isVerifying)
+  const dailyLoading = selectedPayment === PaymentType.DAILY_ACCESS && (isPaymentPending || isConfirming || isVerifying)
+
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 p-4 flex items-center justify-center pointer-events-auto" >
       {/* Neo-brutalist backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/80"
         onClick={handleClose}
       />
-      
+
       {/* Neo-brutalist modal */}
-      <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-md w-full transform rotate-1">
+      <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-md w-full transform rotate-1 max-h-[90vh] overflow-hidden">
         <div className="bg-orange-400 border-b-4 border-black p-4">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-black uppercase tracking-wider text-black flex items-center gap-2">
-              <Castle className="w-7 h-7" /> ACCESS PUZZLES
+              <BadgeCheck className="w-5 h-5" /> Go Premium
             </h2>
             <button
               onClick={handleClose}
@@ -132,7 +138,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
           </div>
         </div>
 
-        <div className="p-6 bg-white">
+        <div className="p-6 bg-white overflow-auto max-h-[calc(90vh-6rem)]">
           {error && (
             <div className="bg-red-400 border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
               <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
@@ -142,40 +148,49 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
             </div>
           )}
 
-          {!isPaymentPending && !isConfirming && !isSuccess && !isVerifying && (
+          {!isSuccess && !isVerifying && (
             <div className="space-y-4">
               {/* Premium Plans */}
               <div className="bg-amber-100 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1">
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-black text-lg uppercase text-black flex items-center gap-2">
-                    <BadgeCheck className="w-5 h-5" /> Go Premium
-                  </h3>
-                  <span className="bg-black text-amber-100 px-3 py-1 font-black text-xl border-2 border-amber-100">
-                    {PREMIUM_PLANS[PaymentType.PREMIUM_MONTHLY].label} / {PREMIUM_PLANS[PaymentType.PREMIUM_YEARLY].label}
-                  </span>
+
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div className="p-3 bg-white border-2 border-black text-center">
+                  <div className="p-3 bg-white border-2 border-black text-center flex flex-col">
                     <div className="font-black">Monthly</div>
                     <div className="font-bold text-xl">$2</div>
                     <button
                       onClick={() => handlePayment(PaymentType.PREMIUM_MONTHLY)}
-                      className="mt-3 w-full bg-black text-white py-2 px-3 font-black text-sm border-2 border-black hover:bg-gray-800 transition-all"
+                      className="mt-3 w-full bg-black text-white py-2 px-3 font-black text-sm border-2 border-black hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-auto"
+                      disabled={isPaymentPending || isConfirming || Boolean(selectedPayment && selectedPayment !== PaymentType.PREMIUM_MONTHLY)}
                     >
-                      Start Monthly
+                      {monthlyLoading ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" /> Processing...
+                        </>
+                      ) : (
+                        'Start Monthly'
+                      )}
                     </button>
                   </div>
 
-                  <div className="p-3 bg-white border-2 border-black text-center">
+                  <div className="p-3 bg-white border-2 border-black text-center flex flex-col">
                     <div className="font-black">Yearly</div>
                     <div className="font-bold text-xl">$20</div>
                     <div className="text-xs mt-1">Best value · Save 2 months</div>
                     <button
                       onClick={() => handlePayment(PaymentType.PREMIUM_YEARLY)}
-                      className="mt-3 w-full bg-black text-white py-2 px-3 font-black text-sm border-2 border-black hover:bg-gray-800 transition-all"
+                      className="mt-3 w-full bg-black text-white py-2 px-3 font-black text-sm border-2 border-black hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-auto"
+                      disabled={isPaymentPending || isConfirming || Boolean(selectedPayment && selectedPayment !== PaymentType.PREMIUM_YEARLY)}
                     >
-                      Start Yearly
+                      {yearlyLoading ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" /> Processing...
+                        </>
+                      ) : (
+                        'Start Yearly'
+                      )}
                     </button>
                   </div>
                 </div>
@@ -204,8 +219,17 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                 <button
                   onClick={() => handlePayment(PaymentType.DAILY_ACCESS)}
                   className="w-full bg-black text-cyan-300 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-cyan-300 hover:bg-gray-800 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 flex items-center justify-center gap-2"
+                  disabled={isPaymentPending || isConfirming || Boolean(selectedPayment && selectedPayment !== PaymentType.DAILY_ACCESS)}
                 >
-                  <Smartphone className="w-4 h-4" /> {preferredToken ? `PAY with ${preferredToken.symbol}` : 'PAY'}
+                  {dailyLoading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" /> Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Smartphone className="w-4 h-4" /> {preferredToken ? `PAY with ${preferredToken.symbol}` : 'PAY'}
+                    </>
+                  )}
                 </button>
               </div>
 

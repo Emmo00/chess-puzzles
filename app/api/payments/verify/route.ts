@@ -3,8 +3,9 @@ import { createPublicClient, http } from "viem";
 import { celo } from "viem/chains";
 import { Payment } from "../../../../lib/models/payment.model";
 import { PaymentType } from "../../../../lib/types/payment";
-import { PAYMENT_RECIPIENT, CUSD_ADDRESSES } from "../../../../lib/config/wagmi";
+import { PAYMENT_RECIPIENT, CUSD_ADDRESSES, REVENUE_COLLECTOR_CONTRACT } from "../../../../lib/config/wagmi";
 import { SUPPORTED_STABLES } from "../../../../lib/utils/payment";
+import { PREMIUM_PLANS } from "../../../../lib/config/premium";
 import dbConnect from "../../../../lib/db";
 
 // Create client for Celo mainnet only
@@ -124,8 +125,6 @@ export async function POST(request: NextRequest) {
     });
 
     // Determine expected amount and recipient based on payment type
-    const { PAYMENT_AMOUNTS, REVENUE_COLLECTOR_CONTRACT } = await import('../../../../lib/utils/payment');
-
     let expectedAmount: string;
     let expectedRecipient: string;
     let expiresAt: Date;
@@ -136,11 +135,11 @@ export async function POST(request: NextRequest) {
       expectedRecipient = PAYMENT_RECIPIENT.toLowerCase();
       expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     } else if (paymentType === PaymentType.PREMIUM_MONTHLY) {
-      expectedAmount = PAYMENT_AMOUNTS[PaymentType.PREMIUM_MONTHLY].toString();
+      expectedAmount = PREMIUM_PLANS[PaymentType.PREMIUM_MONTHLY].amount.toString();
       expectedRecipient = (REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT).toLowerCase();
       expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     } else if (paymentType === PaymentType.PREMIUM_YEARLY) {
-      expectedAmount = PAYMENT_AMOUNTS[PaymentType.PREMIUM_YEARLY].toString();
+      expectedAmount = PREMIUM_PLANS[PaymentType.PREMIUM_YEARLY].amount.toString();
       expectedRecipient = (REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT).toLowerCase();
       expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
     } else {
