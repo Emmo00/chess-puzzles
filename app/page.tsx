@@ -106,7 +106,7 @@ export default function Home() {
   const ctaBlocks = [
     {
       id: 1,
-      title: "Puzzles",
+      title: "Solve Puzzles",
       subtitle: "Daily + Classic",
       ribbonText: "Earn cash",
       accentColor: hasAccess ? "bg-green-400" : "bg-cyan-400",
