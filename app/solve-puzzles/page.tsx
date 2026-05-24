@@ -20,6 +20,7 @@ export default function SolvePuzzlesPage() {
   const [paymentStatus, setPaymentStatus] = useState<{
     hasAccess: boolean;
     hasDailyAccess?: boolean;
+    hasPremiumAccess?: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [mistakeCount, setMistakeCount] = useState(0);

@@ -139,7 +139,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                     <BadgeCheck className="w-5 h-5" /> Go Premium
                   </h3>
                   <span className="bg-black text-amber-100 px-3 py-1 font-black text-xl border-2 border-amber-100">
-                    {PREMIUM_PLANS.monthly.label} / {PREMIUM_PLANS.yearly.label}
+                    {PREMIUM_PLANS[PaymentType.PREMIUM_MONTHLY].label} / {PREMIUM_PLANS[PaymentType.PREMIUM_YEARLY].label}
                   </span>
                 </div>
 
