@@ -12,6 +12,7 @@ import { getBasePoints, getHintMultiplier } from "../../lib/utils/points";
 import { getThemeById } from "../../lib/config/puzzleThemes";
 import { FREE_DAILY_PUZZLE_LIMIT } from "../../lib/config/premium";
 import { TelegramSupportLink } from "@/components/TelegramSupportLink";
+import { PaymentModal } from "@/components/PaymentModal";
 
 type HintStage = 'none' | 'piece' | 'move';
 
@@ -52,6 +53,7 @@ export default function SolvePuzzlesPage() {
   
   // Completion modal state
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [currentTurn, setCurrentTurn] = useState<"w" | "b">("w");
@@ -543,19 +545,40 @@ export default function SolvePuzzlesPage() {
                 Daily Limit Reached! <Ban className="w-8 h-8 shrink-0" />
               </h2>
               <p className="text-lg font-bold text-black uppercase">You&apos;ve solved all {MAX_DAILY_PUZZLES} puzzles for today.</p>
-              <p className="text-md font-bold text-black mt-2 uppercase">Come back tomorrow for more puzzles!</p>
+              <p className="text-md font-bold text-black mt-2 uppercase">Upgrade to Premium to unlock unlimited puzzles.</p>
               <TelegramSupportLink />
             </div>
 
-            <Link
-              href="/"
-              className="inline-block w-full bg-black text-white py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
-            >
-              GO HOME
-            </Link>
+            <div className="space-y-2">
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                className="inline-block w-full bg-amber-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
+              >
+                GO PREMIUM
+              </button>
+
+              <Link
+                href="/"
+                className="inline-block w-full bg-black text-white py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
+              >
+                GO HOME
+              </Link>
+            </div>
           </div>
         )}
       </main>
+
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSuccess={async () => {
+          // Refresh payment status and counts after successful purchase
+          await checkPaymentStatus();
+          await checkSolvedPuzzlesCount();
+          setShowPaymentModal(false);
+        }}
+      />
+
     </div>
   );
 }
