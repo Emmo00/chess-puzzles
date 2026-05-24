@@ -5,7 +5,6 @@ import { UserStats, StreakData } from "@/lib/types";
 import { ChartArea, Flame, Trophy, X } from "lucide-react";
 import Link from "next/link";
 import { PaymentModal } from "./PaymentModal";
-import { useState } from "react";
 
 interface StreakModalProps {
   isOpen: boolean;
