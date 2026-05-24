@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Castle, DollarSign, Puzzle, X } from "lucide-react";
+import { FREE_DAILY_PUZZLE_LIMIT } from "../lib/config/premium";
 
 interface PuzzlesActionModalProps {
   isOpen: boolean;
@@ -66,7 +67,7 @@ export function PuzzlesActionModal({
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="font-black text-lg uppercase text-black">Solve 5 Puzzles</p>
+                <p className="font-black text-lg uppercase text-black">Solve {FREE_DAILY_PUZZLE_LIMIT} Puzzles</p>
                 <p className="font-bold text-xs uppercase text-black/80 mt-1">
                   Classic mode with points and streak progression
                 </p>

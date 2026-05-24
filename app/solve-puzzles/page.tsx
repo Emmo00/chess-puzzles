@@ -10,6 +10,7 @@ import { useUserStats } from "../../lib/hooks/useUserStats";
 import { Puzzle } from "../../lib/types";
 import { getBasePoints, getHintMultiplier } from "../../lib/utils/points";
 import { getThemeById } from "../../lib/config/puzzleThemes";
+import { FREE_DAILY_PUZZLE_LIMIT } from "../../lib/config/premium";
 import { TelegramSupportLink } from "@/components/TelegramSupportLink";
 
 type HintStage = 'none' | 'piece' | 'move';
@@ -134,8 +135,8 @@ export default function SolvePuzzlesPage() {
         },
       });
 
-      if (response.status === 429) {
-        // Daily limit reached - update count to show exhausted state
+      if (response.status === 429 || response.status === 402) {
+        // Daily limit reached or payment required - update count to show exhausted state
         setSolvedPuzzlesCount(MAX_DAILY_PUZZLES);
         return;
       }
@@ -301,11 +302,13 @@ export default function SolvePuzzlesPage() {
 
   // Calculate limits based on payment status
   const getMaxDailyPuzzles = () => {
-    return 5;
+    // Premium users get unlimited puzzles
+    if (paymentStatus?.hasPremiumAccess) return Number.MAX_SAFE_INTEGER;
+    return FREE_DAILY_PUZZLE_LIMIT;
   };
 
   const MAX_DAILY_PUZZLES = getMaxDailyPuzzles();
-  const isAccessExhausted = solvedPuzzlesCount >= MAX_DAILY_PUZZLES;
+  const isAccessExhausted = !paymentStatus?.hasPremiumAccess && solvedPuzzlesCount >= MAX_DAILY_PUZZLES;
 
   return (
     <div className="min-h-screen w-full bg-white text-black flex flex-col">
@@ -324,7 +327,7 @@ export default function SolvePuzzlesPage() {
             }`}
           >
             <span className="inline-flex items-center gap-1">
-              <Zap className="w-4 h-4" /> PUZZLES ({solvedPuzzlesCount}/{MAX_DAILY_PUZZLES})
+              <Zap className="w-4 h-4" /> PUZZLES ({solvedPuzzlesCount}/{paymentStatus?.hasPremiumAccess ? '∞' : MAX_DAILY_PUZZLES})
             </span>
           </div>
         </div>

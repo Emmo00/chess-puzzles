@@ -1,4 +1,5 @@
 import userModel from "../models/users.model";
+import PremiumService from "./premium.service";
 
 export interface LeaderboardEntry {
   rank: number;
@@ -8,6 +9,8 @@ export interface LeaderboardEntry {
   totalPoints: number;
   currentStreak: number;
   longestStreak: number;
+  isPremium?: boolean;
+  premiumPlanLabel?: string | null;
 }
 
 export interface LeaderboardResponse {
@@ -20,6 +23,7 @@ export interface LeaderboardResponse {
 
 class LeaderboardService {
   public users = userModel;
+  private premiumService = new PremiumService();
 
   /**
    * Get leaderboard ranked by puzzles solved (primary) and points (secondary)
@@ -53,14 +57,35 @@ class LeaderboardService {
       longestStreak: user.longestStreak || 0,
     }));
 
+    // Enrich leaderboard entries with premium status in bulk
+    const walletAddresses = leaderboard.map((e) => e.walletAddress).filter(Boolean);
+    const premiumMap = await this.premiumService.getActivePremiumWalletMap(walletAddresses as string[]);
+
+    const enriched = leaderboard.map((entry) => {
+      const premium = premiumMap.get(entry.walletAddress?.toLowerCase() || "");
+      return {
+        ...entry,
+        isPremium: !!premium,
+        premiumPlanLabel: premium?.planLabel ?? null,
+      } as LeaderboardEntry;
+    });
+
     // Get user's rank if wallet address provided
     let userRank: LeaderboardEntry | null = null;
     if (userWalletAddress) {
-      userRank = await this.getUserRank(userWalletAddress);
+      const rawUserRank = await this.getUserRank(userWalletAddress);
+      if (rawUserRank) {
+        const premium = (await this.premiumService.getActivePremiumPayment(userWalletAddress)) as any;
+        userRank = {
+          ...rawUserRank,
+          isPremium: !!premium,
+          premiumPlanLabel: premium?.planLabel ?? null,
+        };
+      }
     }
 
     return {
-      leaderboard,
+      leaderboard: enriched,
       total,
       page,
       limit,

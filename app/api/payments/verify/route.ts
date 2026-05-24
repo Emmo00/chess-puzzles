@@ -130,8 +130,29 @@ export async function POST(request: NextRequest) {
 
     console.log("Using cUSD address:", cusdAddress);
 
-    // Expected amount for cUSD (18 decimals)
-    const expectedAmount = "100000000000000000"; // 0.1 cUSD for daily access
+    // Determine expected amount and recipient based on payment type
+    let expectedAmount = "100000000000000000"; // default 0.1 cUSD for daily access
+    let expectedRecipient = PAYMENT_RECIPIENT;
+    let expiresAt: Date = new Date(Date.now() + 24 * 60 * 60 * 1000); // default 24 hours
+
+    // PAYMENT_AMOUNTS and REVENUE_COLLECTOR_CONTRACT are exported from lib/utils/payment
+    const { PAYMENT_AMOUNTS, REVENUE_COLLECTOR_CONTRACT } = await import('../../../../lib/utils/payment');
+
+    if (paymentType === PaymentType.DAILY_ACCESS) {
+      expectedAmount = PAYMENT_AMOUNTS.DAILY_ACCESS.toString();
+      expectedRecipient = PAYMENT_RECIPIENT;
+      expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    } else if (paymentType === PaymentType.PREMIUM_MONTHLY) {
+      expectedAmount = PAYMENT_AMOUNTS[PaymentType.PREMIUM_MONTHLY].toString();
+      expectedRecipient = (REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT).toLowerCase();
+      expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    } else if (paymentType === PaymentType.PREMIUM_YEARLY) {
+      expectedAmount = PAYMENT_AMOUNTS[PaymentType.PREMIUM_YEARLY].toString();
+      expectedRecipient = (REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT).toLowerCase();
+      expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 365 days
+    } else {
+      return NextResponse.json({ error: 'Unknown payment type' }, { status: 400 });
+    }
 
     // For ERC20 transfers, we need to check the logs
     // Transfer event signature: keccak256("Transfer(address,address,uint256)") = 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
@@ -144,7 +165,7 @@ export async function POST(request: NextRequest) {
         log.address.toLowerCase() === cusdAddress.toLowerCase() &&
         log.topics[0] === transferEventSignature &&
         log.topics[2] &&
-        `0x${log.topics[2].slice(-40)}`.toLowerCase() === PAYMENT_RECIPIENT.toLowerCase()
+        `0x${log.topics[2].slice(-40)}`.toLowerCase() === expectedRecipient.toLowerCase()
     );
 
     if (!transferLog) {
@@ -173,23 +194,23 @@ export async function POST(request: NextRequest) {
     console.log("Decoded transfer:", { fromAddress, toAddress, amount, expectedAmount });
     console.log("Verification params:", {
       walletAddress: walletAddress.toLowerCase(),
-      paymentRecipient: PAYMENT_RECIPIENT.toLowerCase(),
+      expectedRecipient: expectedRecipient.toLowerCase(),
     });
 
     // Verify the transfer details
     if (
       fromAddress.toLowerCase() !== walletAddress.toLowerCase() ||
-      toAddress.toLowerCase() !== PAYMENT_RECIPIENT.toLowerCase() ||
+      toAddress.toLowerCase() !== expectedRecipient.toLowerCase() ||
       amount !== expectedAmount
     ) {
       console.error("Transaction verification failed:", {
         fromMatch: fromAddress.toLowerCase() === walletAddress.toLowerCase(),
-        toMatch: toAddress.toLowerCase() === PAYMENT_RECIPIENT.toLowerCase(),
+        toMatch: toAddress.toLowerCase() === expectedRecipient.toLowerCase(),
         amountMatch: amount === expectedAmount,
         fromAddress: fromAddress.toLowerCase(),
         expectedFrom: walletAddress.toLowerCase(),
         toAddress: toAddress.toLowerCase(),
-        expectedTo: PAYMENT_RECIPIENT.toLowerCase(),
+        expectedTo: expectedRecipient.toLowerCase(),
         amount,
         expectedAmount,
       });
@@ -201,9 +222,6 @@ export async function POST(request: NextRequest) {
 
     console.log("Transaction verification successful!");
 
-    // Calculate expiry for daily access payments
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
     // Save payment to database
     const payment = new Payment({
       walletAddress: walletAddress.toLowerCase(),
@@ -211,7 +229,7 @@ export async function POST(request: NextRequest) {
       transactionHash,
       amount,
       chainId,
-      recipient: PAYMENT_RECIPIENT.toLowerCase(),
+      recipient: expectedRecipient.toLowerCase(),
       verified: true,
       expiresAt,
     });

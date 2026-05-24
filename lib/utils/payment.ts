@@ -1,10 +1,14 @@
 import { parseUnits } from "viem";
-import { CUSD_ADDRESSES, PAYMENT_RECIPIENT } from "../config/wagmi";
+import { CUSD_ADDRESSES, PAYMENT_RECIPIENT, REVENUE_COLLECTOR_CONTRACT } from "../config/wagmi";
+import { PREMIUM_PLANS } from "../config/premium";
 import { stableTokenABI } from "@celo/abis";
+import { PaymentType } from "../types/payment";
 
 // Payment amounts in cUSD (18 decimals)
 export const PAYMENT_AMOUNTS = {
   DAILY_ACCESS: parseUnits("0.1", 18), // 0.1 cUSD
+  [PaymentType.PREMIUM_MONTHLY]: PREMIUM_PLANS[PaymentType.PREMIUM_MONTHLY].amount,
+  [PaymentType.PREMIUM_YEARLY]: PREMIUM_PLANS[PaymentType.PREMIUM_YEARLY].amount,
 } as const;
 
 // Use Celo's stable token ABI for cUSD
@@ -42,3 +46,4 @@ export async function autoConnectMiniPay(): Promise<string | null> {
 }
 
 export { PAYMENT_RECIPIENT };
+export { REVENUE_COLLECTOR_CONTRACT };

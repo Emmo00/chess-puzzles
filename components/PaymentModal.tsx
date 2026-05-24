@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { usePayment } from '../lib/hooks/usePayment'
 import { PaymentType } from '../lib/types/payment'
+import { PREMIUM_PLANS } from '../lib/config/premium'
 import { TelegramSupportLink } from './TelegramSupportLink'
 
 interface PaymentModalProps {
@@ -131,6 +132,48 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
 
           {!isPaymentPending && !isConfirming && !isSuccess && !isVerifying && (
             <div className="space-y-4">
+              {/* Premium Plans */}
+              <div className="bg-amber-100 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-black text-lg uppercase text-black flex items-center gap-2">
+                    <BadgeCheck className="w-5 h-5" /> Go Premium
+                  </h3>
+                  <span className="bg-black text-amber-100 px-3 py-1 font-black text-xl border-2 border-amber-100">
+                    {PREMIUM_PLANS.monthly.label} / {PREMIUM_PLANS.yearly.label}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="p-3 bg-white border-2 border-black text-center">
+                    <div className="font-black">Monthly</div>
+                    <div className="font-bold text-xl">$2</div>
+                    <div className="text-xs mt-1">Billed monthly · Cancel anytime</div>
+                    <button
+                      onClick={() => handlePayment(PaymentType.PREMIUM_MONTHLY)}
+                      className="mt-3 w-full bg-black text-white py-2 px-3 font-black text-sm border-2 border-black hover:bg-gray-800 transition-all"
+                    >
+                      Start Monthly
+                    </button>
+                  </div>
+
+                  <div className="p-3 bg-white border-2 border-black text-center">
+                    <div className="font-black">Yearly</div>
+                    <div className="font-bold text-xl">$20</div>
+                    <div className="text-xs mt-1">Best value · Save 2 months</div>
+                    <button
+                      onClick={() => handlePayment(PaymentType.PREMIUM_YEARLY)}
+                      className="mt-3 w-full bg-black text-white py-2 px-3 font-black text-sm border-2 border-black hover:bg-gray-800 transition-all"
+                    >
+                      Start Yearly
+                    </button>
+                  </div>
+                </div>
+
+                <p className="text-black font-bold text-sm mb-2 uppercase tracking-wide flex items-center gap-1">
+                  <Zap className="w-4 h-4" /> Unlimited puzzles, golden badge on leaderboard and more
+                </p>
+              </div>
+
               {/* Daily Access Option */}
               <div className="bg-cyan-300 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1">
                 <div className="flex justify-between items-center mb-3">

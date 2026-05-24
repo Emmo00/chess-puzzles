@@ -61,6 +61,10 @@ export const CUSD_ADDRESSES = {
 // Payment recipient address
 export const PAYMENT_RECIPIENT = "0xEA22ca862C3AFDA79Ef7Fb5Ae8f13D245354f05b";
 
+// Revenue collector contract address
+export const REVENUE_COLLECTOR_CONTRACT =
+  process.env.NEXT_PUBLIC_REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT;
+
 // Payout Claim Contract
 export const PAYOUT_CLAIM_CONTRACT = "0x4DF823F6A36b35A3983afc41f7c3584C1DCBFDf1";
 

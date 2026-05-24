@@ -40,7 +40,11 @@ export default function PaywallCard() {
               <div className="border-2 border-cyan-500 p-2 bg-cyan-50">
                 <p className="text-lg font-black text-cyan-600">Daily Pass - $0.10</p>
                 <p className="text-xs font-bold">3 puzzles today</p>
-              </div>
+                </div>
+                <div className="border-2 border-amber-500 p-2 bg-amber-50 mt-2">
+                  <p className="text-lg font-black text-amber-600">Go Premium</p>
+                  <p className="text-xs font-bold">Unlimited puzzles · $2/mo or $20/yr · Golden leaderboard badge</p>
+                </div>
             </div>
           </div>
 
