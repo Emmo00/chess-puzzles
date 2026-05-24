@@ -15,9 +15,9 @@ const bodyFont = Space_Grotesk({ subsets: ["latin"], weight: ["400", "500", "700
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] });
 
 const bodyStyle = {
-  ["--font-display" as "--font-display"]: displayFont.style.fontFamily,
-  ["--font-body" as "--font-body"]: bodyFont.style.fontFamily,
-  ["--font-mono" as "--font-mono"]: jetbrainsMono.style.fontFamily,
+  ["--font-display-app" as "--font-display-app"]: displayFont.style.fontFamily,
+  ["--font-body-app" as "--font-body-app"]: bodyFont.style.fontFamily,
+  ["--font-mono-app" as "--font-mono-app"]: jetbrainsMono.style.fontFamily,
 } as React.CSSProperties;
 
 const FALLBACK_APP_URL = "https://chesspuzzles.xyz";

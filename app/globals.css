@@ -94,8 +94,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: var(--font-body-app);
+  --font-mono: var(--font-mono-app);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -161,17 +161,18 @@
     @apply bg-background text-foreground;
     background: var(--neo-cream);
     color: var(--neo-ink);
+    font-family: var(--font-body-app);
     overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display);
+    font-family: var(--font-display-app);
     letter-spacing: -0.04em;
     text-transform: uppercase;
   }
 
   button {
-    font-family: var(--font-display);
+    font-family: var(--font-display-app);
   }
 
   ::selection {
