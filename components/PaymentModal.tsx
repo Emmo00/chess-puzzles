@@ -190,7 +190,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 p-4 flex items-center justify-center pointer-events-auto" >
+    <div className="fixed inset-0 z-[9999] p-4 flex items-center justify-center pointer-events-auto" >
       {/* Neo-brutalist backdrop */}
       <div
         className="absolute inset-0 bg-black/80"
@@ -216,12 +216,14 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
 
         <div ref={modalScrollRef} className="p-6 bg-white overflow-auto max-h-[calc(90vh-6rem)]">
           {error && (
-            <div className="bg-red-400 border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
-              <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
-                <OctagonAlert className="w-4 h-4 shrink-0" /> {error}
+            <>
+              <div className="bg-red-400 border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
+                <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
+                  <OctagonAlert className="w-4 h-4 shrink-0" /> {error}
+                </div>
+                <TelegramSupportLink />
               </div>
-              <TelegramSupportLink />
-            </div>
+            </>
           )}
 
           {celebration && (
@@ -352,57 +354,59 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
           )}
 
           {showTransactionLoader && !celebration && (
-            <div className="text-center py-8">
-              {/* Neo-brutalist loading */}
-              <div className="bg-purple-400 border-4 border-black p-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-2 text-left">
-                <div className="bg-black text-purple-400 border-2 border-black p-3 mb-4 font-black uppercase tracking-wider text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]">
-                  Approve first, then deposit
-                </div>
+            <div className="flex items-center justify-center py-8">
+              <div className="w-full max-w-lg">
+                <div className="bg-gradient-to-br from-purple-600 to-indigo-600 text-white p-6 rounded-lg shadow-2xl transform -rotate-1">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="font-black uppercase tracking-wide">Processing Payment</div>
+                    <div className="text-xs opacity-90">Secure · Celo</div>
+                  </div>
 
-                <h3 className="font-black text-xl uppercase mb-2 text-black tracking-wider flex items-center gap-2">
-                  {isConfirming ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-                  {paymentPhase === 'signing-approve' && 'Sign approve'}
-                  {paymentPhase === 'approving' && 'Waiting for approve confirmation'}
-                  {paymentPhase === 'signing-deposit' && 'Sign deposit'}
-                  {paymentPhase === 'depositing' && 'Waiting for deposit confirmation'}
-                  {paymentPhase === 'confirming' && 'Final confirmation'}
-                </h3>
-
-                <p className="font-bold text-black text-sm uppercase tracking-wide flex items-center gap-1 mb-4">
-                  <Coins className="w-4 h-4" /> Two signatures, one premium unlock
-                </p>
-
-                <div className="space-y-3">
-                  <div className={`border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] ${approveComplete ? 'bg-lime-300' : approveActive ? 'bg-yellow-300 transform -translate-x-1' : 'bg-white'}`}>
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                      <span className="font-black uppercase tracking-wider text-sm text-black">Step 1: Approve</span>
-                      <span className="bg-black text-white px-2 py-1 text-[10px] font-black uppercase tracking-wide">
-                        {approveComplete ? 'Done' : approveActive ? 'Signing' : 'Next'}
-                      </span>
+                  <div className="flex items-center gap-4">
+                    {/* Step 1: Approve */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 flex items-center justify-center rounded-full border-4 border-black ${approveComplete ? 'bg-lime-300' : approveActive ? 'bg-yellow-300 animate-pulse' : 'bg-white'}`}>
+                          {approveComplete ? <BadgeCheck className="w-6 h-6 text-black" /> : approveActive ? <RefreshCw className="w-6 h-6 animate-spin text-black" /> : <span className="font-black text-black">1</span>}
+                        </div>
+                        <div>
+                          <div className="font-black">Approve</div>
+                          <div className="text-xs">{approveComplete ? 'Approved' : approveActive ? 'Approving...' : 'Waiting for signature'}</div>
+                        </div>
+                      </div>
+                      <div className="h-2 bg-black mt-4 rounded-full overflow-hidden">
+                        <div className={`h-2 bg-white transition-all ${approveComplete ? 'w-full' : approveActive ? 'w-2/3' : 'w-0'}`} />
+                      </div>
                     </div>
-                    <p className="text-black font-bold text-xs uppercase tracking-wide">
-                      Allow the revenue contract to spend the selected stablecoin.
-                    </p>
-                  </div>
 
-                  <div className={`border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] ${depositComplete ? 'bg-lime-300' : depositActive ? 'bg-cyan-300 transform translate-x-1' : 'bg-white'}`}>
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                      <span className="font-black uppercase tracking-wider text-sm text-black">Step 2: Deposit</span>
-                      <span className="bg-black text-white px-2 py-1 text-[10px] font-black uppercase tracking-wide">
-                        {depositComplete ? 'Done' : depositActive ? 'Signing' : 'Waiting'}
-                      </span>
+                    {/* Progress connector */}
+                    <div className="w-8 flex justify-center">
+                      <div className={`h-1 w-full bg-black rounded ${approveComplete ? 'opacity-100' : 'opacity-40'}`} />
                     </div>
-                    <p className="text-black font-bold text-xs uppercase tracking-wide">
-                      After approve confirms, deposit the payment to unlock premium.
-                    </p>
-                  </div>
-                </div>
 
-                {transactionHash && (
-                  <div className="bg-black text-purple-400 p-2 mt-4 border-2 border-purple-400 text-xs font-mono break-all">
-                    TX: {transactionHash.slice(0, 20)}...
+                    {/* Step 2: Deposit */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 flex items-center justify-center rounded-full border-4 border-black ${depositComplete ? 'bg-lime-300' : depositActive ? 'bg-cyan-300 animate-pulse' : 'bg-white'}`}>
+                          {depositComplete ? <BadgeCheck className="w-6 h-6 text-black" /> : depositActive ? <RefreshCw className="w-6 h-6 animate-spin text-black" /> : <span className="font-black text-black">2</span>}
+                        </div>
+                        <div>
+                          <div className="font-black">Deposit</div>
+                          <div className="text-xs">{depositComplete ? 'Success' : depositActive ? 'Depositing...' : 'Waiting for approve'}</div>
+                        </div>
+                      </div>
+                      <div className="h-2 bg-black mt-4 rounded-full overflow-hidden">
+                        <div className={`h-2 bg-white transition-all ${depositComplete ? 'w-full' : depositActive ? 'w-2/3' : 'w-0'}`} />
+                      </div>
+                    </div>
                   </div>
-                )}
+
+                  {transactionHash && (
+                    <div className="bg-black text-white p-2 mt-4 border-2 border-white text-xs font-mono break-all">
+                      TX: {transactionHash.slice(0, 20)}...
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
