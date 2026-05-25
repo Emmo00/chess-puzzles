@@ -16,8 +16,10 @@ import {
   X,
   Zap,
 } from 'lucide-react'
+import confetti from 'canvas-confetti'
 import { usePayment } from '../lib/hooks/usePayment'
 import { PaymentType } from '../lib/types/payment'
+import { getPremiumPlan } from '../lib/config/premium'
 import { TelegramSupportLink } from './TelegramSupportLink'
 
 interface PaymentModalProps {
@@ -33,7 +35,14 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
   const [error, setError] = useState<string | null>(null)
   const [isVerifying, setIsVerifying] = useState(false)
   const [preferredToken, setPreferredToken] = useState<any | null>(null)
+  const [celebration, setCelebration] = useState<{
+    title: string
+    subtitle: string
+    expiresAt: string
+  } | null>(null)
   const modalScrollRef = useRef<HTMLDivElement | null>(null)
+  const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const confettiFiredRef = useRef(false)
 
   useEffect(() => {
     (async () => {
@@ -62,6 +71,39 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
     })
   }, [error])
 
+  useEffect(() => {
+    if (!celebration || confettiFiredRef.current) return
+
+    confettiFiredRef.current = true
+
+    const burst = (particleCount: number, spread: number, originY: number) => {
+      confetti({
+        particleCount,
+        spread,
+        startVelocity: 38,
+        scalar: 1.05,
+        origin: { y: originY },
+        colors: ['#facc15', '#22c55e', '#60a5fa', '#ffffff', '#000000'],
+      })
+    }
+
+    burst(120, 80, 0.55)
+    window.setTimeout(() => burst(80, 55, 0.4), 180)
+    window.setTimeout(() => burst(80, 55, 0.7), 360)
+
+    return () => {
+      confettiFiredRef.current = false
+    }
+  }, [celebration])
+
+  useEffect(() => {
+    return () => {
+      if (celebrationTimerRef.current) {
+        clearTimeout(celebrationTimerRef.current)
+      }
+    }
+  }, [])
+
   const handlePayment = async (type: PaymentType) => {
     if (!address) {
       setError('Please connect your wallet first')
@@ -88,14 +130,34 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
       setError(null) // Clear any previous errors
       const verified = await verifyPayment()
       if (verified) {
-        onSuccess()
-        // Close modal after a short delay to show success
-        setTimeout(() => {
+        const plan = selectedPayment ? getPremiumPlan(selectedPayment) : null
+        const expiresAt = new Date(
+          Date.now() + (plan?.durationDays ?? 1) * 24 * 60 * 60 * 1000,
+        )
+
+        setCelebration({
+          title: plan?.label ?? 'Premium',
+          subtitle: selectedPayment === PaymentType.DAILY_ACCESS
+            ? 'Daily access activated'
+            : 'Subscription activated',
+          expiresAt: expiresAt.toLocaleString([], {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          }),
+        })
+        setIsVerifying(false)
+
+        if (celebrationTimerRef.current) {
+          clearTimeout(celebrationTimerRef.current)
+        }
+
+        celebrationTimerRef.current = setTimeout(() => {
+          onSuccess()
           onClose()
           setSelectedPayment(null)
           setError(null)
-          setIsVerifying(false)
-        }, 1500)
+          setCelebration(null)
+        }, 4000)
       } else {
         setError('Payment verification failed. Please contact support.')
         setIsVerifying(false)
@@ -162,7 +224,40 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
             </div>
           )}
 
-          {!isSuccess && !isVerifying && (
+          {celebration && (
+            <div className="space-y-4">
+              <div className="bg-lime-300 border-4 border-black p-6 shadow-[6px_6px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h3 className="font-black text-2xl uppercase tracking-wider text-black flex items-center gap-2">
+                    <BadgeCheck className="w-6 h-6" /> Activated
+                  </h3>
+                  <div className="bg-black text-lime-300 px-3 py-1 font-black uppercase tracking-wider text-[10px] border-2 border-black">
+                    Premium live
+                  </div>
+                </div>
+
+                <div className="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1 mb-4">
+                  <p className="font-black text-black text-xl uppercase tracking-wider">{celebration.title}</p>
+                  <p className="font-bold text-black text-sm uppercase tracking-wide mt-1">{celebration.subtitle}</p>
+                </div>
+
+                <div className="space-y-2 text-black font-bold text-sm uppercase tracking-wide">
+                  <div className="bg-white border-2 border-black px-3 py-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                    Unlimited puzzles unlocked
+                  </div>
+                  <div className="bg-white border-2 border-black px-3 py-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                    Expires: {celebration.expiresAt}
+                  </div>
+                </div>
+
+                <div className="mt-4 bg-black text-lime-300 border-4 border-black p-3 font-black uppercase tracking-wider text-xs shadow-[3px_3px_0px_rgba(0,0,0,1)]">
+                  Enjoy the board. The crown is yours.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!celebration && !isSuccess && !isVerifying && (
             <div className="space-y-4">
               {/* Premium Plans */}
               <div className="bg-amber-100 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1">
@@ -256,7 +351,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
             </div>
           )}
 
-          {showTransactionLoader && (
+          {showTransactionLoader && !celebration && (
             <div className="text-center py-8">
               {/* Neo-brutalist loading */}
               <div className="bg-purple-400 border-4 border-black p-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-2 text-left">

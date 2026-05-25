@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { UserStats, StreakData } from "@/lib/types";
-import { ChartArea, Flame, Trophy, X } from "lucide-react";
+import { BadgeCheck, ChartArea, Flame, Trophy, X } from "lucide-react";
 import Link from "next/link";
 import { PaymentModal } from "./PaymentModal";
 
@@ -10,9 +10,10 @@ interface StreakModalProps {
   isOpen: boolean;
   onClose: () => void;
   userStats: UserStats | StreakData | null;
+  hasPremiumAccess?: boolean;
 }
 
-export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
+export function StreakModal({ isOpen, onClose, userStats, hasPremiumAccess = false }: StreakModalProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -116,32 +117,42 @@ export function StreakModal({ isOpen, onClose, userStats }: StreakModalProps) {
                 </div>
               </div>
 
-              {/* Go Premium Section */}
-              <div className="bg-amber-100 border-4 border-black p-4 shadow-[6px_6px_0px_#000000] transform -rotate-1">
-                <h3 className="font-black text-lg uppercase text-black mb-3 flex gap-2">
-                  ⭐ Go Premium
-                </h3>
-                <div className="space-y-2 mb-4 text-sm">
-                  <div className="flex items-start gap-2">
-                    <span className="font-black text-black">✓</span>
-                    <span className="font-bold text-black">Unlimited Puzzles</span>
+              {!hasPremiumAccess ? (
+                <div className="bg-amber-100 border-4 border-black p-4 shadow-[6px_6px_0px_#000000] transform -rotate-1">
+                  <h3 className="font-black text-lg uppercase text-black mb-3 flex gap-2">
+                    ⭐ Go Premium
+                  </h3>
+                  <div className="space-y-2 mb-4 text-sm">
+                    <div className="flex items-start gap-2">
+                      <span className="font-black text-black">✓</span>
+                      <span className="font-bold text-black">Unlimited Puzzles</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="font-black text-black">✓</span>
+                      <span className="font-bold text-black">Golden Badge on Leaderboard</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="font-black text-black">✓</span>
+                      <span className="font-bold text-black">More perks coming soon</span>
+                    </div>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <span className="font-black text-black">✓</span>
-                    <span className="font-bold text-black">Golden Badge on Leaderboard</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="font-black text-black">✓</span>
-                    <span className="font-bold text-black">More perks coming soon</span>
-                  </div>
+                  <button
+                    onClick={openPayment}
+                    className="w-full bg-black text-amber-100 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-black hover:bg-gray-800 transition-all shadow-[3px_3px_0px_#000000]"
+                  >
+                    Unlock Premium
+                  </button>
                 </div>
-                <button
-                  onClick={openPayment}
-                  className="w-full bg-black text-amber-100 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-black hover:bg-gray-800 transition-all shadow-[3px_3px_0px_#000000]"
-                >
-                  Unlock Premium
-                </button>
-              </div>
+              ) : (
+                <div className="bg-lime-300 border-4 border-black p-4 shadow-[6px_6px_0px_#000000] transform -rotate-1">
+                  <h3 className="font-black text-lg uppercase text-black mb-2 flex gap-2 items-center">
+                    <BadgeCheck className="w-5 h-5" /> Premium Active
+                  </h3>
+                  <p className="font-bold text-black text-sm uppercase tracking-wide">
+                    Unlimited puzzles are already unlocked on this wallet.
+                  </p>
+                </div>
+              )}
             </>
           )}
         </div>
