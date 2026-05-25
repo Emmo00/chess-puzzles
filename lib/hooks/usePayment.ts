@@ -1,16 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount, usePublicClient, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import {
+  useAccount,
+  useConfig,
+  usePublicClient,
+  useSendCalls,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import { encodeFunctionData, erc20Abi, parseUnits } from "viem";
+import { waitForCallsStatus } from "@wagmi/core";
 
 import revenueCollectorAbiJson from "@/abis/revenue-receiver.json";
-import { FREE_DAILY_PUZZLE_LIMIT, getPremiumPlan } from "../config/premium";
+import {
+  FREE_DAILY_PUZZLE_LIMIT,
+  PAYMENT_PRICES,
+  getPremiumPlan,
+} from "../config/premium";
 import { isOnCorrectChain } from "../config/wagmi";
 import { PaymentType } from "../types/payment";
 import {
   CUSD_ABI,
-  PAYMENT_PRICES,
   SUPPORTED_STABLES,
   PAYMENT_RECIPIENT,
   REVENUE_COLLECTOR_CONTRACT,
@@ -24,13 +34,18 @@ const revenueCollectorAbi = revenueCollectorAbiJson as RevenueCollectorAbi;
 type PaymentPhase = "idle" | "approving" | "depositing" | "confirming";
 
 export function usePayment() {
-  const { address, chainId } = useAccount();
+  const config = useConfig();
+  const { address, chainId, connector } = useAccount();
   const publicClient = usePublicClient();
-  const { writeContractAsync } = useWriteContract();
+  const { sendCallsAsync } = useSendCalls();
   const [paymentType, setPaymentType] = useState<PaymentType | null>(null);
   const [paymentPhase, setPaymentPhase] = useState<PaymentPhase>("idle");
-  const [submittedHash, setSubmittedHash] = useState<`0x${string}` | undefined>(undefined);
-  const [usedTokenAddress, setUsedTokenAddress] = useState<string | undefined>(undefined);
+  const [submittedHash, setSubmittedHash] = useState<`0x${string}` | undefined>(
+    undefined,
+  );
+  const [usedTokenAddress, setUsedTokenAddress] = useState<string | undefined>(
+    undefined,
+  );
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: submittedHash,
@@ -46,7 +61,8 @@ export function usePayment() {
   // Return the preferred token (highest balance) without performing payment
   const getPreferredToken = async () => {
     if (!address || !publicClient) return null;
-    const balances: Array<{ token: any; balance: bigint; normalized: number }> = [];
+    const balances: Array<{ token: any; balance: bigint; normalized: number }> =
+      [];
 
     for (const token of SUPPORTED_STABLES) {
       try {
@@ -85,7 +101,11 @@ export function usePayment() {
       setSubmittedHash(undefined);
 
       // Helper: find token with the highest balance for the connected user
-      const balances: Array<{ token: any; balance: bigint; normalized: number }> = [];
+      const balances: Array<{
+        token: any;
+        balance: bigint;
+        normalized: number;
+      }> = [];
 
       for (const token of SUPPORTED_STABLES) {
         try {
@@ -108,56 +128,33 @@ export function usePayment() {
       const preferred = balances[0];
 
       // Determine required amount (smallest units) for this payment type
-      const price = PAYMENT_PRICES[type === PaymentType.DAILY_ACCESS ? 'DAILY_ACCESS' : type];
+      const price = PAYMENT_PRICES[type];
       const decimals = preferred?.token?.decimals ?? 18;
       const requiredAmount = parseUnits(String(price), decimals);
 
       if (!preferred || BigInt(preferred.balance) < BigInt(requiredAmount)) {
         // if user doesn't have sufficient balance in their top token, check others
-        const sufficient = balances.find((b) => BigInt(b.balance) >= BigInt(parseUnits(String(price), b.token.decimals)));
+        const sufficient = balances.find(
+          (b) =>
+            BigInt(b.balance) >=
+            BigInt(parseUnits(String(price), b.token.decimals)),
+        );
         if (sufficient) {
           // use the sufficient token
           preferred.token = sufficient.token;
         } else {
-          throw new Error("INSUFFICIENT_BALANCE: Please top up one of the supported stable coins (USDT, USDC, cUSD).");
+          throw new Error(
+            "INSUFFICIENT_BALANCE: Please top up one of the supported stable coins (USDT, USDC, cUSD).",
+          );
         }
       }
 
       const tokenAddress = preferred.token.tokenAddress as `0x${string}`;
       const tokenDecimals = preferred.token.decimals;
       const smallestAmount = parseUnits(String(price), tokenDecimals);
-      
+
       // Store the token address for verification
       setUsedTokenAddress(tokenAddress);
-
-      // Daily access: simple ERC20 transfer to PAYMENT_RECIPIENT
-      if (type === PaymentType.DAILY_ACCESS) {
-        const data = encodeFunctionData({
-          abi: erc20Abi,
-          functionName: "transfer",
-          args: [PAYMENT_RECIPIENT, smallestAmount],
-        });
-
-        const feeCurrency = await selectSupportedFeeCurrency({
-          publicClient,
-          account: address as `0x${string}`,
-          to: tokenAddress,
-          data,
-        });
-
-        setPaymentPhase("confirming");
-        const hash = await writeContractAsync({
-          account: address,
-          address: tokenAddress,
-          abi: erc20Abi,
-          functionName: "transfer",
-          args: [PAYMENT_RECIPIENT as `0x${string}`, smallestAmount],
-          feeCurrency: preferred.token.feeCurrencyAddress as `0x${string}`,
-        });
-
-        setSubmittedHash(hash);
-        return hash;
-      }
 
       // Premium plans: approve + deposit to revenue collector
       const plan = getPremiumPlan(type);
@@ -171,20 +168,11 @@ export function usePayment() {
 
       const collectorAddress = REVENUE_COLLECTOR_CONTRACT as `0x${string}`;
 
+      if (!connector) {
+        throw new Error("Wallet connector unavailable");
+      }
+
       setPaymentPhase("approving");
-      const approvalHash = await writeContractAsync({
-        account: address,
-        address: tokenAddress,
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [collectorAddress, smallestAmount],
-      });
-
-      await publicClient.waitForTransactionReceipt({
-        hash: approvalHash,
-      });
-
-      setPaymentPhase("depositing");
       const depositData = encodeFunctionData({
         abi: revenueCollectorAbi,
         functionName: "deposit",
@@ -198,18 +186,54 @@ export function usePayment() {
         data: depositData,
       });
 
-      const depositHash = await writeContractAsync({
+      const batchRequest: any = {
         account: address,
-        address: collectorAddress,
-        abi: revenueCollectorAbi,
-        functionName: "deposit",
-        args: [tokenAddress, smallestAmount],
-        feeCurrency: preferred.token.feeCurrencyAddress as `0x${string}`,
+        chainId,
+        forceAtomic: true,
+        calls: [
+          {
+            to: tokenAddress,
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [collectorAddress, smallestAmount],
+            feeCurrency,
+          },
+          {
+            to: collectorAddress,
+            abi: revenueCollectorAbi,
+            functionName: "deposit",
+            args: [tokenAddress, smallestAmount],
+            feeCurrency,
+          },
+        ],
+      };
+
+      if (feeCurrency) {
+        batchRequest.feeCurrency = feeCurrency;
+      }
+
+      const batchResult = await sendCallsAsync(batchRequest);
+
+      console.log("batch result:", batchResult);
+
+      const callsStatus = await waitForCallsStatus(config, {
+        connector,
+        id: batchResult.id,
       });
 
+      console.log("call status:", callsStatus);
+
+      const batchHash = callsStatus.receipts?.[0]?.transactionHash;
+      console.log("batch hash:", batchHash);
+      if (!batchHash) {
+        throw new Error(
+          "Unable to resolve transaction hash for batched payment",
+        );
+      }
+
       setPaymentPhase("confirming");
-      setSubmittedHash(depositHash);
-      return depositHash;
+      setSubmittedHash(batchHash);
+      return batchHash;
     } catch (error) {
       resetPaymentState();
       throw error;
@@ -255,14 +279,19 @@ export function usePayment() {
           }
 
           throw new Error(
-            result.error || "Transaction verification timed out. Please check your transaction status manually."
+            result.error ||
+              "Transaction verification timed out. Please check your transaction status manually.",
           );
         }
 
         const errorResult = await response.json();
         throw new Error(errorResult.error || "Payment verification failed");
       } catch (error) {
-        if (retries < maxRetries && error instanceof Error && error.message.includes("still being processed")) {
+        if (
+          retries < maxRetries &&
+          error instanceof Error &&
+          error.message.includes("still being processed")
+        ) {
           retries++;
           await new Promise((resolve) => setTimeout(resolve, 3000));
           continue;
@@ -280,7 +309,8 @@ export function usePayment() {
     makePayment,
     verifyPayment,
     getPreferredToken,
-    isPaymentPending: paymentPhase === "approving" || paymentPhase === "depositing",
+    isPaymentPending:
+      paymentPhase === "approving" || paymentPhase === "depositing",
     isConfirming,
     isSuccess,
     transactionHash: submittedHash,

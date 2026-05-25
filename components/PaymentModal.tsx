@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAccount } from 'wagmi'
 import {
   BadgeCheck,
@@ -18,7 +18,6 @@ import {
 } from 'lucide-react'
 import { usePayment } from '../lib/hooks/usePayment'
 import { PaymentType } from '../lib/types/payment'
-import { PREMIUM_PLANS } from '../lib/config/premium'
 import { TelegramSupportLink } from './TelegramSupportLink'
 
 interface PaymentModalProps {
@@ -34,6 +33,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
   const [error, setError] = useState<string | null>(null)
   const [isVerifying, setIsVerifying] = useState(false)
   const [preferredToken, setPreferredToken] = useState<any | null>(null)
+  const modalScrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     (async () => {
@@ -52,6 +52,15 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
       handleVerifyPayment()
     }
   }, [isSuccess, transactionHash])
+
+  useEffect(() => {
+    if (!error) return
+
+    modalScrollRef.current?.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
+  }, [error])
 
   const handlePayment = async (type: PaymentType) => {
     if (!address) {
@@ -138,7 +147,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
           </div>
         </div>
 
-        <div className="p-6 bg-white overflow-auto max-h-[calc(90vh-6rem)]">
+        <div ref={modalScrollRef} className="p-6 bg-white overflow-auto max-h-[calc(90vh-6rem)]">
           {error && (
             <div className="bg-red-400 border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
               <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
@@ -162,7 +171,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                     <div className="font-bold text-xl">$2</div>
                     <button
                       onClick={() => handlePayment(PaymentType.PREMIUM_MONTHLY)}
-                      className="mt-3 w-full bg-black text-white py-2 px-3 font-black text-sm border-2 border-black hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-auto"
+                      className="w-full bg-black text-white py-2 px-3 font-black text-sm border-2 border-black hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-auto"
                       disabled={isPaymentPending || isConfirming || Boolean(selectedPayment && selectedPayment !== PaymentType.PREMIUM_MONTHLY)}
                     >
                       {monthlyLoading ? (
@@ -181,7 +190,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                     <div className="text-xs mt-1">Best value · Save 2 months</div>
                     <button
                       onClick={() => handlePayment(PaymentType.PREMIUM_YEARLY)}
-                      className="mt-3 w-full bg-black text-white py-2 px-3 font-black text-sm border-2 border-black hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-auto"
+                      className="w-full bg-black text-white py-2 px-3 font-black text-sm border-2 border-black hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-auto"
                       disabled={isPaymentPending || isConfirming || Boolean(selectedPayment && selectedPayment !== PaymentType.PREMIUM_YEARLY)}
                     >
                       {yearlyLoading ? (

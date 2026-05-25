@@ -1,8 +1,5 @@
-import { parseUnits } from "viem";
 import { PAYMENT_RECIPIENT, REVENUE_COLLECTOR_CONTRACT } from "../config/wagmi";
-import { PREMIUM_PLANS } from "../config/premium";
 import { stableTokenABI } from "@celo/abis";
-import { PaymentType } from "../types/payment";
 
 // Supported stable coins on Sollar (addresses and decimals)
 export const SUPPORTED_STABLES = [
@@ -25,13 +22,6 @@ export const SUPPORTED_STABLES = [
     decimals: 18,
   },
 ];
-
-// Human-readable prices
-export const PAYMENT_PRICES = {
-  DAILY_ACCESS: "0.1",
-  [PaymentType.PREMIUM_MONTHLY]: "2",
-  [PaymentType.PREMIUM_YEARLY]: "20",
-} as const;
 
 // ERC20 ABI helper (use Celo stable token ABI where appropriate)
 export const CUSD_ABI = stableTokenABI;

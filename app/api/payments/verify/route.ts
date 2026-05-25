@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPublicClient, http } from "viem";
+import { createPublicClient, http, parseUnits } from "viem";
 import { celo } from "viem/chains";
 import { Payment } from "../../../../lib/models/payment.model";
 import { PaymentType } from "../../../../lib/types/payment";
@@ -125,21 +125,17 @@ export async function POST(request: NextRequest) {
     });
 
     // Determine expected amount and recipient based on payment type
-    let expectedAmount: string;
     let expectedRecipient: string;
     let expiresAt: Date;
     let selectedToken: typeof SUPPORTED_STABLES[0] | null = null;
 
     if (paymentType === PaymentType.DAILY_ACCESS) {
-      expectedAmount = "100000000000000000"; // 0.1 in wei
       expectedRecipient = PAYMENT_RECIPIENT.toLowerCase();
       expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     } else if (paymentType === PaymentType.PREMIUM_MONTHLY) {
-      expectedAmount = PREMIUM_PLANS[PaymentType.PREMIUM_MONTHLY].amount.toString();
       expectedRecipient = (REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT).toLowerCase();
       expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     } else if (paymentType === PaymentType.PREMIUM_YEARLY) {
-      expectedAmount = PREMIUM_PLANS[PaymentType.PREMIUM_YEARLY].amount.toString();
       expectedRecipient = (REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT).toLowerCase();
       expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
     } else {
@@ -208,8 +204,8 @@ export async function POST(request: NextRequest) {
     const toAddress = `0x${transferLog.topics[2]?.slice(-40)}`;
     const amount = BigInt(transferLog.data).toString();
 
-    // Convert expected amount to the token's smallest units
-    const expectedAmountInTokenUnits = (BigInt(expectedAmount) / BigInt(10 ** (18 - usedToken.decimals))).toString();
+    const plan = PREMIUM_PLANS[paymentType as PaymentType];
+    const expectedAmountInTokenUnits = parseUnits(plan.priceCusd, usedToken.decimals).toString();
 
     console.log("Decoded transfer:", { fromAddress, toAddress, amount, expectedAmountInTokenUnits, tokenSymbol: usedToken.symbol });
     console.log("Verification params:", {
