@@ -11,9 +11,16 @@ interface StreakModalProps {
   onClose: () => void;
   userStats: UserStats | StreakData | null;
   hasPremiumAccess?: boolean;
+  onPaymentSuccess?: () => void;
 }
 
-export function StreakModal({ isOpen, onClose, userStats, hasPremiumAccess = false }: StreakModalProps) {
+export function StreakModal({
+  isOpen,
+  onClose,
+  userStats,
+  hasPremiumAccess = false,
+  onPaymentSuccess,
+}: StreakModalProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -191,8 +198,7 @@ export function StreakModal({ isOpen, onClose, userStats, hasPremiumAccess = fal
         isOpen={showPaymentModal} 
         onClose={closePayment} 
         onSuccess={() => {
-          closePayment();
-          handleClose();
+          onPaymentSuccess?.();
         }} 
       />
     </div>

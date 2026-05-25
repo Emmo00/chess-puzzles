@@ -70,8 +70,8 @@ export default function PaywallCard() {
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         onSuccess={() => {
-          // Refresh the page or trigger a state update to reflect the new access
-          window.location.reload()
+          // Let the payment modal own its success state; keep this paywall open
+          // until the user closes the payment modal themselves.
         }}
       />
 
