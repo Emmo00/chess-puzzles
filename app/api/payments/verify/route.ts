@@ -3,7 +3,10 @@ import { createPublicClient, http, parseUnits } from "viem";
 import { celo } from "viem/chains";
 import { Payment } from "../../../../lib/models/payment.model";
 import { PaymentType } from "../../../../lib/types/payment";
-import { PAYMENT_RECIPIENT, CUSD_ADDRESSES, REVENUE_COLLECTOR_CONTRACT } from "../../../../lib/config/wagmi";
+import {
+  PAYMENT_RECIPIENT,
+  REVENUE_COLLECTOR_CONTRACT,
+} from "../../../../lib/config/wagmi";
 import { SUPPORTED_STABLES } from "../../../../lib/utils/payment";
 import { PREMIUM_PLANS } from "../../../../lib/config/premium";
 import dbConnect from "../../../../lib/db";
@@ -17,7 +20,13 @@ const celoClient = createPublicClient({
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
-    const { transactionHash, walletAddress, paymentType, chainId, tokenAddress } = await request.json();
+    const {
+      transactionHash,
+      walletAddress,
+      paymentType,
+      chainId,
+      tokenAddress,
+    } = await request.json();
 
     // Log the incoming request for debugging
     console.log("Payment verification request:", {
@@ -36,15 +45,20 @@ export async function POST(request: NextRequest) {
         paymentType: !!paymentType,
         chainId: !!chainId,
       });
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 },
+      );
     }
 
     // Validate chain ID (only Celo mainnet supported)
     if (chainId !== celo.id) {
       console.error("Unsupported chain ID:", chainId, "Expected:", celo.id);
       return NextResponse.json(
-        { error: `Unsupported chain. Only Celo mainnet (${celo.id}) is supported` },
-        { status: 400 }
+        {
+          error: `Unsupported chain. Only Celo mainnet (${celo.id}) is supported`,
+        },
+        { status: 400 },
       );
     }
 
@@ -70,29 +84,35 @@ export async function POST(request: NextRequest) {
         receipt = await celoClient.getTransactionReceipt({
           hash: transactionHash as `0x${string}`,
         });
-        
+
         if (receipt) {
           console.log("Transaction receipt found after", retries, "retries");
           break;
         }
       } catch (error: any) {
-        if (error.name === 'TransactionReceiptNotFoundError') {
-          console.log(`Transaction receipt not found, retry ${retries + 1}/${maxRetries}`);
+        if (error.name === "TransactionReceiptNotFoundError") {
+          console.log(
+            `Transaction receipt not found, retry ${retries + 1}/${maxRetries}`,
+          );
           retries++;
-          
+
           if (retries < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            await new Promise((resolve) => setTimeout(resolve, retryDelay));
             continue;
           }
-          
+
           // If we've exhausted retries, return a more helpful error
-          console.error("Transaction receipt not found after all retries:", transactionHash);
+          console.error(
+            "Transaction receipt not found after all retries:",
+            transactionHash,
+          );
           return NextResponse.json(
-            { 
-              error: "Transaction is still being processed. Please try again in a few moments.",
-              retryable: true 
-            }, 
-            { status: 202 } // 202 Accepted - request received but not yet processed
+            {
+              error:
+                "Transaction is still being processed. Please try again in a few moments.",
+              retryable: true,
+            },
+            { status: 202 }, // 202 Accepted - request received but not yet processed
           );
         } else {
           // Re-throw other errors
@@ -102,19 +122,31 @@ export async function POST(request: NextRequest) {
     }
 
     if (!receipt) {
-      console.error("Transaction receipt not found after retries:", transactionHash);
+      console.error(
+        "Transaction receipt not found after retries:",
+        transactionHash,
+      );
       return NextResponse.json(
-        { 
-          error: "Transaction not found after multiple attempts. Please check the transaction hash.",
-          retryable: false 
-        }, 
-        { status: 400 }
+        {
+          error:
+            "Transaction not found after multiple attempts. Please check the transaction hash.",
+          retryable: false,
+        },
+        { status: 400 },
       );
     }
 
     if (receipt.status !== "success") {
-      console.error("Transaction failed:", transactionHash, "Status:", receipt.status);
-      return NextResponse.json({ error: "Transaction failed" }, { status: 400 });
+      console.error(
+        "Transaction failed:",
+        transactionHash,
+        "Status:",
+        receipt.status,
+      );
+      return NextResponse.json(
+        { error: "Transaction failed" },
+        { status: 400 },
+      );
     }
 
     console.log("Transaction receipt found, status: success");
@@ -127,39 +159,50 @@ export async function POST(request: NextRequest) {
     // Determine expected amount and recipient based on payment type
     let expectedRecipient: string;
     let expiresAt: Date;
-    let selectedToken: typeof SUPPORTED_STABLES[0] | null = null;
 
     if (paymentType === PaymentType.DAILY_ACCESS) {
       expectedRecipient = PAYMENT_RECIPIENT.toLowerCase();
       expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     } else if (paymentType === PaymentType.PREMIUM_MONTHLY) {
-      expectedRecipient = (REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT).toLowerCase();
+      expectedRecipient = (
+        REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT
+      ).toLowerCase();
       expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     } else if (paymentType === PaymentType.PREMIUM_YEARLY) {
-      expectedRecipient = (REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT).toLowerCase();
+      expectedRecipient = (
+        REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT
+      ).toLowerCase();
       expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
     } else {
-      return NextResponse.json({ error: 'Unknown payment type' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Unknown payment type" },
+        { status: 400 },
+      );
     }
 
     // Find supported token by address or use provided tokenAddress
-    let tokenToCheck = tokenAddress ? SUPPORTED_STABLES.find(t => t.tokenAddress.toLowerCase() === tokenAddress.toLowerCase()) : null;
-    
+    let tokenToCheck = tokenAddress
+      ? SUPPORTED_STABLES.find(
+          (t) => t.tokenAddress.toLowerCase() === tokenAddress.toLowerCase(),
+        )
+      : null;
+
     // If no token specified, check all supported tokens
-    if (!tokenToCheck && !tokenAddress) {
-      console.log("No token address provided, checking all supported stables");
-      // Will check below
-    } else if (!tokenToCheck && tokenAddress) {
+    if (!tokenToCheck && tokenAddress) {
       console.error("Token address not in supported list:", tokenAddress);
       return NextResponse.json({ error: "Unsupported token" }, { status: 400 });
     }
 
     // For ERC20 transfers, we need to check the logs
     // Transfer event signature: keccak256("Transfer(address,address,uint256)") = 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
-    const transferEventSignature = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+    const transferEventSignature =
+      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 
-    console.log("Looking for transfer logs in transaction, total logs:", receipt.logs.length);
-    
+    console.log(
+      "Looking for transfer logs in transaction, total logs:",
+      receipt.logs.length,
+    );
+
     // If token was specified, check only that token
     // Otherwise, check all supported stablecoins
     const tokensToCheck = tokenToCheck ? [tokenToCheck] : SUPPORTED_STABLES;
@@ -172,7 +215,8 @@ export async function POST(request: NextRequest) {
           log.address.toLowerCase() === token.tokenAddress.toLowerCase() &&
           log.topics[0] === transferEventSignature &&
           log.topics[2] &&
-          `0x${log.topics[2].slice(-40)}`.toLowerCase() === expectedRecipient.toLowerCase()
+          `0x${log.topics[2].slice(-40)}`.toLowerCase() ===
+            expectedRecipient.toLowerCase(),
       );
 
       if (log) {
@@ -187,12 +231,20 @@ export async function POST(request: NextRequest) {
       console.error(
         "Transfer event not found for any supported token. Available logs:",
         receipt.logs
-          .filter((log) => SUPPORTED_STABLES.some(t => t.tokenAddress.toLowerCase() === log.address.toLowerCase()))
-          .map((log, index) => ({ index, address: log.address, topics: log.topics }))
+          .filter((log) =>
+            SUPPORTED_STABLES.some(
+              (t) => t.tokenAddress.toLowerCase() === log.address.toLowerCase(),
+            ),
+          )
+          .map((log, index) => ({
+            index,
+            address: log.address,
+            topics: log.topics,
+          })),
       );
       return NextResponse.json(
         { error: "ERC20 Transfer event not found in transaction" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -205,9 +257,18 @@ export async function POST(request: NextRequest) {
     const amount = BigInt(transferLog.data).toString();
 
     const plan = PREMIUM_PLANS[paymentType as PaymentType];
-    const expectedAmountInTokenUnits = parseUnits(plan.priceCusd, usedToken.decimals).toString();
+    const expectedAmountInTokenUnits = parseUnits(
+      plan.priceCusd,
+      usedToken.decimals,
+    ).toString();
 
-    console.log("Decoded transfer:", { fromAddress, toAddress, amount, expectedAmountInTokenUnits, tokenSymbol: usedToken.symbol });
+    console.log("Decoded transfer:", {
+      fromAddress,
+      toAddress,
+      amount,
+      expectedAmountInTokenUnits,
+      tokenSymbol: usedToken.symbol,
+    });
     console.log("Verification params:", {
       walletAddress: walletAddress.toLowerCase(),
       expectedRecipient: expectedRecipient.toLowerCase(),
@@ -233,7 +294,7 @@ export async function POST(request: NextRequest) {
       });
       return NextResponse.json(
         { error: "Transaction details do not match payment requirements" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -263,6 +324,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Payment verification error:", error);
-    return NextResponse.json({ error: "Payment verification failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Payment verification failed" },
+      { status: 500 },
+    );
   }
 }
