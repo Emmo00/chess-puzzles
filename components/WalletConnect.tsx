@@ -74,7 +74,7 @@ export function WalletConnect() {
           <div className="relative">
             <button
               onClick={!isOnCorrectChain ? switchToPreferredChain : undefined}
-              className={`px-4 py-3 border-4 border-black font-black text-xs uppercase tracking-wider transition-all duration-200 flex items-center gap-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 ${
+              className={`px-4 py-3 border-4 border-black font-black text-xs uppercase tracking-wider transition-all duration-150 flex items-center gap-2 shadow-[5px_5px_0px_#000000] hover:shadow-[7px_7px_0px_#000000] hover:translate-x-[-2px] hover:translate-y-[-2px] ${
                 isOnCorrectChain ? "" : "bg-yellow-400 text-black hover:bg-yellow-300 cursor-pointer animate-pulse"
               }`}
             >
@@ -105,7 +105,7 @@ export function WalletConnect() {
           }
         }}
         disabled={isPending}
-        className="bg-cyan-400 border-4 border-black px-4 py-3 font-black text-xs uppercase tracking-wider text-black transition-all duration-200 flex items-center gap-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-[4px_4px_0px_rgba(0,0,0,1)]"
+        className="bg-cyan-400 border-4 border-black px-4 py-3 font-black text-xs uppercase tracking-wider text-black transition-all duration-150 flex items-center gap-2 shadow-[5px_5px_0px_#000000] hover:shadow-[7px_7px_0px_#000000] hover:translate-x-[-2px] hover:translate-y-[-2px] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-[5px_5px_0px_#000000]"
       >
         <Smartphone className="w-5 h-5" />
         {isPending ? "CONNECTING..." : "CONNECT MINIPAY"}
@@ -131,7 +131,7 @@ export function WalletConnect() {
           }
         }}
         disabled={isPending}
-        className="bg-purple-400 border-4 border-black px-4 py-3 font-black text-xs uppercase tracking-wider text-black transition-all duration-200 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-[4px_4px_0px_rgba(0,0,0,1)]"
+        className="bg-purple-400 border-4 border-black px-4 py-3 font-black text-xs uppercase tracking-wider text-black transition-all duration-150 shadow-[5px_5px_0px_#000000] hover:shadow-[7px_7px_0px_#000000] hover:translate-x-[-2px] hover:translate-y-[-2px] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-[5px_5px_0px_#000000]"
       >
         {isPending ? "CONNECTING..." : "CONNECT WALLET"}
       </button>

@@ -23,9 +23,9 @@ export default function PaywallCard() {
       }}
     >
       <div
-        className="border-4 border-black bg-magenta-500 px-6 py-6 text-black"
+        className="border-4 border-black bg-magenta-500 px-6 py-6 text-black shadow-[10px_10px_0px_#000000]"
         style={{
-          boxShadow: "6px 6px 0px rgba(0, 0, 0, 0.2)",
+          boxShadow: "10px 10px 0px #000000",
         }}
       >
         <div className="flex flex-col items-center gap-4 text-center">
@@ -34,13 +34,17 @@ export default function PaywallCard() {
             <p className="text-sm font-bold opacity-80">Purchase access to solve puzzles</p>
           </div>
 
-          <div className="w-full border-4 border-black bg-white py-4">
+          <div className="w-full border-4 border-black bg-white py-4 shadow-[4px_4px_0px_#000000]">
             <p className="text-xs font-black uppercase tracking-wider opacity-70 mb-1">Get Access</p>
             <div className="space-y-2">
-              <div className="border-2 border-cyan-500 p-2 bg-cyan-50">
+              <div className="border-2 border-black p-2 bg-cyan-300">
                 <p className="text-lg font-black text-cyan-600">Daily Pass - $0.10</p>
                 <p className="text-xs font-bold">3 puzzles today</p>
-              </div>
+                </div>
+                <div className="border-2 border-black p-2 bg-amber-100 mt-2">
+                  <p className="text-lg font-black text-amber-600">Go Premium</p>
+                  <p className="text-xs font-bold">Unlimited puzzles · $2/mo or $20/yr · Golden leaderboard badge</p>
+                </div>
             </div>
           </div>
 
@@ -48,10 +52,10 @@ export default function PaywallCard() {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onClick={() => setShowPaymentModal(true)}
-            className="w-full border-4 border-black bg-lime-400 text-black px-4 py-3 font-black text-sm uppercase tracking-widest transition-all duration-300"
+            className="w-full border-4 border-black bg-lime-400 text-black px-4 py-3 font-black text-sm uppercase tracking-widest transition-all duration-150"
             style={{
-              boxShadow: isHovered ? "6px 6px 0px rgba(0, 0, 0, 0.3)" : "4px 4px 0px rgba(0, 0, 0, 0.2)",
-              transform: isHovered ? "translate(-2px, -2px) scale(1.02)" : "translate(0, 0)",
+              boxShadow: isHovered ? "8px 8px 0px #000000" : "5px 5px 0px #000000",
+              transform: isHovered ? "translate(-2px, -2px)" : "translate(0, 0)",
             }}
           >
             Unlock Now
@@ -66,8 +70,8 @@ export default function PaywallCard() {
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         onSuccess={() => {
-          // Refresh the page or trigger a state update to reflect the new access
-          window.location.reload()
+          // Let the payment modal own its success state; keep this paywall open
+          // until the user closes the payment modal themselves.
         }}
       />
 

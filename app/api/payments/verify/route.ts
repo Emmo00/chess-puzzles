@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPublicClient, http } from "viem";
+import { createPublicClient, http, parseUnits } from "viem";
 import { celo } from "viem/chains";
 import { Payment } from "../../../../lib/models/payment.model";
 import { PaymentType } from "../../../../lib/types/payment";
-import { PAYMENT_RECIPIENT, CUSD_ADDRESSES } from "../../../../lib/config/wagmi";
+import {
+  PAYMENT_RECIPIENT,
+  REVENUE_COLLECTOR_CONTRACT,
+} from "../../../../lib/config/wagmi";
+import { SUPPORTED_STABLES } from "../../../../lib/utils/payment";
+import { PREMIUM_PLANS } from "../../../../lib/config/premium";
 import dbConnect from "../../../../lib/db";
 
 // Create client for Celo mainnet only
@@ -15,7 +20,13 @@ const celoClient = createPublicClient({
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
-    const { transactionHash, walletAddress, paymentType, chainId } = await request.json();
+    const {
+      transactionHash,
+      walletAddress,
+      paymentType,
+      chainId,
+      tokenAddress,
+    } = await request.json();
 
     // Log the incoming request for debugging
     console.log("Payment verification request:", {
@@ -23,6 +34,7 @@ export async function POST(request: NextRequest) {
       walletAddress,
       paymentType,
       chainId,
+      tokenAddress,
     });
 
     // Validate inputs
@@ -33,15 +45,20 @@ export async function POST(request: NextRequest) {
         paymentType: !!paymentType,
         chainId: !!chainId,
       });
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 },
+      );
     }
 
     // Validate chain ID (only Celo mainnet supported)
     if (chainId !== celo.id) {
       console.error("Unsupported chain ID:", chainId, "Expected:", celo.id);
       return NextResponse.json(
-        { error: `Unsupported chain. Only Celo mainnet (${celo.id}) is supported` },
-        { status: 400 }
+        {
+          error: `Unsupported chain. Only Celo mainnet (${celo.id}) is supported`,
+        },
+        { status: 400 },
       );
     }
 
@@ -67,29 +84,35 @@ export async function POST(request: NextRequest) {
         receipt = await celoClient.getTransactionReceipt({
           hash: transactionHash as `0x${string}`,
         });
-        
+
         if (receipt) {
           console.log("Transaction receipt found after", retries, "retries");
           break;
         }
       } catch (error: any) {
-        if (error.name === 'TransactionReceiptNotFoundError') {
-          console.log(`Transaction receipt not found, retry ${retries + 1}/${maxRetries}`);
+        if (error.name === "TransactionReceiptNotFoundError") {
+          console.log(
+            `Transaction receipt not found, retry ${retries + 1}/${maxRetries}`,
+          );
           retries++;
-          
+
           if (retries < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            await new Promise((resolve) => setTimeout(resolve, retryDelay));
             continue;
           }
-          
+
           // If we've exhausted retries, return a more helpful error
-          console.error("Transaction receipt not found after all retries:", transactionHash);
+          console.error(
+            "Transaction receipt not found after all retries:",
+            transactionHash,
+          );
           return NextResponse.json(
-            { 
-              error: "Transaction is still being processed. Please try again in a few moments.",
-              retryable: true 
-            }, 
-            { status: 202 } // 202 Accepted - request received but not yet processed
+            {
+              error:
+                "Transaction is still being processed. Please try again in a few moments.",
+              retryable: true,
+            },
+            { status: 202 }, // 202 Accepted - request received but not yet processed
           );
         } else {
           // Re-throw other errors
@@ -99,19 +122,31 @@ export async function POST(request: NextRequest) {
     }
 
     if (!receipt) {
-      console.error("Transaction receipt not found after retries:", transactionHash);
+      console.error(
+        "Transaction receipt not found after retries:",
+        transactionHash,
+      );
       return NextResponse.json(
-        { 
-          error: "Transaction not found after multiple attempts. Please check the transaction hash.",
-          retryable: false 
-        }, 
-        { status: 400 }
+        {
+          error:
+            "Transaction not found after multiple attempts. Please check the transaction hash.",
+          retryable: false,
+        },
+        { status: 400 },
       );
     }
 
     if (receipt.status !== "success") {
-      console.error("Transaction failed:", transactionHash, "Status:", receipt.status);
-      return NextResponse.json({ error: "Transaction failed" }, { status: 400 });
+      console.error(
+        "Transaction failed:",
+        transactionHash,
+        "Status:",
+        receipt.status,
+      );
+      return NextResponse.json(
+        { error: "Transaction failed" },
+        { status: 400 },
+      );
     }
 
     console.log("Transaction receipt found, status: success");
@@ -121,88 +156,149 @@ export async function POST(request: NextRequest) {
       hash: transactionHash as `0x${string}`,
     });
 
-    // Verify transaction details
-    const cusdAddress = CUSD_ADDRESSES[celo.id];
-    if (!cusdAddress) {
-      console.error("cUSD address not found for Celo mainnet");
-      return NextResponse.json({ error: "cUSD not supported on this chain" }, { status: 400 });
+    // Determine expected amount and recipient based on payment type
+    let expectedRecipient: string;
+    let expiresAt: Date;
+
+    if (paymentType === PaymentType.DAILY_ACCESS) {
+      expectedRecipient = PAYMENT_RECIPIENT.toLowerCase();
+      expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    } else if (paymentType === PaymentType.PREMIUM_MONTHLY) {
+      expectedRecipient = (
+        REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT
+      ).toLowerCase();
+      expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    } else if (paymentType === PaymentType.PREMIUM_YEARLY) {
+      expectedRecipient = (
+        REVENUE_COLLECTOR_CONTRACT || PAYMENT_RECIPIENT
+      ).toLowerCase();
+      expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    } else {
+      return NextResponse.json(
+        { error: "Unknown payment type" },
+        { status: 400 },
+      );
     }
 
-    console.log("Using cUSD address:", cusdAddress);
+    // Find supported token by address or use provided tokenAddress
+    let tokenToCheck = tokenAddress
+      ? SUPPORTED_STABLES.find(
+          (t) => t.tokenAddress.toLowerCase() === tokenAddress.toLowerCase(),
+        )
+      : null;
 
-    // Expected amount for cUSD (18 decimals)
-    const expectedAmount = "100000000000000000"; // 0.1 cUSD for daily access
+    // If no token specified, check all supported tokens
+    if (!tokenToCheck && tokenAddress) {
+      console.error("Token address not in supported list:", tokenAddress);
+      return NextResponse.json({ error: "Unsupported token" }, { status: 400 });
+    }
 
     // For ERC20 transfers, we need to check the logs
     // Transfer event signature: keccak256("Transfer(address,address,uint256)") = 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
     const transferEventSignature =
       "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 
-    console.log("Looking for transfer logs in transaction, total logs:", receipt.logs.length);
-    const transferLog = receipt.logs.find(
-      (log) =>
-        log.address.toLowerCase() === cusdAddress.toLowerCase() &&
-        log.topics[0] === transferEventSignature &&
-        log.topics[2] &&
-        `0x${log.topics[2].slice(-40)}`.toLowerCase() === PAYMENT_RECIPIENT.toLowerCase()
+    console.log(
+      "Looking for transfer logs in transaction, total logs:",
+      receipt.logs.length,
     );
 
-    if (!transferLog) {
-      console.error(
-        "cUSD Transfer event not found. Available logs from cUSD contract:",
-        receipt.logs
-          .filter((log) => log.address.toLowerCase() === cusdAddress.toLowerCase())
-          .map((log, index) => ({ index, topics: log.topics, address: log.address }))
+    // If token was specified, check only that token
+    // Otherwise, check all supported stablecoins
+    const tokensToCheck = tokenToCheck ? [tokenToCheck] : SUPPORTED_STABLES;
+    let transferLog = null;
+    let usedToken = null;
+
+    for (const token of tokensToCheck) {
+      const log = receipt.logs.find(
+        (log) =>
+          log.address.toLowerCase() === token.tokenAddress.toLowerCase() &&
+          log.topics[0] === transferEventSignature &&
+          log.topics[2] &&
+          `0x${log.topics[2].slice(-40)}`.toLowerCase() ===
+            expectedRecipient.toLowerCase(),
       );
-      console.error("Expected cUSD address:", cusdAddress);
-      console.error("Expected Transfer event signature:", transferEventSignature);
+
+      if (log) {
+        transferLog = log;
+        usedToken = token;
+        console.log("Found transfer log for token:", token.symbol);
+        break;
+      }
+    }
+
+    if (!transferLog || !usedToken) {
+      console.error(
+        "Transfer event not found for any supported token. Available logs:",
+        receipt.logs
+          .filter((log) =>
+            SUPPORTED_STABLES.some(
+              (t) => t.tokenAddress.toLowerCase() === log.address.toLowerCase(),
+            ),
+          )
+          .map((log, index) => ({
+            index,
+            address: log.address,
+            topics: log.topics,
+          })),
+      );
       return NextResponse.json(
-        { error: "cUSD Transfer event not found in transaction" },
-        { status: 400 }
+        { error: "ERC20 Transfer event not found in transaction" },
+        { status: 400 },
       );
     }
 
     console.log("Transfer log found:", transferLog);
 
-    // Decode transfer log (simplified - in production use proper ABI decoding)
+    // Decode transfer log
     // Transfer event: Transfer(address indexed from, address indexed to, uint256 value)
     const fromAddress = `0x${transferLog.topics[1]?.slice(-40)}`;
     const toAddress = `0x${transferLog.topics[2]?.slice(-40)}`;
     const amount = BigInt(transferLog.data).toString();
 
-    console.log("Decoded transfer:", { fromAddress, toAddress, amount, expectedAmount });
+    const plan = PREMIUM_PLANS[paymentType as PaymentType];
+    const expectedAmountInTokenUnits = parseUnits(
+      plan.priceCusd,
+      usedToken.decimals,
+    ).toString();
+
+    console.log("Decoded transfer:", {
+      fromAddress,
+      toAddress,
+      amount,
+      expectedAmountInTokenUnits,
+      tokenSymbol: usedToken.symbol,
+    });
     console.log("Verification params:", {
       walletAddress: walletAddress.toLowerCase(),
-      paymentRecipient: PAYMENT_RECIPIENT.toLowerCase(),
+      expectedRecipient: expectedRecipient.toLowerCase(),
+      tokenDecimals: usedToken.decimals,
     });
 
     // Verify the transfer details
     if (
       fromAddress.toLowerCase() !== walletAddress.toLowerCase() ||
-      toAddress.toLowerCase() !== PAYMENT_RECIPIENT.toLowerCase() ||
-      amount !== expectedAmount
+      toAddress.toLowerCase() !== expectedRecipient.toLowerCase() ||
+      amount !== expectedAmountInTokenUnits
     ) {
       console.error("Transaction verification failed:", {
         fromMatch: fromAddress.toLowerCase() === walletAddress.toLowerCase(),
-        toMatch: toAddress.toLowerCase() === PAYMENT_RECIPIENT.toLowerCase(),
-        amountMatch: amount === expectedAmount,
+        toMatch: toAddress.toLowerCase() === expectedRecipient.toLowerCase(),
+        amountMatch: amount === expectedAmountInTokenUnits,
         fromAddress: fromAddress.toLowerCase(),
         expectedFrom: walletAddress.toLowerCase(),
         toAddress: toAddress.toLowerCase(),
-        expectedTo: PAYMENT_RECIPIENT.toLowerCase(),
+        expectedTo: expectedRecipient.toLowerCase(),
         amount,
-        expectedAmount,
+        expectedAmountInTokenUnits,
       });
       return NextResponse.json(
         { error: "Transaction details do not match payment requirements" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     console.log("Transaction verification successful!");
-
-    // Calculate expiry for daily access payments
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     // Save payment to database
     const payment = new Payment({
@@ -211,7 +307,9 @@ export async function POST(request: NextRequest) {
       transactionHash,
       amount,
       chainId,
-      recipient: PAYMENT_RECIPIENT.toLowerCase(),
+      recipient: expectedRecipient.toLowerCase(),
+      tokenAddress: usedToken.tokenAddress,
+      tokenSymbol: usedToken.symbol,
       verified: true,
       expiresAt,
     });
@@ -226,6 +324,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Payment verification error:", error);
-    return NextResponse.json({ error: "Payment verification failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Payment verification failed" },
+      { status: 500 },
+    );
   }
 }

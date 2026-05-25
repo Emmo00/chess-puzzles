@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Payment } from '../../../../lib/models/payment.model';
 import { PaymentType } from '../../../../lib/types/payment';
 import dbConnect from '../../../../lib/db';
+import PremiumService from '../../../../lib/services/premium.service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,14 +32,26 @@ export async function GET(request: NextRequest) {
     }).sort({ createdAt: -1 });
 
     const hasDailyAccess = !!dailyPayment;
-    const hasAccess = hasDailyAccess;
+
+    // Check for premium access
+    const premiumService = new PremiumService();
+    const premium = await premiumService.getActivePremiumPayment(walletAddress);
+    const hasPremiumAccess = !!premium;
+
+    const hasAccess = hasDailyAccess || hasPremiumAccess;
 
     return NextResponse.json({
       hasAccess,
       hasDailyAccess,
+      hasPremiumAccess,
+      premiumPlan: premium?.paymentType || null,
+      premiumPlanLabel: premium?.planLabel || null,
+      premiumExpiresAt: premium?.expiresAt || null,
       dailyAccessDate: dailyPayment?.createdAt?.toISOString(),
       message: hasAccess 
-        ? 'Daily access active'
+        ? hasPremiumAccess
+          ? 'Premium access active'
+          : 'Daily access active'
         : 'No active access found'
     });
 

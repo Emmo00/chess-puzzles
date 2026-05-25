@@ -27,24 +27,24 @@ export default function CTABlock({ title, subtitle, accentColor, icon, ribbonTex
     <span
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative gap-4 w-full h-28 overflow-hidden border-4 border-black ${accentColor} px-3 py-2 font-black text-sm uppercase tracking-wider text-black transition-all duration-200 flex flex-col items-center justify-center cursor-pointer text-center`}
+      className={`relative gap-4 w-full h-28 overflow-hidden border-4 border-black ${accentColor} px-3 py-2 font-black text-sm uppercase tracking-wider text-black transition-all duration-150 flex flex-col items-center justify-center cursor-pointer text-center`}
       style={{
         boxShadow: isHovered
-          ? "6px 6px 0px rgba(0, 0, 0, 0.3), 0px 0px 16px rgba(0, 0, 0, 0.4)"
-          : "4px 4px 0px rgba(0, 0, 0, 0.2)",
-        transform: isHovered ? "translate(-2px, -2px) scale(1.05) rotate(1deg)" : "translate(0, 0)",
+          ? "8px 8px 0px #000000"
+          : "5px 5px 0px #000000",
+        transform: isHovered ? "translate(-2px, -2px) rotate(1deg)" : "translate(0, 0)",
         display: "flex",
       }}
     >
       {ribbonText ? (
-        <span className="pointer-events-none absolute -right-10 top-4 w-36 rotate-45 border-y-2 border-black bg-black px-2 py-0.5 text-center text-[15px] font-black normal-case tracking-wide text-yellow-300">
+        <span className="pointer-events-none absolute -right-10 top-4 w-36 rotate-45 border-y-2 border-black bg-black px-2 py-0.5 text-center text-[15px] font-black normal-case tracking-wide text-yellow-300 shadow-[2px_2px_0px_#000000]">
           {ribbonText}
         </span>
       ) : null}
-      <span className="text-xl flex items-center justify-center">{icon}</span>
+      <span className="text-2xl flex items-center justify-center">{icon}</span>
       <div className="flex flex-col items-center gap-0.5 leading-tight">
-        <span className="text-xs font-black">{title}</span>
-        <span className="text-[10px] font-bold opacity-75 text-center">{subtitle}</span>
+        <span className="text-sm font-bold font-mono">{title}</span>
+        <span className="text-[10px] uppercase tracking-[0.08em] text-center font-italic font-mono">{subtitle}</span>
       </div>
     </span>
   )
@@ -57,13 +57,13 @@ export default function CTABlock({ title, subtitle, accentColor, icon, ribbonTex
       }}
     >
       {onClick ? (
-        <button onClick={onClick} className="w-full h-full">{buttonContent}</button>
+        <button onClick={onClick} className="w-full h-full focus:outline-none">{buttonContent}</button>
       ) : href && href !== "#" ? (
         <Link href={href} className="block h-full">
           {buttonContent}
         </Link>
       ) : (
-        <button className="w-full h-full">{buttonContent}</button>
+        <button className="w-full h-full focus:outline-none">{buttonContent}</button>
       )}
       <style jsx>{`
         @keyframes slideUp {

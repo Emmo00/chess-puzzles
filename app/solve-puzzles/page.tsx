@@ -10,7 +10,9 @@ import { useUserStats } from "../../lib/hooks/useUserStats";
 import { Puzzle } from "../../lib/types";
 import { getBasePoints, getHintMultiplier } from "../../lib/utils/points";
 import { getThemeById } from "../../lib/config/puzzleThemes";
+import { FREE_DAILY_PUZZLE_LIMIT } from "../../lib/config/premium";
 import { TelegramSupportLink } from "@/components/TelegramSupportLink";
+import { PaymentModal } from "@/components/PaymentModal";
 
 type HintStage = 'none' | 'piece' | 'move';
 
@@ -19,6 +21,7 @@ export default function SolvePuzzlesPage() {
   const [paymentStatus, setPaymentStatus] = useState<{
     hasAccess: boolean;
     hasDailyAccess?: boolean;
+    hasPremiumAccess?: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [mistakeCount, setMistakeCount] = useState(0);
@@ -50,6 +53,7 @@ export default function SolvePuzzlesPage() {
   
   // Completion modal state
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [currentTurn, setCurrentTurn] = useState<"w" | "b">("w");
@@ -134,8 +138,8 @@ export default function SolvePuzzlesPage() {
         },
       });
 
-      if (response.status === 429) {
-        // Daily limit reached - update count to show exhausted state
+      if (response.status === 429 || response.status === 402) {
+        // Daily limit reached or payment required - update count to show exhausted state
         setSolvedPuzzlesCount(MAX_DAILY_PUZZLES);
         return;
       }
@@ -301,11 +305,13 @@ export default function SolvePuzzlesPage() {
 
   // Calculate limits based on payment status
   const getMaxDailyPuzzles = () => {
-    return 5;
+    // Premium users get unlimited puzzles
+    if (paymentStatus?.hasPremiumAccess) return Number.MAX_SAFE_INTEGER;
+    return FREE_DAILY_PUZZLE_LIMIT;
   };
 
   const MAX_DAILY_PUZZLES = getMaxDailyPuzzles();
-  const isAccessExhausted = solvedPuzzlesCount >= MAX_DAILY_PUZZLES;
+  const isAccessExhausted = !paymentStatus?.hasPremiumAccess && solvedPuzzlesCount >= MAX_DAILY_PUZZLES;
 
   return (
     <div className="min-h-screen w-full bg-white text-black flex flex-col">
@@ -324,7 +330,7 @@ export default function SolvePuzzlesPage() {
             }`}
           >
             <span className="inline-flex items-center gap-1">
-              <Zap className="w-4 h-4" /> PUZZLES ({solvedPuzzlesCount}/{MAX_DAILY_PUZZLES})
+              <Zap className="w-4 h-4" /> PUZZLES ({solvedPuzzlesCount}/{paymentStatus?.hasPremiumAccess ? '∞' : MAX_DAILY_PUZZLES})
             </span>
           </div>
         </div>
@@ -524,7 +530,7 @@ export default function SolvePuzzlesPage() {
             <button
               onClick={fetchPuzzle}
               disabled={puzzleLoading}
-              className="w-full bg-green-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50 disabled:hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] disabled:hover:translate-x-0 disabled:hover:translate-y-0"
+              className="w-full bg-green-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.75 hover:translate-y-0.75 transition-all disabled:opacity-50 disabled:hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] disabled:hover:translate-x-0 disabled:hover:translate-y-0"
             >
               {puzzleLoading ? "LOADING PUZZLE..." : "START"}
             </button>
@@ -539,19 +545,39 @@ export default function SolvePuzzlesPage() {
                 Daily Limit Reached! <Ban className="w-8 h-8 shrink-0" />
               </h2>
               <p className="text-lg font-bold text-black uppercase">You&apos;ve solved all {MAX_DAILY_PUZZLES} puzzles for today.</p>
-              <p className="text-md font-bold text-black mt-2 uppercase">Come back tomorrow for more puzzles!</p>
+              <p className="text-md font-bold text-black mt-2 uppercase">Upgrade to Premium to unlock unlimited puzzles.</p>
               <TelegramSupportLink />
             </div>
 
-            <Link
-              href="/"
-              className="inline-block w-full bg-black text-white py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
-            >
-              GO HOME
-            </Link>
+            <div className="space-y-2">
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                className="inline-block w-full bg-amber-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.75 hover:translate-y-0.75 transition-all"
+              >
+                GO PREMIUM
+              </button>
+
+              <Link
+                href="/"
+                className="inline-block w-full bg-black text-white py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.75 hover:translate-y-0.75 transition-all"
+              >
+                GO HOME
+              </Link>
+            </div>
           </div>
         )}
       </main>
+
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSuccess={async () => {
+          // Refresh payment status and counts after successful purchase
+          await checkPaymentStatus();
+          await checkSolvedPuzzlesCount();
+        }}
+      />
+
     </div>
   );
 }

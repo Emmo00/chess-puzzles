@@ -25,7 +25,7 @@ export default function PuzzleCounter({ remaining }: PuzzleCounterProps) {
       }}
     >
       <div
-        className="border-4 border-black bg-cyan-400 px-6 py-3 font-black text-lg tracking-wider uppercase text-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+        className="border-4 border-black bg-cyan-400 px-6 py-3 font-black text-lg tracking-wider uppercase text-black shadow-[6px_6px_0px_#000000]"
       >
         <span>PUZZLES LEFT: </span>
         <span className="font-black">{displayRemaining}</span>

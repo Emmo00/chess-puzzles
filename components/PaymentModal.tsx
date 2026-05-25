@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAccount } from 'wagmi'
 import {
   BadgeCheck,
@@ -16,8 +16,10 @@ import {
   X,
   Zap,
 } from 'lucide-react'
+import confetti from 'canvas-confetti'
 import { usePayment } from '../lib/hooks/usePayment'
 import { PaymentType } from '../lib/types/payment'
+import { getPremiumPlan } from '../lib/config/premium'
 import { TelegramSupportLink } from './TelegramSupportLink'
 
 interface PaymentModalProps {
@@ -28,10 +30,29 @@ interface PaymentModalProps {
 
 export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) {
   const { address } = useAccount()
-  const { makePayment, verifyPayment, isPaymentPending, isConfirming, isSuccess, transactionHash } = usePayment()
+  const { makePayment, verifyPayment, getPreferredToken, isPaymentPending, isConfirming, isSuccess, transactionHash, paymentPhase } = usePayment()
   const [selectedPayment, setSelectedPayment] = useState<PaymentType | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isVerifying, setIsVerifying] = useState(false)
+  const [preferredToken, setPreferredToken] = useState<any | null>(null)
+  const [celebration, setCelebration] = useState<{
+    title: string
+    subtitle: string
+    expiresAt: string
+  } | null>(null)
+  const modalScrollRef = useRef<HTMLDivElement | null>(null)
+  const confettiFiredRef = useRef(false)
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const t = await getPreferredToken()
+        setPreferredToken(t)
+      } catch (e) {
+        // ignore
+      }
+    })()
+  }, [address])
 
   // Auto-verify payment when transaction is successful
   useEffect(() => {
@@ -39,6 +60,40 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
       handleVerifyPayment()
     }
   }, [isSuccess, transactionHash])
+
+  useEffect(() => {
+    if (!error) return
+
+    modalScrollRef.current?.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
+  }, [error])
+
+  useEffect(() => {
+    if (!celebration || confettiFiredRef.current) return
+
+    confettiFiredRef.current = true
+
+    const burst = (particleCount: number, spread: number, originY: number) => {
+      confetti({
+        particleCount,
+        spread,
+        startVelocity: 38,
+        scalar: 1.05,
+        origin: { y: originY },
+        colors: ['#facc15', '#22c55e', '#60a5fa', '#ffffff', '#000000'],
+      })
+    }
+
+    burst(120, 80, 0.55)
+    window.setTimeout(() => burst(80, 55, 0.4), 180)
+    window.setTimeout(() => burst(80, 55, 0.7), 360)
+
+    return () => {
+      confettiFiredRef.current = false
+    }
+  }, [celebration])
 
   const handlePayment = async (type: PaymentType) => {
     if (!address) {
@@ -50,36 +105,47 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
       setError(null)
       setSelectedPayment(type)
       await makePayment(type)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Payment error:', error)
-      setError(error instanceof Error ? error.message : 'Payment failed')
+      const short = error?.shortMessage || error?.short || (error instanceof Error ? error.message : String(error))
+      setError(short || 'Payment failed')
       setSelectedPayment(null)
     }
   }
 
   const handleVerifyPayment = async () => {
     if (isVerifying) return
-    
+
     try {
       setIsVerifying(true)
       setError(null) // Clear any previous errors
       const verified = await verifyPayment()
       if (verified) {
+        const plan = selectedPayment ? getPremiumPlan(selectedPayment) : null
+        const expiresAt = new Date(
+          Date.now() + (plan?.durationDays ?? 1) * 24 * 60 * 60 * 1000,
+        )
+
+        setCelebration({
+          title: plan?.label ?? 'Premium',
+          subtitle: selectedPayment === PaymentType.DAILY_ACCESS
+            ? 'Daily access activated'
+            : 'Subscription activated',
+          expiresAt: expiresAt.toLocaleString([], {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          }),
+        })
+        setIsVerifying(false)
         onSuccess()
-        // Close modal after a short delay to show success
-        setTimeout(() => {
-          onClose()
-          setSelectedPayment(null)
-          setError(null)
-          setIsVerifying(false)
-        }, 1500)
       } else {
         setError('Payment verification failed. Please contact support.')
         setIsVerifying(false)
       }
     } catch (error) {
       console.error('Verification error:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Failed to verify payment'
+      const errAny = error as any
+      const errorMessage = errAny?.shortMessage || errAny?.short || (error instanceof Error ? error.message : 'Failed to verify payment')
       setError(errorMessage)
       setIsVerifying(false)
     }
@@ -90,24 +156,34 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
     onClose()
     setSelectedPayment(null)
     setError(null)
+    setCelebration(null)
   }
+
+  const monthlyLoading = selectedPayment === PaymentType.PREMIUM_MONTHLY && (isPaymentPending || isConfirming || isVerifying)
+  const yearlyLoading = selectedPayment === PaymentType.PREMIUM_YEARLY && (isPaymentPending || isConfirming || isVerifying)
+  const dailyLoading = selectedPayment === PaymentType.DAILY_ACCESS && (isPaymentPending || isConfirming || isVerifying)
+  const showTransactionLoader = isPaymentPending || isConfirming
+  const approveActive = paymentPhase === 'signing-approve' || paymentPhase === 'approving'
+  const depositActive = paymentPhase === 'signing-deposit' || paymentPhase === 'depositing' || paymentPhase === 'confirming'
+  const approveComplete = depositActive || isConfirming || isSuccess
+  const depositComplete = isConfirming || isSuccess
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 p-4 flex items-center justify-center pointer-events-auto" >
+    <div className="fixed inset-0 z-100000 p-4 flex items-center justify-center pointer-events-auto">
       {/* Neo-brutalist backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/80"
         onClick={handleClose}
       />
-      
+
       {/* Neo-brutalist modal */}
-      <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-md w-full transform rotate-1">
+      <div className="relative isolate bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-md w-full transform rotate-1 max-h-[90vh] overflow-hidden">
         <div className="bg-orange-400 border-b-4 border-black p-4">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-black uppercase tracking-wider text-black flex items-center gap-2">
-              <Castle className="w-7 h-7" /> ACCESS PUZZLES
+              <BadgeCheck className="w-5 h-5" /> Go Premium
             </h2>
             <button
               onClick={handleClose}
@@ -119,18 +195,103 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
           </div>
         </div>
 
-        <div className="p-6 bg-white">
+        <div ref={modalScrollRef} className="p-6 bg-white overflow-auto max-h-[calc(90vh-6rem)]">
           {error && (
-            <div className="bg-red-400 border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
-              <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
-                <OctagonAlert className="w-4 h-4 shrink-0" /> {error}
+            <>
+              <div className="bg-red-400 border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
+                <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
+                  <OctagonAlert className="w-4 h-4 shrink-0" /> {error}
+                </div>
+                <TelegramSupportLink />
               </div>
-              <TelegramSupportLink />
+            </>
+          )}
+
+          {celebration && (
+            <div className="space-y-4">
+              <div className="bg-lime-300 border-4 border-black p-6 shadow-[6px_6px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h3 className="font-black text-2xl uppercase tracking-wider text-black flex items-center gap-2">
+                    <BadgeCheck className="w-6 h-6" /> Activated
+                  </h3>
+                  <div className="bg-black text-lime-300 px-3 py-1 font-black uppercase tracking-wider text-[10px] border-2 border-black">
+                    Premium live
+                  </div>
+                </div>
+
+                <div className="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1 mb-4">
+                  <p className="font-black text-black text-xl uppercase tracking-wider">{celebration.title}</p>
+                  <p className="font-bold text-black text-sm uppercase tracking-wide mt-1">{celebration.subtitle}</p>
+                </div>
+
+                <div className="space-y-2 text-black font-bold text-sm uppercase tracking-wide">
+                  <div className="bg-white border-2 border-black px-3 py-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                    Unlimited puzzles unlocked
+                  </div>
+                  <div className="bg-white border-2 border-black px-3 py-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                    Expires: {celebration.expiresAt}
+                  </div>
+                </div>
+
+                <div className="mt-4 bg-black text-lime-300 border-4 border-black p-3 font-black uppercase tracking-wider text-xs shadow-[3px_3px_0px_rgba(0,0,0,1)]">
+                  Enjoy the board. The crown is yours.
+                </div>
+              </div>
             </div>
           )}
 
-          {!isPaymentPending && !isConfirming && !isSuccess && !isVerifying && (
+          {!celebration && !isSuccess && !isVerifying && (
             <div className="space-y-4">
+              {/* Premium Plans */}
+              <div className="bg-amber-100 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1">
+                <div className="flex justify-between items-center mb-3">
+
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="p-3 bg-white border-2 border-black text-center flex flex-col">
+                    <div className="font-black">Monthly</div>
+                    <div className="font-bold text-xl">$2</div>
+                    <button
+                      onClick={() => handlePayment(PaymentType.PREMIUM_MONTHLY)}
+                      className="w-full bg-black text-white py-2 px-3 font-black text-sm border-2 border-black hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-auto"
+                      disabled={isPaymentPending || isConfirming || Boolean(selectedPayment && selectedPayment !== PaymentType.PREMIUM_MONTHLY)}
+                    >
+                      {monthlyLoading ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" /> Processing...
+                        </>
+                      ) : (
+                        'Start Monthly'
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="p-3 bg-white border-2 border-black text-center flex flex-col">
+                    <div className="font-black">Yearly</div>
+                    <div className="font-bold text-xl">$20</div>
+                    <div className="text-xs mt-1">Best value · Save 2 months</div>
+                    <button
+                      onClick={() => handlePayment(PaymentType.PREMIUM_YEARLY)}
+                      className="w-full bg-black text-white py-2 px-3 font-black text-sm border-2 border-black hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-auto"
+                      disabled={isPaymentPending || isConfirming || Boolean(selectedPayment && selectedPayment !== PaymentType.PREMIUM_YEARLY)}
+                    >
+                      {yearlyLoading ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" /> Processing...
+                        </>
+                      ) : (
+                        'Start Yearly'
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <p className="text-black font-bold text-sm mb-2 uppercase tracking-wide flex items-center gap-1">
+                  <Zap className="w-4 h-4" /> Unlimited puzzles, golden badge on leaderboard and more
+                </p>
+              </div>
+
               {/* Daily Access Option */}
               <div className="bg-cyan-300 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1">
                 <div className="flex justify-between items-center mb-3">
@@ -142,16 +303,25 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                   </span>
                 </div>
                 <p className="text-black font-bold text-sm mb-2 uppercase tracking-wide flex items-center gap-1">
-                  <Zap className="w-4 h-4" /> 3 Puzzles Today!
+                  <Zap className="w-4 h-4" /> Unlimited puzzles today!
                 </p>
                 <p className="text-black font-bold text-xs mb-4 opacity-80">
-                  Solve 3 chess puzzles today
+                  Solve unlimited chess puzzles for 24 hours
                 </p>
                 <button
                   onClick={() => handlePayment(PaymentType.DAILY_ACCESS)}
                   className="w-full bg-black text-cyan-300 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-cyan-300 hover:bg-gray-800 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 flex items-center justify-center gap-2"
+                  disabled={isPaymentPending || isConfirming || Boolean(selectedPayment && selectedPayment !== PaymentType.DAILY_ACCESS)}
                 >
-                  <Smartphone className="w-4 h-4" /> PAY $0.10 cUSD
+                  {dailyLoading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" /> Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Smartphone className="w-4 h-4" /> {preferredToken ? `PAY with ${preferredToken.symbol}` : 'PAY'}
+                    </>
+                  )}
                 </button>
               </div>
 
@@ -164,27 +334,73 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
             </div>
           )}
 
-          {(isPaymentPending || isConfirming) && (
-            <div className="text-center py-8">
-              {/* Neo-brutalist loading */}
-              <div className="bg-purple-400 border-4 border-black p-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-2">
-                <div className="w-16 h-16 mx-auto mb-4 bg-black border-4 border-purple-400 animate-bounce">
-                  <div className="w-full h-full bg-purple-400 border-2 border-black animate-pulse"></div>
-                </div>
-                <h3 className="font-black text-xl uppercase mb-2 text-black tracking-wider">
-                  <span className="inline-flex items-center gap-2">
-                    {isPaymentPending ? <Zap className="w-5 h-5" /> : <RefreshCw className="w-5 h-5 animate-spin" />}
-                    {isPaymentPending ? 'Processing...' : 'Confirming...'}
-                  </span>
-                </h3>
-                <p className="font-bold text-black text-sm uppercase tracking-wide flex items-center justify-center gap-1">
-                  <Coins className="w-4 h-4" /> Paying $0.10 cUSD
-                </p>
-                {transactionHash && (
-                  <div className="bg-black text-purple-400 p-2 mt-4 border-2 border-purple-400 text-xs font-mono break-all">
-                    TX: {transactionHash.slice(0, 20)}...
+          {showTransactionLoader && !celebration && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 p-4">
+              <div className="relative w-full max-w-lg -rotate-1">
+                <div className="absolute inset-0 translate-x-3 translate-y-3 bg-black" aria-hidden="true" />
+                <div className="relative border-4 border-black bg-yellow-300 p-5 sm:p-6">
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <div className="bg-white text-black px-3 py-1 border-2 border-black font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs shadow-[3px_3px_0px_rgba(0,0,0,1)]">
+                      Celo · Secure
+                    </div>
                   </div>
-                )}
+
+                  <div className="mb-5 border-4 border-black bg-white p-3 sm:p-4 shadow-[5px_5px_0px_rgba(0,0,0,1)] transform rotate-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="h-3 w-3 bg-black" />
+                      <p className="font-black uppercase tracking-[0.22em] text-black text-xs sm:text-sm">
+                        Approve first, then deposit
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] items-stretch">
+                    <div className="border-4 border-black bg-white p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`h-10 w-10 flex items-center justify-center border-4 border-black ${approveComplete ? 'bg-lime-300' : approveActive ? 'bg-yellow-300 animate-pulse' : 'bg-white'}`}>
+                          {approveComplete ? <BadgeCheck className="w-5 h-5 text-black" /> : approveActive ? <RefreshCw className="w-5 h-5 animate-spin text-black" /> : <span className="font-black text-black">1</span>}
+                        </div>
+                        <div>
+                          <div className="font-black text-black uppercase tracking-wide text-sm sm:text-base">Approve</div>
+                          <div className="text-[11px] sm:text-xs font-bold uppercase tracking-wide text-black">
+                            {approveComplete ? 'Approved' : approveActive ? 'Approving...' : 'Waiting for signature'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="h-3 border-2 border-black bg-black overflow-hidden">
+                        <div className={`h-full bg-white transition-all duration-500 ${approveComplete ? 'w-full' : approveActive ? 'w-2/3' : 'w-0'}`} />
+                      </div>
+                    </div>
+
+                    <div className="hidden sm:flex items-center justify-center px-1">
+                      <div className={`h-1 w-8 border border-black ${approveComplete ? 'bg-lime-300' : 'bg-black'}`} />
+                    </div>
+
+                    <div className="border-4 border-black bg-white p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`h-10 w-10 flex items-center justify-center border-4 border-black ${depositComplete ? 'bg-lime-300' : depositActive ? 'bg-cyan-300 animate-pulse' : 'bg-white'}`}>
+                          {depositComplete ? <BadgeCheck className="w-5 h-5 text-black" /> : depositActive ? <RefreshCw className="w-5 h-5 animate-spin text-black" /> : <span className="font-black text-black">2</span>}
+                        </div>
+                        <div>
+                          <div className="font-black text-black uppercase tracking-wide text-sm sm:text-base">Deposit</div>
+                          <div className="text-[11px] sm:text-xs font-bold uppercase tracking-wide text-black">
+                            {depositComplete ? 'Success' : depositActive ? 'Waiting for deposit' : 'Waiting for approve'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="h-3 border-2 border-black bg-black overflow-hidden">
+                        <div className={`h-full bg-white transition-all duration-500 ${depositComplete ? 'w-full' : depositActive ? 'w-2/3' : 'w-0'}`} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {transactionHash && (
+                    <div className="mt-5 border-4 border-black bg-black text-white p-3 shadow-[4px_4px_0px_rgba(0,0,0,1)] rotate-1">
+                      <div className="font-black uppercase tracking-[0.2em] text-[10px] mb-1">Transaction</div>
+                      <div className="font-mono text-[11px] break-all">{transactionHash.slice(0, 20)}...</div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

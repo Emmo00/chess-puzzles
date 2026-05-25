@@ -120,7 +120,14 @@ export default function LeaderboardPage() {
                   {getRankDisplay(userRank.rank)}
                 </div>
                 <div>
-                  <div className="font-black text-black">{userRank.displayName}</div>
+                  <div className="font-black text-black">
+                    {userRank.displayName}
+                    {userRank.isPremium && (
+                      <span title={userRank.premiumPlanLabel || 'Premium'} className="ml-2 inline-flex items-center">
+                        <Star className="w-4 h-4 text-yellow-500" />
+                      </span>
+                    )}
+                  </div>
                   <div className="text-sm font-bold text-black/70">{formatAddress(userRank.walletAddress)}</div>
                 </div>
               </div>
@@ -187,6 +194,11 @@ export default function LeaderboardPage() {
                       <div className="min-w-0">
                         <div className="font-black text-black text-sm truncate">
                           {entry.displayName}
+                          {entry.isPremium && (
+                            <span title={entry.premiumPlanLabel || 'Premium'} className="ml-2 inline-flex items-center">
+                              <Star className="w-4 h-4 text-yellow-500" />
+                            </span>
+                          )}
                           {isCurrentUser && " (YOU)"}
                         </div>
                         <div className="text-xs font-bold text-black/60 truncate">
