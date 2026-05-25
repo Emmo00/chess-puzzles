@@ -28,7 +28,7 @@ interface PaymentModalProps {
 
 export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) {
   const { address } = useAccount()
-  const { makePayment, verifyPayment, getPreferredToken, isPaymentPending, isConfirming, isSuccess, transactionHash } = usePayment()
+  const { makePayment, verifyPayment, getPreferredToken, isPaymentPending, isConfirming, isSuccess, transactionHash, paymentPhase } = usePayment()
   const [selectedPayment, setSelectedPayment] = useState<PaymentType | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isVerifying, setIsVerifying] = useState(false)
@@ -119,6 +119,11 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
   const monthlyLoading = selectedPayment === PaymentType.PREMIUM_MONTHLY && (isPaymentPending || isConfirming || isVerifying)
   const yearlyLoading = selectedPayment === PaymentType.PREMIUM_YEARLY && (isPaymentPending || isConfirming || isVerifying)
   const dailyLoading = selectedPayment === PaymentType.DAILY_ACCESS && (isPaymentPending || isConfirming || isVerifying)
+  const showTransactionLoader = isPaymentPending || isConfirming
+  const approveActive = paymentPhase === 'signing-approve' || paymentPhase === 'approving'
+  const depositActive = paymentPhase === 'signing-deposit' || paymentPhase === 'depositing' || paymentPhase === 'confirming'
+  const approveComplete = depositActive || isConfirming || isSuccess
+  const depositComplete = isConfirming || isSuccess
 
   if (!isOpen) return null
 
@@ -251,22 +256,53 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
             </div>
           )}
 
-          {(isPaymentPending || isConfirming) && (
+          {showTransactionLoader && (
             <div className="text-center py-8">
               {/* Neo-brutalist loading */}
-              <div className="bg-purple-400 border-4 border-black p-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-2">
-                <div className="w-16 h-16 mx-auto mb-4 bg-black border-4 border-purple-400 animate-bounce">
-                  <div className="w-full h-full bg-purple-400 border-2 border-black animate-pulse"></div>
+              <div className="bg-purple-400 border-4 border-black p-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-2 text-left">
+                <div className="bg-black text-purple-400 border-2 border-black p-3 mb-4 font-black uppercase tracking-wider text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                  Approve first, then deposit
                 </div>
-                <h3 className="font-black text-xl uppercase mb-2 text-black tracking-wider">
-                  <span className="inline-flex items-center gap-2">
-                    {isPaymentPending ? <Zap className="w-5 h-5" /> : <RefreshCw className="w-5 h-5 animate-spin" />}
-                    {isPaymentPending ? 'Processing...' : 'Confirming...'}
-                  </span>
+
+                <h3 className="font-black text-xl uppercase mb-2 text-black tracking-wider flex items-center gap-2">
+                  {isConfirming ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                  {paymentPhase === 'signing-approve' && 'Sign approve'}
+                  {paymentPhase === 'approving' && 'Waiting for approve confirmation'}
+                  {paymentPhase === 'signing-deposit' && 'Sign deposit'}
+                  {paymentPhase === 'depositing' && 'Waiting for deposit confirmation'}
+                  {paymentPhase === 'confirming' && 'Final confirmation'}
                 </h3>
-                <p className="font-bold text-black text-sm uppercase tracking-wide flex items-center justify-center gap-1">
-                  <Coins className="w-4 h-4" /> Paying $0.10 cUSD
+
+                <p className="font-bold text-black text-sm uppercase tracking-wide flex items-center gap-1 mb-4">
+                  <Coins className="w-4 h-4" /> Two signatures, one premium unlock
                 </p>
+
+                <div className="space-y-3">
+                  <div className={`border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] ${approveComplete ? 'bg-lime-300' : approveActive ? 'bg-yellow-300 transform -translate-x-1' : 'bg-white'}`}>
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <span className="font-black uppercase tracking-wider text-sm text-black">Step 1: Approve</span>
+                      <span className="bg-black text-white px-2 py-1 text-[10px] font-black uppercase tracking-wide">
+                        {approveComplete ? 'Done' : approveActive ? 'Signing' : 'Next'}
+                      </span>
+                    </div>
+                    <p className="text-black font-bold text-xs uppercase tracking-wide">
+                      Allow the revenue contract to spend the selected stablecoin.
+                    </p>
+                  </div>
+
+                  <div className={`border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] ${depositComplete ? 'bg-lime-300' : depositActive ? 'bg-cyan-300 transform translate-x-1' : 'bg-white'}`}>
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <span className="font-black uppercase tracking-wider text-sm text-black">Step 2: Deposit</span>
+                      <span className="bg-black text-white px-2 py-1 text-[10px] font-black uppercase tracking-wide">
+                        {depositComplete ? 'Done' : depositActive ? 'Signing' : 'Waiting'}
+                      </span>
+                    </div>
+                    <p className="text-black font-bold text-xs uppercase tracking-wide">
+                      After approve confirms, deposit the payment to unlock premium.
+                    </p>
+                  </div>
+                </div>
+
                 {transactionHash && (
                   <div className="bg-black text-purple-400 p-2 mt-4 border-2 border-purple-400 text-xs font-mono break-all">
                     TX: {transactionHash.slice(0, 20)}...

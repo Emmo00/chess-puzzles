@@ -5,11 +5,10 @@ import {
   useAccount,
   useConfig,
   usePublicClient,
-  useSendCalls,
+  useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
 import { encodeFunctionData, erc20Abi, parseUnits } from "viem";
-import { waitForCallsStatus } from "@wagmi/core";
 
 import revenueCollectorAbiJson from "@/abis/revenue-receiver.json";
 import {
@@ -31,13 +30,19 @@ type RevenueCollectorAbi = typeof revenueCollectorAbiJson;
 
 const revenueCollectorAbi = revenueCollectorAbiJson as RevenueCollectorAbi;
 
-type PaymentPhase = "idle" | "approving" | "depositing" | "confirming";
+type PaymentPhase =
+  | "idle"
+  | "signing-approve"
+  | "approving"
+  | "signing-deposit"
+  | "depositing"
+  | "confirming";
 
 export function usePayment() {
   const config = useConfig();
   const { address, chainId, connector } = useAccount();
   const publicClient = usePublicClient();
-  const { sendCallsAsync } = useSendCalls();
+  const { writeContractAsync } = useWriteContract();
   const [paymentType, setPaymentType] = useState<PaymentType | null>(null);
   const [paymentPhase, setPaymentPhase] = useState<PaymentPhase>("idle");
   const [submittedHash, setSubmittedHash] = useState<`0x${string}` | undefined>(
@@ -172,68 +177,61 @@ export function usePayment() {
         throw new Error("Wallet connector unavailable");
       }
 
+      const approveData = encodeFunctionData({
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [collectorAddress, smallestAmount],
+      });
+
+      const feeCurrency = await selectSupportedFeeCurrency({
+        publicClient,
+        account: address as `0x${string}`,
+        to: tokenAddress,
+        data: approveData,
+      });
+
+      setPaymentPhase("signing-approve");
+      const approvalHash = await writeContractAsync({
+        account: address,
+        address: tokenAddress,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [collectorAddress, smallestAmount],
+        feeCurrency,
+      });
+
       setPaymentPhase("approving");
+      await publicClient.waitForTransactionReceipt({
+        hash: approvalHash,
+      });
+
+      setPaymentPhase("signing-deposit");
       const depositData = encodeFunctionData({
         abi: revenueCollectorAbi,
         functionName: "deposit",
         args: [tokenAddress, smallestAmount],
       });
 
-      const feeCurrency = await selectSupportedFeeCurrency({
+      const depositFeeCurrency = await selectSupportedFeeCurrency({
         publicClient,
         account: address as `0x${string}`,
         to: collectorAddress,
         data: depositData,
       });
 
-      const batchRequest: any = {
+      setPaymentPhase("depositing");
+      const depositHash = await writeContractAsync({
         account: address,
-        chainId,
-        forceAtomic: true,
-        calls: [
-          {
-            to: tokenAddress,
-            abi: erc20Abi,
-            functionName: "approve",
-            args: [collectorAddress, smallestAmount],
-            feeCurrency,
-          },
-          {
-            to: collectorAddress,
-            abi: revenueCollectorAbi,
-            functionName: "deposit",
-            args: [tokenAddress, smallestAmount],
-            feeCurrency,
-          },
-        ],
-      };
-
-      if (feeCurrency) {
-        batchRequest.feeCurrency = feeCurrency;
-      }
-
-      const batchResult = await sendCallsAsync(batchRequest);
-
-      console.log("batch result:", batchResult);
-
-      const callsStatus = await waitForCallsStatus(config, {
-        connector,
-        id: batchResult.id,
+        address: collectorAddress,
+        abi: revenueCollectorAbi,
+        functionName: "deposit",
+        args: [tokenAddress, smallestAmount],
+        feeCurrency: depositFeeCurrency,
       });
 
-      console.log("call status:", callsStatus);
-
-      const batchHash = callsStatus.receipts?.[0]?.transactionHash;
-      console.log("batch hash:", batchHash);
-      if (!batchHash) {
-        throw new Error(
-          "Unable to resolve transaction hash for batched payment",
-        );
-      }
-
       setPaymentPhase("confirming");
-      setSubmittedHash(batchHash);
-      return batchHash;
+      setSubmittedHash(depositHash);
+      return depositHash;
     } catch (error) {
       resetPaymentState();
       throw error;
@@ -310,7 +308,10 @@ export function usePayment() {
     verifyPayment,
     getPreferredToken,
     isPaymentPending:
-      paymentPhase === "approving" || paymentPhase === "depositing",
+      paymentPhase === "signing-approve" ||
+      paymentPhase === "approving" ||
+      paymentPhase === "signing-deposit" ||
+      paymentPhase === "depositing",
     isConfirming,
     isSuccess,
     transactionHash: submittedHash,
