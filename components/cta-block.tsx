@@ -43,8 +43,8 @@ export default function CTABlock({ title, subtitle, accentColor, icon, ribbonTex
       ) : null}
       <span className="text-2xl flex items-center justify-center">{icon}</span>
       <div className="flex flex-col items-center gap-0.5 leading-tight">
-        <span className="text-xs font-black">{title}</span>
-        <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-center">{subtitle}</span>
+        <span className="text-sm font-bold font-mono">{title}</span>
+        <span className="text-[10px] uppercase tracking-[0.08em] text-center font-italic font-mono">{subtitle}</span>
       </div>
     </span>
   )

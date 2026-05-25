@@ -11,6 +11,7 @@ interface StreakModalProps {
   onClose: () => void;
   userStats: UserStats | StreakData | null;
   hasPremiumAccess?: boolean;
+  premiumExpiresAt?: string | null;
   onPaymentSuccess?: () => void;
 }
 
@@ -19,6 +20,7 @@ export function StreakModal({
   onClose,
   userStats,
   hasPremiumAccess = false,
+  premiumExpiresAt,
   onPaymentSuccess,
 }: StreakModalProps) {
   const [isLoading, setIsLoading] = useState(true);
@@ -158,6 +160,14 @@ export function StreakModal({
                   <p className="font-bold text-black text-sm uppercase tracking-wide">
                     Unlimited puzzles are already unlocked on this wallet.
                   </p>
+                  {premiumExpiresAt && (
+                    <p className="mt-2 font-bold text-black text-xs uppercase tracking-wide">
+                      Expires at {new Date(premiumExpiresAt).toLocaleString([], {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                      })}
+                    </p>
+                  )}
                 </div>
               )}
             </>

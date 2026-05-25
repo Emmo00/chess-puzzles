@@ -24,6 +24,7 @@ export default function Home() {
     hasAccess: boolean;
     hasDailyAccess: boolean;
     hasPremiumAccess?: boolean;
+    premiumExpiresAt?: string | null;
   } | null>(null);
   const { address, isConnected } = useAccount();
   const { userStats } = useUserStats();
@@ -210,6 +211,7 @@ export default function Home() {
           onClose={() => setShowStreakModal(false)}
           userStats={streakData || null}
           hasPremiumAccess={paymentStatus?.hasPremiumAccess || false}
+          premiumExpiresAt={paymentStatus?.premiumExpiresAt || null}
           onPaymentSuccess={handlePaymentSuccess}
         />
       </div>
