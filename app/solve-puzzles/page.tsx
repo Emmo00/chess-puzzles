@@ -106,6 +106,34 @@ export default function SolvePuzzlesPage() {
     }
   };
 
+  useEffect(() => {
+    if (!mounted || !address || !isConnected) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const refreshStatus = async () => {
+      if (!isMounted) return;
+      await checkPaymentStatus();
+    };
+
+    refreshStatus();
+
+    const intervalId = window.setInterval(refreshStatus, 30000);
+    const handleFocus = () => {
+      refreshStatus();
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [mounted, address, isConnected]);
+
   const checkSolvedPuzzlesCount = async () => {
     if (!address) return;
 
@@ -530,7 +558,7 @@ export default function SolvePuzzlesPage() {
             <button
               onClick={fetchPuzzle}
               disabled={puzzleLoading}
-              className="w-full bg-green-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50 disabled:hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] disabled:hover:translate-x-0 disabled:hover:translate-y-0"
+              className="w-full bg-green-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.75 hover:translate-y-0.75 transition-all disabled:opacity-50 disabled:hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] disabled:hover:translate-x-0 disabled:hover:translate-y-0"
             >
               {puzzleLoading ? "LOADING PUZZLE..." : "START"}
             </button>
@@ -552,14 +580,14 @@ export default function SolvePuzzlesPage() {
             <div className="space-y-2">
               <button
                 onClick={() => setShowPaymentModal(true)}
-                className="inline-block w-full bg-amber-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
+                className="inline-block w-full bg-amber-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.75 hover:translate-y-0.75 transition-all"
               >
                 GO PREMIUM
               </button>
 
               <Link
                 href="/"
-                className="inline-block w-full bg-black text-white py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
+                className="inline-block w-full bg-black text-white py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.75 hover:translate-y-0.75 transition-all"
               >
                 GO HOME
               </Link>
@@ -575,7 +603,6 @@ export default function SolvePuzzlesPage() {
           // Refresh payment status and counts after successful purchase
           await checkPaymentStatus();
           await checkSolvedPuzzlesCount();
-          setShowPaymentModal(false);
         }}
       />
 

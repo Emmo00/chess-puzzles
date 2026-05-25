@@ -72,6 +72,34 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    if (!address || !isConnected) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const refreshStatus = async () => {
+      if (!isMounted) return;
+      await checkPaymentStatus();
+    };
+
+    refreshStatus();
+
+    const intervalId = window.setInterval(refreshStatus, 30000);
+    const handleFocus = () => {
+      refreshStatus();
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [address, isConnected]);
+
   const handlePaymentSuccess = () => {
     checkPaymentStatus(); // Refresh payment status
   };

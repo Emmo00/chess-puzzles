@@ -41,7 +41,6 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
     expiresAt: string
   } | null>(null)
   const modalScrollRef = useRef<HTMLDivElement | null>(null)
-  const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const confettiFiredRef = useRef(false)
 
   useEffect(() => {
@@ -96,14 +95,6 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
     }
   }, [celebration])
 
-  useEffect(() => {
-    return () => {
-      if (celebrationTimerRef.current) {
-        clearTimeout(celebrationTimerRef.current)
-      }
-    }
-  }, [])
-
   const handlePayment = async (type: PaymentType) => {
     if (!address) {
       setError('Please connect your wallet first')
@@ -146,18 +137,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
           }),
         })
         setIsVerifying(false)
-
-        if (celebrationTimerRef.current) {
-          clearTimeout(celebrationTimerRef.current)
-        }
-
-        celebrationTimerRef.current = setTimeout(() => {
-          onSuccess()
-          onClose()
-          setSelectedPayment(null)
-          setError(null)
-          setCelebration(null)
-        }, 4000)
+        onSuccess()
       } else {
         setError('Payment verification failed. Please contact support.')
         setIsVerifying(false)
@@ -176,6 +156,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
     onClose()
     setSelectedPayment(null)
     setError(null)
+    setCelebration(null)
   }
 
   const monthlyLoading = selectedPayment === PaymentType.PREMIUM_MONTHLY && (isPaymentPending || isConfirming || isVerifying)
@@ -190,7 +171,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[9999] p-4 flex items-center justify-center pointer-events-auto" >
+    <div className="fixed inset-0 z-100000 p-4 flex items-center justify-center pointer-events-auto">
       {/* Neo-brutalist backdrop */}
       <div
         className="absolute inset-0 bg-black/80"
@@ -198,7 +179,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
       />
 
       {/* Neo-brutalist modal */}
-      <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-md w-full transform rotate-1 max-h-[90vh] overflow-hidden">
+      <div className="relative isolate bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-md w-full transform rotate-1 max-h-[90vh] overflow-hidden">
         <div className="bg-orange-400 border-b-4 border-black p-4">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-black uppercase tracking-wider text-black flex items-center gap-2">
@@ -354,56 +335,69 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
           )}
 
           {showTransactionLoader && !celebration && (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-full max-w-lg">
-                <div className="bg-gradient-to-br from-purple-600 to-indigo-600 text-white p-6 rounded-lg shadow-2xl transform -rotate-1">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="font-black uppercase tracking-wide">Processing Payment</div>
-                    <div className="text-xs opacity-90">Secure · Celo</div>
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 p-4">
+              <div className="relative w-full max-w-lg -rotate-1">
+                <div className="absolute inset-0 translate-x-3 translate-y-3 bg-black" aria-hidden="true" />
+                <div className="relative border-4 border-black bg-yellow-300 p-5 sm:p-6">
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <div className="bg-white text-black px-3 py-1 border-2 border-black font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs shadow-[3px_3px_0px_rgba(0,0,0,1)]">
+                      Celo · Secure
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    {/* Step 1: Approve */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 flex items-center justify-center rounded-full border-4 border-black ${approveComplete ? 'bg-lime-300' : approveActive ? 'bg-yellow-300 animate-pulse' : 'bg-white'}`}>
-                          {approveComplete ? <BadgeCheck className="w-6 h-6 text-black" /> : approveActive ? <RefreshCw className="w-6 h-6 animate-spin text-black" /> : <span className="font-black text-black">1</span>}
+                  <div className="mb-5 border-4 border-black bg-white p-3 sm:p-4 shadow-[5px_5px_0px_rgba(0,0,0,1)] transform rotate-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="h-3 w-3 bg-black" />
+                      <p className="font-black uppercase tracking-[0.22em] text-black text-xs sm:text-sm">
+                        Approve first, then deposit
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] items-stretch">
+                    <div className="border-4 border-black bg-white p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`h-10 w-10 flex items-center justify-center border-4 border-black ${approveComplete ? 'bg-lime-300' : approveActive ? 'bg-yellow-300 animate-pulse' : 'bg-white'}`}>
+                          {approveComplete ? <BadgeCheck className="w-5 h-5 text-black" /> : approveActive ? <RefreshCw className="w-5 h-5 animate-spin text-black" /> : <span className="font-black text-black">1</span>}
                         </div>
                         <div>
-                          <div className="font-black">Approve</div>
-                          <div className="text-xs">{approveComplete ? 'Approved' : approveActive ? 'Approving...' : 'Waiting for signature'}</div>
+                          <div className="font-black text-black uppercase tracking-wide text-sm sm:text-base">Approve</div>
+                          <div className="text-[11px] sm:text-xs font-bold uppercase tracking-wide text-black">
+                            {approveComplete ? 'Approved' : approveActive ? 'Approving...' : 'Waiting for signature'}
+                          </div>
                         </div>
                       </div>
-                      <div className="h-2 bg-black mt-4 rounded-full overflow-hidden">
-                        <div className={`h-2 bg-white transition-all ${approveComplete ? 'w-full' : approveActive ? 'w-2/3' : 'w-0'}`} />
+                      <div className="h-3 border-2 border-black bg-black overflow-hidden">
+                        <div className={`h-full bg-white transition-all duration-500 ${approveComplete ? 'w-full' : approveActive ? 'w-2/3' : 'w-0'}`} />
                       </div>
                     </div>
 
-                    {/* Progress connector */}
-                    <div className="w-8 flex justify-center">
-                      <div className={`h-1 w-full bg-black rounded ${approveComplete ? 'opacity-100' : 'opacity-40'}`} />
+                    <div className="hidden sm:flex items-center justify-center px-1">
+                      <div className={`h-1 w-8 border border-black ${approveComplete ? 'bg-lime-300' : 'bg-black'}`} />
                     </div>
 
-                    {/* Step 2: Deposit */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 flex items-center justify-center rounded-full border-4 border-black ${depositComplete ? 'bg-lime-300' : depositActive ? 'bg-cyan-300 animate-pulse' : 'bg-white'}`}>
-                          {depositComplete ? <BadgeCheck className="w-6 h-6 text-black" /> : depositActive ? <RefreshCw className="w-6 h-6 animate-spin text-black" /> : <span className="font-black text-black">2</span>}
+                    <div className="border-4 border-black bg-white p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`h-10 w-10 flex items-center justify-center border-4 border-black ${depositComplete ? 'bg-lime-300' : depositActive ? 'bg-cyan-300 animate-pulse' : 'bg-white'}`}>
+                          {depositComplete ? <BadgeCheck className="w-5 h-5 text-black" /> : depositActive ? <RefreshCw className="w-5 h-5 animate-spin text-black" /> : <span className="font-black text-black">2</span>}
                         </div>
                         <div>
-                          <div className="font-black">Deposit</div>
-                          <div className="text-xs">{depositComplete ? 'Success' : depositActive ? 'Depositing...' : 'Waiting for approve'}</div>
+                          <div className="font-black text-black uppercase tracking-wide text-sm sm:text-base">Deposit</div>
+                          <div className="text-[11px] sm:text-xs font-bold uppercase tracking-wide text-black">
+                            {depositComplete ? 'Success' : depositActive ? 'Waiting for deposit' : 'Waiting for approve'}
+                          </div>
                         </div>
                       </div>
-                      <div className="h-2 bg-black mt-4 rounded-full overflow-hidden">
-                        <div className={`h-2 bg-white transition-all ${depositComplete ? 'w-full' : depositActive ? 'w-2/3' : 'w-0'}`} />
+                      <div className="h-3 border-2 border-black bg-black overflow-hidden">
+                        <div className={`h-full bg-white transition-all duration-500 ${depositComplete ? 'w-full' : depositActive ? 'w-2/3' : 'w-0'}`} />
                       </div>
                     </div>
                   </div>
 
                   {transactionHash && (
-                    <div className="bg-black text-white p-2 mt-4 border-2 border-white text-xs font-mono break-all">
-                      TX: {transactionHash.slice(0, 20)}...
+                    <div className="mt-5 border-4 border-black bg-black text-white p-3 shadow-[4px_4px_0px_rgba(0,0,0,1)] rotate-1">
+                      <div className="font-black uppercase tracking-[0.2em] text-[10px] mb-1">Transaction</div>
+                      <div className="font-mono text-[11px] break-all">{transactionHash.slice(0, 20)}...</div>
                     </div>
                   )}
                 </div>
