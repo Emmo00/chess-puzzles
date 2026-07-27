@@ -11,6 +11,7 @@ export interface IPayment extends Document {
   verified: boolean;
   createdAt: Date;
   expiresAt?: Date;
+  metadata?: Record<string, unknown>;
 }
 
 const PaymentSchema = new Schema<IPayment>({
@@ -54,6 +55,10 @@ const PaymentSchema = new Schema<IPayment>({
   },
   expiresAt: {
     type: Date,
+    required: false,
+  },
+  metadata: {
+    type: Schema.Types.Mixed,
     required: false,
   },
 });

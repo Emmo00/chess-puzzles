@@ -7,10 +7,13 @@ import Link from "next/link";
 import { Ban, Check, Circle, Lightbulb, X, Zap } from "lucide-react";
 import ChessBoard, { ChessBoardRef } from "../../components/chess-board";
 import { useUserStats } from "../../lib/hooks/useUserStats";
+import { useHintBalance } from "../../lib/hooks/useHintBalance";
 import { Puzzle } from "../../lib/types";
-import { getBasePoints, getHintMultiplier } from "../../lib/utils/points";
 import { getThemeById } from "../../lib/config/puzzleThemes";
 import { TelegramSupportLink } from "@/components/TelegramSupportLink";
+import { BottomNav } from "@/components/BottomNav";
+import { PointsCountUp } from "@/components/PointsCountUp";
+import { toast } from "sonner";
 
 type HintStage = 'none' | 'piece' | 'move';
 
@@ -21,6 +24,7 @@ export default function SolvePuzzlesPage() {
     hasDailyAccess?: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accessConfig, setAccessConfig] = useState<{ dailyFreePuzzles: number; unlockAmountUsd: string } | null>(null);
   const [mistakeCount, setMistakeCount] = useState(0);
   const [puzzleProgress, setPuzzleProgress] = useState(0);
   const [currentPuzzle, setCurrentPuzzle] = useState<Puzzle | null>(null);
@@ -34,6 +38,10 @@ export default function SolvePuzzlesPage() {
     mistakes: number;
     points: number;
     hintCount: number;
+    breakdown: any | null;
+    oldTotal: number;
+    newTotal: number;
+    levelUp: any | null;
   } | null>(null);
   
   // Hint state
@@ -47,6 +55,7 @@ export default function SolvePuzzlesPage() {
   
   // Wrong move state
   const [isWrongMoveActive, setIsWrongMoveActive] = useState(false);
+  const [movePulse, setMovePulse] = useState(false);
   
   // Completion modal state
   const [showCompletionModal, setShowCompletionModal] = useState(false);
@@ -58,6 +67,7 @@ export default function SolvePuzzlesPage() {
   const { address, isConnected } = useAccount();
   const router = useRouter();
   const { userStats } = useUserStats();
+  const { hintBalance, outOfHints, consume: consumeHint } = useHintBalance();
 
   useEffect(() => {
     setMounted(true);
@@ -72,8 +82,22 @@ export default function SolvePuzzlesPage() {
     if (mounted && address) {
       checkPaymentStatus();
       checkSolvedPuzzlesCount();
+      fetchAccessConfig();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, address, isConnected, router]);
+
+  const autoFetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (!mounted || !address || loading || autoFetchedRef.current || !accessConfig) return;
+    const limit = paymentStatus?.hasDailyAccess ? 999 : accessConfig.dailyFreePuzzles;
+    if (solvedPuzzlesCount < limit && !currentPuzzle && !isCompleted) {
+      autoFetchedRef.current = true;
+      fetchPuzzle();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, address, loading, paymentStatus, solvedPuzzlesCount, currentPuzzle, isCompleted, accessConfig]);
 
   // Timer effect
   useEffect(() => {
@@ -102,6 +126,18 @@ export default function SolvePuzzlesPage() {
     }
   };
 
+  const fetchAccessConfig = async () => {
+    try {
+      const res = await fetch("/api/config/public");
+      if (res.ok) {
+        const data = await res.json();
+        setAccessConfig({ dailyFreePuzzles: data.dailyFreePuzzles, unlockAmountUsd: data.unlockAmountUsd });
+      }
+    } catch {
+      // use defaults
+    }
+  };
+
   const checkSolvedPuzzlesCount = async () => {
     if (!address) return;
 
@@ -125,8 +161,12 @@ export default function SolvePuzzlesPage() {
 
     setPuzzleLoading(true);
     try {
-      // Get today's puzzle and create user tracking in one call
-      const response = await fetch("/api/puzzles/solve/new", {
+      const modeParam =
+        typeof window !== "undefined" &&
+        new URLSearchParams(window.location.search).get("mode") === "custom"
+          ? "custom"
+          : "adaptive";
+      const response = await fetch(`/api/puzzles/solve/new?mode=${modeParam}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -176,16 +216,23 @@ export default function SolvePuzzlesPage() {
           mistakes: mistakeCount,
           hintCount: hintCount,
           rating: currentPuzzle.rating,
+          solveTimeSec: Math.floor(finalElapsedTime / 1000),
         }),
       });
 
       if (response.ok) {
         const result = await response.json();
+        const oldTotal = Math.max(0, Math.floor(userStats?.points ?? 0));
+        const awardedPoints = result.points ?? 0;
         setCompletionStats({
           timeElapsed: finalElapsedTime,
           mistakes: mistakeCount,
-          points: result.points,
+          points: awardedPoints,
           hintCount: hintCount,
+          breakdown: result.breakdown ?? null,
+          oldTotal,
+          newTotal: oldTotal + awardedPoints,
+          levelUp: result.levelUp ?? null,
         });
       }
     } catch (error) {
@@ -193,24 +240,36 @@ export default function SolvePuzzlesPage() {
     }
   };
 
-  const handleShowHint = () => {
+  const handleShowHint = async () => {
+    if (hintBalance <= 0) {
+      router.push("/store");
+      return;
+    }
     if (hintStage === 'none') {
-      // First click: show piece to move
+      const ok = await consumeHint();
+      if (!ok) {
+        toast.error("Out of hints", { description: "Buy more in the Store." });
+        return;
+      }
+      setHintCount(prev => prev + 1);
       setHintStage('piece');
       const nextMove = chessBoardRef.current?.getNextMove();
       if (nextMove) {
         setHighlightedSquares({ from: nextMove.from });
       }
     } else if (hintStage === 'piece') {
-      // Second click: show target square too (and count this as using a hint)
-      setHintStage('move');
+      const ok = await consumeHint();
+      if (!ok) {
+        toast.error("Out of hints", { description: "Buy more in the Store." });
+        return;
+      }
       setHintCount(prev => prev + 1);
+      setHintStage('move');
       const nextMove = chessBoardRef.current?.getNextMove();
       if (nextMove) {
         setHighlightedSquares({ from: nextMove.from, to: nextMove.to });
       }
     }
-    // After 'move' stage, button becomes disabled until next correct move
   };
 
   const handleBack = () => {
@@ -236,9 +295,10 @@ export default function SolvePuzzlesPage() {
 
   const handleProgress = (progress: number) => {
     setPuzzleProgress(progress);
-    // Reset hint stage when a correct move is made
     setHintStage('none');
     setHighlightedSquares(null);
+    setMovePulse(true);
+    window.setTimeout(() => setMovePulse(false), 360);
   };
 
   const handleStartNewPuzzle = () => {
@@ -271,14 +331,6 @@ export default function SolvePuzzlesPage() {
     return `${seconds}s`;
   };
 
-  const getHintPenaltyPoints = () => {
-    if (!currentPuzzle || hintCount === 0) return 0;
-
-    const basePoints = getBasePoints(currentPuzzle.rating);
-    const hintMultiplier = getHintMultiplier(hintCount);
-    return Math.round(basePoints * (1 - hintMultiplier));
-  };
-
   const getThemeLabel = (themeId: string) => {
     const configuredTheme = getThemeById(themeId);
     if (configuredTheme) return configuredTheme.name;
@@ -293,22 +345,18 @@ export default function SolvePuzzlesPage() {
 
   if (loading) {
     return (
-      <div className="w-screen h-screen bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="h-dvh w-full app-paper-bg flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-black"></div>
       </div>
     );
   }
 
   // Calculate limits based on payment status
-  const getMaxDailyPuzzles = () => {
-    return 5;
-  };
-
-  const MAX_DAILY_PUZZLES = getMaxDailyPuzzles();
-  const isAccessExhausted = solvedPuzzlesCount >= MAX_DAILY_PUZZLES;
+  const MAX_DAILY_PUZZLES = accessConfig?.dailyFreePuzzles ?? 3;
+  const isAccessExhausted = solvedPuzzlesCount >= MAX_DAILY_PUZZLES && !paymentStatus?.hasDailyAccess;
 
   return (
-    <div className="min-h-screen w-full bg-white text-black flex flex-col">
+    <div className="h-dvh w-full app-paper-bg text-black flex flex-col overflow-hidden">
       {/* Header with Streak Badge and Back Button */}
       <header className="pt-4 px-4 flex justify-between items-center shrink-0">
         <Link
@@ -351,8 +399,26 @@ export default function SolvePuzzlesPage() {
                   HINTS USED: {completionStats.hintCount} <Lightbulb className="w-4 h-4" />
                 </div>
               )}
-              <div className="bg-white border-2 border-black p-2">POINTS: +{completionStats.points}</div>
             </div>
+            <div className="mt-3">
+              <PointsCountUp
+                breakdown={completionStats.breakdown}
+                oldTotal={completionStats.oldTotal}
+                newTotal={completionStats.newTotal}
+              />
+            </div>
+            {completionStats.levelUp && (
+              <div className="mt-3 bg-yellow-300 border-2 border-black p-3">
+                <div className="font-black text-sm text-black">
+                  LEVEL UP! {completionStats.levelUp.oldLevel} → {completionStats.levelUp.newLevel}
+                </div>
+                {completionStats.levelUp.rewards?.map((r: any, i: number) => (
+                  <div key={i} className="text-xs font-bold text-black mt-1">
+                    Milestone {completionStats.levelUp.milestonesHit[i]} — +{r.hints} hints, +{r.streakFreezes} streak freezes
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="mt-4 space-y-2">
               <button
                 onClick={handleStartNewPuzzle}
@@ -372,7 +438,7 @@ export default function SolvePuzzlesPage() {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-6 gap-3 min-h-0">
+      <main className="flex-1 overflow-y-auto flex flex-col items-center justify-center px-4 py-6 gap-3 min-h-0">
         {/* Show puzzle interface if puzzle is loaded */}
         {currentPuzzle && (
           <>
@@ -402,32 +468,34 @@ export default function SolvePuzzlesPage() {
                   {currentPuzzle.themes.slice(0, 5).map((themeId) => (
                     <span
                       key={themeId}
-                      className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-600 bg-gray-100 border border-gray-300 rounded-full"
+                      className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-black bg-lime-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                       title={themeId}
                     >
                       {getThemeLabel(themeId)}
                     </span>
                   ))}
                   {currentPuzzle.themes.length > 5 && (
-                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-500 bg-gray-100 border border-gray-300 rounded-full">
+                    <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-black bg-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                       +{currentPuzzle.themes.length - 5}
                     </span>
                   )}
                 </div>
               )}
 
-              <ChessBoard
-                ref={chessBoardRef}
-                puzzle={currentPuzzle}
-                onComplete={handlePuzzleComplete}
-                onProgress={handleProgress}
-                onWrongMove={() => setMistakeCount((prev) => prev + 1)}
-                onMoveIndexChange={setCurrentMoveIndex}
-                onTurnChange={setCurrentTurn}
-                onWrongMoveStateChange={handleWrongMoveStateChange}
-                onHistoryChange={handleHistoryChange}
-                highlightedSquares={highlightedSquares}
-              />
+              <div className={`transition-shadow duration-200 ${movePulse ? 'shadow-[0_0_0_4px_rgba(255,214,0,0.8)]' : ''}`}>
+                <ChessBoard
+                  ref={chessBoardRef}
+                  puzzle={currentPuzzle}
+                  onComplete={handlePuzzleComplete}
+                  onProgress={handleProgress}
+                  onWrongMove={() => setMistakeCount((prev) => prev + 1)}
+                  onMoveIndexChange={setCurrentMoveIndex}
+                  onTurnChange={setCurrentTurn}
+                  onWrongMoveStateChange={handleWrongMoveStateChange}
+                  onHistoryChange={handleHistoryChange}
+                  highlightedSquares={highlightedSquares}
+                />
+              </div>
             </div>
             <div className="w-full max-w-xs shrink-0 space-y-3">
               {/* Navigation and Hint Controls */}
@@ -462,23 +530,10 @@ export default function SolvePuzzlesPage() {
                   </button>
                 ) : (
                   <button
-                    onClick={handleShowHint}
-                    disabled={hintStage === 'move' || canGoForward}
-                    className={`flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${
-                      hintStage === 'move' || canGoForward
-                        ? "bg-yellow-200 opacity-50 cursor-not-allowed"
-                        : hintCount > 0
-                        ? "bg-yellow-200 hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px"
-                        : "bg-yellow-400 hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px"
-                    }`}
+                    onClick={handleRetry}
+                    className="flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all bg-red-400"
                   >
-                    {hintStage === 'none' && `HINT${hintCount > 0 ? ` (${hintCount})` : ''}`}
-                    {hintStage === 'piece' && <span className="font-black text-xs">SHOW MOVE</span>}
-                    {hintStage === 'move' && (
-                      <span className="inline-flex items-center gap-1">
-                        <Check className="w-4 h-4" /> HINT SHOWN
-                      </span>
-                    )}
+                    RETRY
                   </button>
                 )}
                 
@@ -495,11 +550,37 @@ export default function SolvePuzzlesPage() {
                   NEXT →
                 </button>
               </div>
-              
+
+              {/* Full-width Hint Button */}
+              {!isCompleted && !isWrongMoveActive && hintStage !== 'move' && (
+                <button
+                  onClick={handleShowHint}
+                  className="w-full text-black py-3 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all bg-yellow-400 inline-flex items-center justify-center gap-2"
+                >
+                  <Lightbulb className="w-4 h-4" />
+                  {hintBalance > 0 ? (
+                    <>
+                      <span>Hint</span>
+                      <span className="bg-black text-yellow-400 px-2 py-0.5 text-xs font-black">{hintBalance}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Get Hints</span>
+                      <span className="bg-black text-yellow-400 px-1.5 py-0.5 text-xs font-black">+</span>
+                    </>
+                  )}
+                </button>
+              )}
+              {!isCompleted && !isWrongMoveActive && hintStage === 'move' && (
+                <div className="w-full text-black py-3 px-4 font-black text-xs border-2 border-black bg-yellow-200 inline-flex items-center justify-center gap-2 opacity-60">
+                  <Check className="w-4 h-4" /> HINT SHOWN
+                </div>
+              )}
+
               {/* Hint count indicator */}
               {hintCount > 0 && !isCompleted && (
-                <div className="text-center text-sm font-bold text-gray-600">
-                  Hints used: {hintCount} (-{getHintPenaltyPoints()} points)
+                <div className="text-center text-xs font-black uppercase text-black bg-yellow-200 border-2 border-black p-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  Hints used: {hintCount} (−{hintCount >= 3 ? "all" : hintCount === 2 ? "60" : "30"} pts)
                 </div>
               )}
               
@@ -513,8 +594,18 @@ export default function SolvePuzzlesPage() {
           </>
         )}
 
-        {/* Show start button if no puzzle loaded */}
-        {!currentPuzzle && !isCompleted && !isAccessExhausted && (
+        {/* Show loading indicator while puzzle is being fetched */}
+        {!currentPuzzle && !isCompleted && !isAccessExhausted && puzzleLoading && (
+          <div className="w-full max-w-xs text-center">
+            <div className="bg-yellow-400 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-4 border-black mx-auto mb-3"></div>
+              <p className="text-lg font-black text-black">LOADING PUZZLE...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Fallback retry if puzzle didn't load automatically */}
+        {!currentPuzzle && !isCompleted && !isAccessExhausted && !puzzleLoading && (
           <div className="w-full max-w-xs text-center space-y-6">
             <div className="bg-yellow-400 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 transform -rotate-1">
               <h2 className="text-3xl font-black text-black mb-3">SOLVE PUZZLES</h2>
@@ -522,11 +613,10 @@ export default function SolvePuzzlesPage() {
             </div>
 
             <button
-              onClick={fetchPuzzle}
-              disabled={puzzleLoading}
-              className="w-full bg-green-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50 disabled:hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] disabled:hover:translate-x-0 disabled:hover:translate-y-0"
+              onClick={() => { autoFetchedRef.current = false; fetchPuzzle(); }}
+              className="w-full bg-green-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
             >
-              {puzzleLoading ? "LOADING PUZZLE..." : "START"}
+              START
             </button>
           </div>
         )}
@@ -538,10 +628,17 @@ export default function SolvePuzzlesPage() {
               <h2 className="text-3xl font-black text-black mb-3 inline-flex items-center gap-2 uppercase">
                 Daily Limit Reached! <Ban className="w-8 h-8 shrink-0" />
               </h2>
-              <p className="text-lg font-bold text-black uppercase">You&apos;ve solved all {MAX_DAILY_PUZZLES} puzzles for today.</p>
-              <p className="text-md font-bold text-black mt-2 uppercase">Come back tomorrow for more puzzles!</p>
+              <p className="text-lg font-bold text-black uppercase">You&apos;ve used all {MAX_DAILY_PUZZLES} free puzzles today.</p>
+              <p className="text-md font-bold text-black mt-2 uppercase">Pay ${accessConfig?.unlockAmountUsd ?? "0.01"} USDT to unlock unlimited puzzles for the rest of the day — or come back tomorrow!</p>
               <TelegramSupportLink />
             </div>
+
+            <Link
+              href="/store"
+              className="inline-block w-full bg-lime-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
+            >
+              UNLOCK UNLIMITED · STORE
+            </Link>
 
             <Link
               href="/"
@@ -552,6 +649,8 @@ export default function SolvePuzzlesPage() {
           </div>
         )}
       </main>
+
+      <BottomNav />
     </div>
   );
 }

@@ -1,113 +1,161 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useAccount } from 'wagmi'
+import { useState, useEffect } from "react";
+import { useAccount } from "wagmi";
 import {
   BadgeCheck,
   Castle,
   Coins,
   CreditCard,
+  Lightbulb,
   OctagonAlert,
   PartyPopper,
   RefreshCw,
   Search,
   Smartphone,
+  Store,
   Target,
   X,
   Zap,
-} from 'lucide-react'
-import { usePayment } from '../lib/hooks/usePayment'
-import { PaymentType } from '../lib/types/payment'
-import { TelegramSupportLink } from './TelegramSupportLink'
+} from "lucide-react";
+import { usePayment } from "../lib/hooks/usePayment";
+import { PaymentType } from "../lib/types/payment";
+import { TelegramSupportLink } from "./TelegramSupportLink";
 
-interface PaymentModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSuccess: () => void
+interface StoreItem {
+  _id?: string;
+  name: string;
+  category: string;
+  description?: string;
+  priceUsd: string;
+  quantity: number;
 }
 
-export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) {
-  const { address } = useAccount()
-  const { makePayment, verifyPayment, isPaymentPending, isConfirming, isSuccess, transactionHash } = usePayment()
-  const [selectedPayment, setSelectedPayment] = useState<PaymentType | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isVerifying, setIsVerifying] = useState(false)
+interface PaymentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  storeItem?: StoreItem | null;
+}
 
-  // Auto-verify payment when transaction is successful
+export function PaymentModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  storeItem,
+}: PaymentModalProps) {
+  const { address } = useAccount();
+  const {
+    makePayment,
+    verifyPayment,
+    isPaymentPending,
+    isConfirming,
+    isSuccess,
+    transactionHash,
+    amountUsd,
+  } = usePayment();
+  const [error, setError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+
   useEffect(() => {
     if (isSuccess && transactionHash && !isVerifying) {
-      handleVerifyPayment()
+      handleVerifyPayment();
     }
-  }, [isSuccess, transactionHash])
+  }, [isSuccess, transactionHash]);
 
-  const handlePayment = async (type: PaymentType) => {
+  const handlePayment = async () => {
     if (!address) {
-      setError('Please connect your wallet first')
-      return
+      setError("Please connect your wallet first");
+      return;
     }
 
     try {
-      setError(null)
-      setSelectedPayment(type)
-      await makePayment(type)
-    } catch (error) {
-      console.error('Payment error:', error)
-      setError(error instanceof Error ? error.message : 'Payment failed')
-      setSelectedPayment(null)
+      setError(null);
+      const type = storeItem
+        ? PaymentType.STORE_PURCHASE
+        : PaymentType.DAILY_ACCESS;
+      const usd = storeItem ? storeItem.priceUsd : "0.01";
+      const meta = storeItem
+        ? {
+            itemId: storeItem._id,
+            itemCategory: storeItem.category,
+            itemName: storeItem.name,
+            itemQuantity: storeItem.quantity,
+          }
+        : undefined;
+      await makePayment(type, usd, meta);
+    } catch (err: any) {
+      console.error("Payment error:", err);
+      setError(err instanceof Error ? err.message : "Payment failed");
     }
-  }
+  };
 
   const handleVerifyPayment = async () => {
-    if (isVerifying) return
-    
+    if (isVerifying) return;
+
     try {
-      setIsVerifying(true)
-      setError(null) // Clear any previous errors
-      const verified = await verifyPayment()
+      setIsVerifying(true);
+      setError(null);
+      const verified = await verifyPayment();
       if (verified) {
-        onSuccess()
-        // Close modal after a short delay to show success
+        onSuccess();
         setTimeout(() => {
-          onClose()
-          setSelectedPayment(null)
-          setError(null)
-          setIsVerifying(false)
-        }, 1500)
+          onClose();
+          setError(null);
+          setIsVerifying(false);
+        }, 1500);
       } else {
-        setError('Payment verification failed. Please contact support.')
-        setIsVerifying(false)
+        setError("Payment verification failed. Please contact support.");
+        setIsVerifying(false);
       }
-    } catch (error) {
-      console.error('Verification error:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Failed to verify payment'
-      setError(errorMessage)
-      setIsVerifying(false)
+    } catch (err: any) {
+      console.error("Verification error:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to verify payment"
+      );
+      setIsVerifying(false);
     }
-  }
+  };
 
   const handleClose = () => {
-    if (isPaymentPending || isConfirming || isVerifying) return
-    onClose()
-    setSelectedPayment(null)
-    setError(null)
-  }
+    if (isPaymentPending || isConfirming || isVerifying) return;
+    onClose();
+    setError(null);
+  };
 
-  if (!isOpen) return null
+  const isStore = Boolean(storeItem);
+  const displayAmount = storeItem
+    ? `$${storeItem.priceUsd}`
+    : "$0.01";
+  const title = isStore
+    ? storeItem!.name
+    : "Daily Pass";
+  const subtitle = isStore
+    ? `×${storeItem!.quantity} · ${storeItem!.description || storeItem!.category.replace(/_/g, " ")}`
+    : "Unlimited puzzles today";
+
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 p-4 flex items-center justify-center pointer-events-auto" >
-      {/* Neo-brutalist backdrop */}
-      <div 
+    <div className="fixed inset-0 z-50 p-4 flex items-center justify-center pointer-events-auto">
+      <div
         className="absolute inset-0 bg-black/80"
         onClick={handleClose}
       />
-      
-      {/* Neo-brutalist modal */}
+
       <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-md w-full transform rotate-1">
-        <div className="bg-orange-400 border-b-4 border-black p-4">
+        <div className={`${isStore ? "bg-lime-400" : "bg-orange-400"} border-b-4 border-black p-4`}>
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-black uppercase tracking-wider text-black flex items-center gap-2">
-              <Castle className="w-7 h-7" /> ACCESS PUZZLES
+              {isStore ? (
+                <>
+                  <Store className="w-7 h-7" /> STORE
+                </>
+              ) : (
+                <>
+                  <Castle className="w-7 h-7" /> ACCESS PUZZLES
+                </>
+              )}
             </h2>
             <button
               onClick={handleClose}
@@ -131,31 +179,35 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
 
           {!isPaymentPending && !isConfirming && !isSuccess && !isVerifying && (
             <div className="space-y-4">
-              {/* Daily Access Option */}
-              <div className="bg-cyan-300 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1">
+              <div className={`${isStore ? "bg-lime-200" : "bg-cyan-300"} border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1`}>
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="font-black text-lg uppercase text-black flex items-center gap-2">
-                    <Target className="w-5 h-5" /> Daily Pass
+                    {isStore ? <Store className="w-5 h-5" /> : <Target className="w-5 h-5" />}
+                    {title}
                   </h3>
                   <span className="bg-black text-cyan-300 px-3 py-1 font-black text-xl border-2 border-cyan-300">
-                    $0.10
+                    {displayAmount} cUSD
                   </span>
                 </div>
                 <p className="text-black font-bold text-sm mb-2 uppercase tracking-wide flex items-center gap-1">
-                  <Zap className="w-4 h-4" /> 3 Puzzles Today!
-                </p>
-                <p className="text-black font-bold text-xs mb-4 opacity-80">
-                  Solve 3 chess puzzles today
+                  {isStore ? (
+                    <>
+                      <Lightbulb className="w-4 h-4" /> {subtitle}
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4" /> {subtitle}
+                    </>
+                  )}
                 </p>
                 <button
-                  onClick={() => handlePayment(PaymentType.DAILY_ACCESS)}
+                  onClick={handlePayment}
                   className="w-full bg-black text-cyan-300 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-cyan-300 hover:bg-gray-800 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 flex items-center justify-center gap-2"
                 >
-                  <Smartphone className="w-4 h-4" /> PAY $0.10 cUSD
+                  <Smartphone className="w-4 h-4" /> PAY {displayAmount} cUSD
                 </button>
               </div>
 
-              {/* Footer Info */}
               <div className="bg-yellow-200 border-2 border-black p-3 transform rotate-1 mt-4">
                 <p className="text-xs font-bold text-black uppercase tracking-wide text-center flex items-center justify-center gap-1">
                   <CreditCard className="w-3.5 h-3.5" /> Powered by MiniPay on Celo Network
@@ -166,7 +218,6 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
 
           {(isPaymentPending || isConfirming) && (
             <div className="text-center py-8">
-              {/* Neo-brutalist loading */}
               <div className="bg-purple-400 border-4 border-black p-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-2">
                 <div className="w-16 h-16 mx-auto mb-4 bg-black border-4 border-purple-400 animate-bounce">
                   <div className="w-full h-full bg-purple-400 border-2 border-black animate-pulse"></div>
@@ -174,11 +225,11 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                 <h3 className="font-black text-xl uppercase mb-2 text-black tracking-wider">
                   <span className="inline-flex items-center gap-2">
                     {isPaymentPending ? <Zap className="w-5 h-5" /> : <RefreshCw className="w-5 h-5 animate-spin" />}
-                    {isPaymentPending ? 'Processing...' : 'Confirming...'}
+                    {isPaymentPending ? "Processing..." : "Confirming..."}
                   </span>
                 </h3>
                 <p className="font-bold text-black text-sm uppercase tracking-wide flex items-center justify-center gap-1">
-                  <Coins className="w-4 h-4" /> Paying $0.10 cUSD
+                  <Coins className="w-4 h-4" /> Paying {displayAmount} cUSD
                 </p>
                 {transactionHash && (
                   <div className="bg-black text-purple-400 p-2 mt-4 border-2 border-purple-400 text-xs font-mono break-all">
@@ -222,7 +273,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                   Success!
                 </h3>
                 <p className="font-bold text-black uppercase tracking-wide flex items-center justify-center gap-2">
-                  <BadgeCheck className="w-5 h-5" /> Access Granted!
+                  <BadgeCheck className="w-5 h-5" /> {isStore ? "Purchased!" : "Access Granted!"}
                 </p>
               </div>
             </div>
@@ -230,5 +281,5 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
         </div>
       </div>
     </div>
-  )
+  );
 }

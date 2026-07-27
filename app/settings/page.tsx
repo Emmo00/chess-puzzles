@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BarChart3, Music, Save, Settings, Target } from "lucide-react";
+import { BarChart3, Music, Puzzle, Save, Settings, Target } from "lucide-react";
 import { UserSettings } from "../../lib/types";
 import { PUZZLE_THEMES, THEME_CATEGORIES, DEFAULT_THEMES } from "../../lib/config/puzzleThemes";
 import { isMusicEnabled, setMusicEnabled as persistMusicEnabled } from "../../lib/utils/backgroundMusic";
 import { TelegramSupportLink } from "@/components/TelegramSupportLink";
+import { BottomNav } from "@/components/BottomNav";
 import { TriangleAlert } from "lucide-react";
 
 export default function SettingsPage() {
@@ -198,9 +199,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-white text-black flex flex-col">
+    <div className="h-dvh w-full app-paper-bg text-black flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="pt-4 px-4 flex justify-between items-center shrink-0 sticky top-0 bg-white z-20 border-b-4 border-black">
+      <header className="pt-4 px-4 flex justify-between items-center shrink-0 bg-[#fff9e9] z-20 border-b-4 border-black">
         <Link
           href="/"
           className="bg-black text-white px-2 py-1 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
@@ -215,7 +216,7 @@ export default function SettingsPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center px-4 py-6 gap-6 pb-24">
+      <main className="flex-1 overflow-y-auto flex flex-col items-center px-4 py-6 gap-6 pb-4">
         <div className="w-full max-w-md space-y-6">
           {errorMsg && (
             <div className="bg-red-400 border-4 border-black p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
@@ -379,22 +380,29 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        <Link
+          href="/solve-puzzles?mode=custom"
+          className="block w-full bg-cyan-400 text-black py-4 px-6 font-black text-lg border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all flex items-center justify-center gap-2"
+        >
+          <Puzzle className="w-5 h-5" /> START CUSTOM PUZZLE
+        </Link>
       </main>
 
-      {/* Sticky Save Button */}
+      {/* Sticky Save Button (above bottom nav) */}
       {hasChanges && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t-4 border-black">
-          <div className="max-w-md mx-auto">
-            <button
-              onClick={saveSettings}
-              disabled={saving}
-              className="w-full bg-green-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {saving ? "SAVING..." : <><Save className="w-5 h-5" /> SAVE SETTINGS</>}
-            </button>
-          </div>
+        <div className="shrink-0 px-4 py-3 bg-[#fff9e9] border-t-4 border-black">
+          <button
+            onClick={saveSettings}
+            disabled={saving}
+            className="w-full bg-green-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {saving ? "SAVING..." : <><Save className="w-5 h-5" /> SAVE SETTINGS</>}
+          </button>
         </div>
       )}
+
+      <BottomNav />
     </div>
   );
 }

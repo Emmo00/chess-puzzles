@@ -3,18 +3,29 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useAccount } from "wagmi";
-import Link from "next/link";
 import { LeaderboardEntry, LeaderboardResponse } from "../../lib/services/leaderboard.service";
 import { TelegramSupportLink } from "@/components/TelegramSupportLink";
-import { TriangleAlert, Medal, Trophy, Puzzle, BarChart3, Star } from "lucide-react";
+import { BottomNav } from "@/components/BottomNav";
+import { LeagueBadge } from "@/components/LeagueBadge";
+import { LEAGUES, type League } from "@/lib/leagues";
+import { TriangleAlert, Medal, Trophy, Flame, Star } from "lucide-react";
+
+const LEAGUE_TABS: League[] = ["king", "knight", "pawn"];
+
+function defaultLeague(userLeague?: League | null): League {
+  return userLeague ?? "pawn";
+}
 
 export default function LeaderboardPage() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState<LeaderboardEntry | null>(null);
+  const [userLeague, setUserLeague] = useState<League | null>(null);
+  const [activeLeague, setActiveLeague] = useState<League>("pawn");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [seasonEnd, setSeasonEnd] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const limit = 20;
 
@@ -25,10 +36,31 @@ export default function LeaderboardPage() {
   }, []);
 
   useEffect(() => {
-    if (mounted) {
-      fetchLeaderboard();
+    if (!mounted) return;
+    fetchUserLeague();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, address]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    fetchLeaderboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, page, address, activeLeague]);
+
+  const fetchUserLeague = async () => {
+    if (!address) return;
+    try {
+      const res = await fetch(`/api/leaderboard?walletAddress=${address}&limit=1`);
+      if (res.ok) {
+        const data: LeaderboardResponse = await res.json();
+        const league = defaultLeague(data.userLeague);
+        setUserLeague(league);
+        setActiveLeague(league);
+      }
+    } catch {
+      // ignore
     }
-  }, [mounted, page, address]);
+  };
 
   const fetchLeaderboard = async () => {
     setLoading(true);
@@ -36,8 +68,9 @@ export default function LeaderboardPage() {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
+        league: activeLeague,
       });
-      
+
       if (address) {
         params.append("walletAddress", address);
       }
@@ -48,6 +81,7 @@ export default function LeaderboardPage() {
         setLeaderboard(data.leaderboard);
         setTotal(data.total);
         setUserRank(data.userRank || null);
+        setSeasonEnd(data.seasonEnd || null);
         setErrorMsg(null);
       } else {
         setErrorMsg("Failed to fetch leaderboard");
@@ -60,9 +94,9 @@ export default function LeaderboardPage() {
     }
   };
 
-  const formatAddress = (address: string) => {
-    if (!address) return "Anonymous";
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const formatAddress = (addr: string) => {
+    if (!addr) return "Anonymous";
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
   const getRankDisplay = (rank: number): ReactNode => {
@@ -72,36 +106,52 @@ export default function LeaderboardPage() {
     return `#${rank}`;
   };
 
-  const getRankStyle = (rank: number) => {
-    if (rank === 1) return "bg-yellow-400";
-    if (rank === 2) return "bg-gray-300";
-    if (rank === 3) return "bg-orange-400";
-    return "bg-white";
-  };
-
   const totalPages = Math.ceil(total / limit);
 
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen w-full bg-white text-black flex flex-col">
-      {/* Header */}
-      <header className="pt-4 px-4 flex justify-between items-center shrink-0">
-        <Link
-          href="/"
-          className="bg-black text-white px-2 py-1 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all"
-        >
-          ← BACK
-        </Link>
-        <div className="px-4 py-2 font-black text-sm border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-purple-400 text-black">
-          <span className="inline-flex items-center gap-1">
-            <Trophy className="w-4 h-4" /> LEADERBOARD
-          </span>
+    <div className="h-dvh w-full app-paper-bg text-black flex flex-col overflow-hidden">
+      <header className="pt-4 px-4 flex justify-between items-center shrink-0 gap-2">
+        <div className="px-3 py-2 font-black text-sm border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-purple-400 text-black inline-flex items-center gap-1">
+          <Trophy className="w-4 h-4" /> RANKS
         </div>
+        {seasonEnd && (
+          <div className="text-[10px] font-black uppercase text-black/70 text-right">
+            Season resets<br />
+            {new Date(seasonEnd).toUTCString().slice(0, 22)}
+          </div>
+        )}
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center px-4 py-6 gap-4">
+      {/* League tabs */}
+      <div className="px-4 pt-3 pb-2 shrink-0 flex gap-2">
+        {LEAGUE_TABS.map((league) => {
+          const meta = LEAGUES[league];
+          const active = activeLeague === league;
+          return (
+            <button
+              key={league}
+              type="button"
+              onClick={() => {
+                setActiveLeague(league);
+                setPage(1);
+              }}
+              className={`flex-1 px-2 py-2 border-4 border-black font-black text-xs uppercase tracking-wide inline-flex items-center justify-center gap-1 transition-all ${
+                active
+                  ? "shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -translate-y-0.5"
+                  : "shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] opacity-70"
+              }`}
+              style={{ background: meta.color }}
+            >
+              <span aria-hidden="true">{meta.badge}</span>
+              {meta.name.split(" ")[0]}
+            </button>
+          );
+        })}
+      </div>
+
+      <main className="flex-1 overflow-y-auto flex flex-col items-center px-4 py-2 gap-4">
         {errorMsg && (
           <div className="w-full max-w-md bg-red-400 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 transform -rotate-1 text-left">
             <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
@@ -110,10 +160,13 @@ export default function LeaderboardPage() {
             <TelegramSupportLink />
           </div>
         )}
-        {/* User's Rank Card (if connected and ranked) */}
+
         {isConnected && userRank && (
           <div className="w-full max-w-md bg-cyan-400 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 transform -rotate-1">
-            <div className="font-black text-lg text-black mb-2">YOUR RANK</div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-black text-lg text-black">YOUR RANK</div>
+              <LeagueBadge league={userRank.league} />
+            </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="bg-black text-cyan-400 px-3 py-2 font-black text-xl">
@@ -126,34 +179,25 @@ export default function LeaderboardPage() {
               </div>
               <div className="text-right">
                 <div className="font-black text-black inline-flex items-center justify-end gap-1 w-full">
-                  {userRank.totalPuzzlesSolved} <Puzzle className="w-4 h-4" />
+                  {userRank.seasonPoints} <Star className="w-4 h-4" />
                 </div>
-                <div className="text-sm font-bold text-black/70">{userRank.totalPoints} pts</div>
+                <div className="text-sm font-bold text-black/70 inline-flex items-center justify-end gap-1 w-full">
+                  <Flame className="w-3 h-3" /> {userRank.currentStreak} · {userRank.rankScore} pts
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Not ranked message */}
-        {isConnected && !userRank && !loading && (
-          <div className="w-full max-w-md bg-yellow-400 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 text-center">
-            <div className="font-black text-lg text-black">NOT RANKED YET</div>
-            <div className="text-sm font-bold text-black/70">Solve puzzles to appear on the leaderboard!</div>
-          </div>
-        )}
-
-        {/* Leaderboard List */}
         <div className="w-full max-w-md">
           <div className="bg-purple-400 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-            {/* Header */}
-            <div className="bg-black text-white px-4 py-3 grid grid-cols-[3rem_1fr_4rem_4rem] gap-2 items-center font-black text-sm">
+            <div className="bg-black text-white px-3 py-3 grid grid-cols-[3rem_1fr_5rem_3rem] gap-2 items-center font-black text-[11px] sm:text-sm">
               <span>RANK</span>
               <span>PLAYER</span>
-              <span className="text-right">PUZZLES</span>
-              <span className="text-right">POINTS</span>
+              <span className="text-right">SEASON</span>
+              <span className="text-right">SCORE</span>
             </div>
 
-            {/* Loading State */}
             {loading && (
               <div className="p-8 text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-2"></div>
@@ -161,15 +205,13 @@ export default function LeaderboardPage() {
               </div>
             )}
 
-            {/* Empty State */}
             {!loading && leaderboard.length === 0 && (
               <div className="p-8 text-center">
-                <div className="font-black text-black text-lg mb-2">NO PLAYERS YET</div>
-                <div className="text-sm font-bold text-black/70">Be the first to solve puzzles!</div>
+                <div className="font-black text-black text-lg mb-2">NO PLAYERS HERE YET</div>
+                <div className="text-sm font-bold text-black/70">Climb into this league to claim a spot!</div>
               </div>
             )}
 
-            {/* Leaderboard Entries */}
             {!loading && leaderboard.length > 0 && (
               <div className="divide-y-2 divide-black">
                 {leaderboard.map((entry) => {
@@ -177,27 +219,26 @@ export default function LeaderboardPage() {
                   return (
                     <div
                       key={entry.walletAddress}
-                      className={`px-4 py-3 grid grid-cols-[3rem_1fr_4rem_4rem] gap-2 items-center ${
-                        isCurrentUser ? "bg-cyan-300" : getRankStyle(entry.rank)
-                      }`}
+                      className={`px-3 py-3 grid grid-cols-[3rem_1fr_5rem_3rem] gap-2 items-center bg-white`}
+                      style={isCurrentUser ? { background: "#cffafe" } : undefined}
                     >
                       <span className="font-black text-black">
                         {getRankDisplay(entry.rank)}
                       </span>
                       <div className="min-w-0">
-                        <div className="font-black text-black text-sm truncate">
+                        <div className="font-black text-black text-sm truncate flex items-center gap-1.5">
                           {entry.displayName}
                           {isCurrentUser && " (YOU)"}
                         </div>
-                        <div className="text-xs font-bold text-black/60 truncate">
-                          {formatAddress(entry.walletAddress)}
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <LeagueBadge league={entry.league} />
                         </div>
                       </div>
                       <span className="text-right font-black text-black">
-                        {entry.totalPuzzlesSolved}
+                        {entry.seasonPoints}
                       </span>
                       <span className="text-right font-bold text-black/70">
-                        {entry.totalPoints}
+                        {entry.rankScore}
                       </span>
                     </div>
                   );
@@ -206,7 +247,6 @@ export default function LeaderboardPage() {
             )}
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center gap-2 mt-4">
               <button
@@ -229,25 +269,9 @@ export default function LeaderboardPage() {
             </div>
           )}
         </div>
-
-        {/* Info Card */}
-        <div className="w-full max-w-md bg-green-400 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 transform rotate-1">
-          <div className="font-black text-lg text-black mb-2 inline-flex items-center gap-2">
-            <BarChart3 className="w-5 h-5" /> RANKING SYSTEM
-          </div>
-          <div className="space-y-1 text-sm font-bold text-black">
-            <div className="inline-flex items-center gap-1">
-              <Puzzle className="w-4 h-4" /> Puzzles Solved (Primary)
-            </div>
-            <div className="inline-flex items-center gap-1">
-              <Star className="w-4 h-4" /> Total Points (Secondary)
-            </div>
-            <div className="text-xs text-black/70 mt-2">
-              Consistency matters! Solve more puzzles to climb the ranks.
-            </div>
-          </div>
-        </div>
       </main>
+
+      <BottomNav />
     </div>
   );
 }

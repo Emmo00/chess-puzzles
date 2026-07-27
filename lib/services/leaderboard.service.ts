@@ -1,4 +1,13 @@
 import userModel from "../models/users.model";
+import userPuzzleModel from "../models/userPuzzles.model";
+import {
+  getCurrentSeasonStart,
+  getCurrentSeasonEnd,
+  getLeague,
+  leaderboardRankScore,
+  compareLeaderboardEntries,
+  type League,
+} from "../leagues";
 
 export interface LeaderboardEntry {
   rank: number;
@@ -8,6 +17,9 @@ export interface LeaderboardEntry {
   totalPoints: number;
   currentStreak: number;
   longestStreak: number;
+  seasonPoints: number;
+  rankScore: number;
+  league: League;
 }
 
 export interface LeaderboardResponse {
@@ -16,47 +28,160 @@ export interface LeaderboardResponse {
   page: number;
   limit: number;
   userRank?: LeaderboardEntry | null;
+  userLeague?: League | null;
+  seasonStart: string;
+  seasonEnd: string;
+}
+
+interface SeasonAggRow {
+  _id: string;
+  seasonPoints: number;
+  firstSolvedAt: Date;
 }
 
 class LeaderboardService {
   public users = userModel;
 
-  /**
-   * Get leaderboard ranked by puzzles solved (primary) and points (secondary)
-   */
   async getLeaderboard(
     page: number = 1,
     limit: number = 50,
-    userWalletAddress?: string
+    userWalletAddress?: string,
+    leagueFilter?: League | null
   ): Promise<LeaderboardResponse> {
-    const skip = (page - 1) * limit;
+    const seasonStart = getCurrentSeasonStart();
+    const seasonEnd = getCurrentSeasonEnd();
 
-    // Get total count of users with at least 1 puzzle solved
-    const total = await this.users.countDocuments({ totalPuzzlesSolved: { $gt: 0 } });
+    const seasonRows: SeasonAggRow[] = await userPuzzleModel.aggregate<SeasonAggRow>([
+      {
+        $match: {
+          completed: true,
+          solvedAt: { $gte: seasonStart, $lte: seasonEnd },
+        },
+      },
+      {
+        $group: {
+          _id: "$userWalletAddress",
+          seasonPoints: { $sum: "$points" },
+          firstSolvedAt: { $min: "$solvedAt" },
+        },
+      },
+    ]);
 
-    // Get leaderboard sorted by puzzles solved (desc), then points (desc)
+    if (seasonRows.length === 0) {
+      return {
+        leaderboard: [],
+        total: 0,
+        page,
+        limit,
+        userRank: null,
+        userLeague: null,
+        seasonStart: seasonStart.toISOString(),
+        seasonEnd: seasonEnd.toISOString(),
+      };
+    }
+
+    const walletKeys = seasonRows.map((row) => row._id.toLowerCase());
     const users = await this.users
-      .find({ totalPuzzlesSolved: { $gt: 0 } })
-      .sort({ totalPuzzlesSolved: -1, totalPoints: -1 })
-      .skip(skip)
-      .limit(limit)
-      .select("walletAddress displayName totalPuzzlesSolved totalPoints currentStreak longestStreak")
+      .find({ walletAddress: { $in: walletKeys } })
+      .select(
+        "walletAddress displayName totalPuzzlesSolved totalPoints currentStreak longestStreak"
+      )
       .lean();
 
-    const leaderboard: LeaderboardEntry[] = users.map((user: any, index: number) => ({
+    const userByKey = new Map<string, any>();
+    for (const user of users) {
+      userByKey.set((user.walletAddress || "").toLowerCase(), user);
+    }
+
+    type Ranked = {
+      walletAddress: string;
+      displayName: string;
+      totalPuzzlesSolved: number;
+      totalPoints: number;
+      currentStreak: number;
+      longestStreak: number;
+      seasonPoints: number;
+      rankScore: number;
+      firstReachedAt: number;
+      streak: number;
+    };
+
+    const ranked: Ranked[] = seasonRows
+      .map((row): Ranked | null => {
+        const user = userByKey.get(row._id.toLowerCase());
+        if (!user) return null;
+        const streak = user.currentStreak || 0;
+        const seasonPoints = row.seasonPoints || 0;
+        return {
+          walletAddress: user.walletAddress,
+          displayName: user.displayName || user.walletAddress?.slice(0, 8) || "Anonymous",
+          totalPuzzlesSolved: user.totalPuzzlesSolved || 0,
+          totalPoints: user.totalPoints || 0,
+          currentStreak: streak,
+          longestStreak: user.longestStreak || 0,
+          seasonPoints,
+          rankScore: leaderboardRankScore(seasonPoints, streak),
+          firstReachedAt: row.firstSolvedAt ? new Date(row.firstSolvedAt).getTime() : Number.MAX_SAFE_INTEGER,
+          streak,
+        };
+      })
+      .filter((row): row is Ranked => row !== null);
+
+    ranked.sort((a, b) =>
+      compareLeaderboardEntries(a, a.rankScore, b, b.rankScore)
+    );
+
+    let userLeague: League | null = null;
+    if (userWalletAddress) {
+      const lower = userWalletAddress.toLowerCase();
+      const userRow = ranked.find((row) => row.walletAddress?.toLowerCase() === lower);
+      if (userRow) {
+        userLeague = getLeague(userRow.seasonPoints, userRow.currentStreak);
+      }
+    }
+
+    const filtered = leagueFilter
+      ? ranked.filter(
+          (row) => getLeague(row.seasonPoints, row.currentStreak) === leagueFilter
+        )
+      : ranked;
+
+    const total = filtered.length;
+    const skip = (page - 1) * limit;
+    const pageRows = filtered.slice(skip, skip + limit);
+
+    const leaderboard: LeaderboardEntry[] = pageRows.map((row, index) => ({
       rank: skip + index + 1,
-      walletAddress: user.walletAddress,
-      displayName: user.displayName || user.walletAddress?.slice(0, 8) || "Anonymous",
-      totalPuzzlesSolved: user.totalPuzzlesSolved || 0,
-      totalPoints: user.totalPoints || 0,
-      currentStreak: user.currentStreak || 0,
-      longestStreak: user.longestStreak || 0,
+      walletAddress: row.walletAddress,
+      displayName: row.displayName,
+      totalPuzzlesSolved: row.totalPuzzlesSolved,
+      totalPoints: row.totalPoints,
+      currentStreak: row.currentStreak,
+      longestStreak: row.longestStreak,
+      seasonPoints: row.seasonPoints,
+      rankScore: row.rankScore,
+      league: getLeague(row.seasonPoints, row.currentStreak),
     }));
 
-    // Get user's rank if wallet address provided
     let userRank: LeaderboardEntry | null = null;
     if (userWalletAddress) {
-      userRank = await this.getUserRank(userWalletAddress);
+      const lower = userWalletAddress.toLowerCase();
+      const idx = filtered.findIndex((row) => row.walletAddress?.toLowerCase() === lower);
+      if (idx >= 0) {
+        const row = filtered[idx];
+        userRank = {
+          rank: idx + 1,
+          walletAddress: row.walletAddress,
+          displayName: row.displayName,
+          totalPuzzlesSolved: row.totalPuzzlesSolved,
+          totalPoints: row.totalPoints,
+          currentStreak: row.currentStreak,
+          longestStreak: row.longestStreak,
+          seasonPoints: row.seasonPoints,
+          rankScore: row.rankScore,
+          league: getLeague(row.seasonPoints, row.currentStreak),
+        };
+      }
     }
 
     return {
@@ -65,41 +190,9 @@ class LeaderboardService {
       page,
       limit,
       userRank,
-    };
-  }
-
-  /**
-   * Get a specific user's rank
-   */
-  async getUserRank(walletAddress: string): Promise<LeaderboardEntry | null> {
-    const user = await this.users
-      .findOne({ walletAddress: walletAddress.toLowerCase() })
-      .select("walletAddress displayName totalPuzzlesSolved totalPoints currentStreak longestStreak")
-      .lean();
-
-    if (!user || !user.totalPuzzlesSolved || user.totalPuzzlesSolved === 0) {
-      return null;
-    }
-
-    // Count users with more puzzles solved, or same puzzles but more points
-    const rank = await this.users.countDocuments({
-      $or: [
-        { totalPuzzlesSolved: { $gt: user.totalPuzzlesSolved } },
-        {
-          totalPuzzlesSolved: user.totalPuzzlesSolved,
-          totalPoints: { $gt: user.totalPoints || 0 },
-        },
-      ],
-    });
-
-    return {
-      rank: rank + 1,
-      walletAddress: (user as any).walletAddress,
-      displayName: (user as any).displayName || (user as any).walletAddress?.slice(0, 8) || "Anonymous",
-      totalPuzzlesSolved: (user as any).totalPuzzlesSolved || 0,
-      totalPoints: (user as any).totalPoints || 0,
-      currentStreak: (user as any).currentStreak || 0,
-      longestStreak: (user as any).longestStreak || 0,
+      userLeague,
+      seasonStart: seasonStart.toISOString(),
+      seasonEnd: seasonEnd.toISOString(),
     };
   }
 }

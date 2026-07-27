@@ -14,6 +14,9 @@ const userSchema = new mongoose.Schema({
   longestStreak: { type: Number, default: 1 },
   totalPuzzlesSolved: { type: Number, default: 0 },
   lastPuzzleDate: { type: String, default: null },
+  hintBalance: { type: Number, default: 5 },
+  streakFreezes: { type: Number, default: 1 },
+  effectiveRating: { type: Number, default: 1000 },
   // User settings
   settings: {
     ratingRange: {

@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: ['mongoose'],
-  turbopack: {},
+  turbopack: {
+    root: __dirname,
+  },
   productionBrowserSourceMaps: true,
 }
 

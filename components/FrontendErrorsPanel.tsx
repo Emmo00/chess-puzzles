@@ -22,7 +22,7 @@ interface PaginationData {
   totalPages: number;
 }
 
-export function FrontendErrorsPanel({ adminAccessKey }: { adminAccessKey: string }) {
+export function FrontendErrorsPanel() {
   const [errors, setErrors] = useState<ErrorLog[]>([]);
   const [pagination, setPagination] = useState<PaginationData>({ page: 1, limit: 10, total: 0, totalPages: 0 });
   const [statusFilter, setStatusFilter] = useState<"all" | "new" | "resolved">("new");
@@ -38,11 +38,7 @@ export function FrontendErrorsPanel({ adminAccessKey }: { adminAccessKey: string
         query.append("status", status);
       }
 
-      const res = await fetch(`/api/admin/errors?${query.toString()}`, {
-        headers: {
-          "Authorization": `Bearer ${adminAccessKey}`,
-        },
-      });
+      const res = await fetch(`/api/admin/errors?${query.toString()}`);
 
       if (!res.ok) {
         throw new Error("Failed to fetch errors");
@@ -60,7 +56,7 @@ export function FrontendErrorsPanel({ adminAccessKey }: { adminAccessKey: string
     } finally {
       setLoading(false);
     }
-  }, [adminAccessKey]);
+  }, []);
 
   useEffect(() => {
     fetchErrors(1, statusFilter);
@@ -70,10 +66,7 @@ export function FrontendErrorsPanel({ adminAccessKey }: { adminAccessKey: string
     try {
       const res = await fetch(`/api/admin/errors`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminAccessKey}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status: "resolved" }),
       });
 

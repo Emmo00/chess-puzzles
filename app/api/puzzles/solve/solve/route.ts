@@ -4,17 +4,19 @@ import { authenticateWalletUser } from "../../../../../lib/auth";
 import PuzzleService from "../../../../../lib/services/puzzles.service";
 import UserService from "../../../../../lib/services/users.service";
 import { calculatePoints } from "../../../../../lib/utils/points";
+import { calculateEarnedPoints, useNewScoring } from "../../../../../lib/scoring";
+import { getScoringConfig } from "../../../../../lib/config/scoring";
+import AdaptiveService from "../../../../../lib/services/adaptive.service";
+import RewardsService from "../../../../../lib/services/rewards.service";
 import { UserPuzzle } from "../../../../../lib/types";
 
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     
-    // Authenticate user
     const user = await authenticateWalletUser(request);
     const body = await request.json();
-    // Extract puzzleId, mistakes, hintCount, and rating from request body
-    const { puzzleId, mistakes, hintCount = 0, rating } = body;
+    const { puzzleId, mistakes, hintCount = 0, rating, solveTimeSec } = body;
 
     if (!puzzleId || typeof mistakes !== "number" || typeof rating !== "number") {
       return NextResponse.json(
@@ -26,14 +28,50 @@ export async function POST(request: NextRequest) {
     const puzzleService = new PuzzleService();
     const userService = new UserService();
 
-    const points = calculatePoints({ rating, mistakes, hintCount: hintCount || 0 });
+    let currentUser;
+    try {
+      currentUser = await userService.getUser(user.walletAddress);
+    } catch (error: any) {
+      if (error.status === 404) {
+        await userService.createUser({
+          walletAddress: user.walletAddress,
+          displayName: user.displayName || user.walletAddress.slice(0, 8),
+        });
+        currentUser = await userService.getUser(user.walletAddress);
+      } else {
+        throw error;
+      }
+    }
+
+    const isNewScoring = useNewScoring();
+    const scoringConfig = isNewScoring ? await getScoringConfig() : null;
+
+    let points: number;
+    let breakdown: any = null;
+    if (isNewScoring && scoringConfig) {
+      const streakUser = await userService.updateUserStreakByUTCDay(user.walletAddress);
+      breakdown = calculateEarnedPoints({
+        kind: "standard",
+        hintCount: hintCount || 0,
+        streak: streakUser.currentStreak || 1,
+        solveTimeSec:
+          typeof solveTimeSec === "number" && Number.isFinite(solveTimeSec)
+            ? solveTimeSec
+            : Number.MAX_SAFE_INTEGER,
+        config: scoringConfig,
+      });
+      points = breakdown.points;
+    } else {
+      await userService.updateUserStreakByUTCDay(user.walletAddress);
+      points = calculatePoints({ rating, mistakes, hintCount: hintCount || 0 });
+    }
 
     const userPuzzleData: Partial<UserPuzzle> = {
       userWalletAddress: user.walletAddress,
       puzzleId,
       type: "solve",
       completed: true,
-      attempts: mistakes + 1, // Keep track of total attempts (mistakes + successful attempt)
+      attempts: mistakes + 1,
       points,
       solvedAt: new Date(),
     };
@@ -41,40 +79,58 @@ export async function POST(request: NextRequest) {
     const updatedUserPuzzle = await puzzleService.updateUserPuzzle(userPuzzleData);
 
     if (updatedUserPuzzle) {
-      // Get or create user
-      let currentUser;
-      try {
-        currentUser = await userService.getUser(user.walletAddress);
-      } catch (error: any) {
-        // User doesn't exist, create them
-        if (error.status === 404) {
-          await userService.createUser({
-            walletAddress: user.walletAddress,
-            displayName: user.displayName || user.walletAddress.slice(0, 8),
-          });
-          // Fetch the newly created user to get full stats
-          currentUser = await userService.getUser(user.walletAddress);
-        } else {
-          throw error;
-        }
-      }
-
-      // Update streak using UTC day boundaries
-      await userService.updateUserStreakByUTCDay(user.walletAddress);
-
-      const newPoints = (currentUser.totalPoints || 0) + userPuzzleData.points!;
-      const newTotalSolved = (currentUser.totalPuzzlesSolved || 0) + 1;
+      const refreshedUser = await userService.getUser(user.walletAddress);
+      const oldPoints = refreshedUser.totalPoints || 0;
+      const newPoints = oldPoints + (userPuzzleData.points ?? 0);
+      const newTotalSolved = (refreshedUser.totalPuzzlesSolved || 0) + 1;
 
       await userService.updateUserStats(user.walletAddress, {
         totalPoints: newPoints,
         totalPuzzlesSolved: newTotalSolved,
         lastPuzzleDate: new Date().toISOString(),
       });
+
+      try {
+        const adaptiveService = new AdaptiveService();
+        await adaptiveService.updateRatingAfterSolve(user.walletAddress, {
+          solveTimeSec:
+            typeof solveTimeSec === "number" && Number.isFinite(solveTimeSec)
+              ? solveTimeSec
+              : 120,
+          hints: hintCount || 0,
+          mistakes,
+          puzzleRating: rating,
+          failed: isNewScoring && (hintCount || 0) >= 3,
+        });
+      } catch (adaptiveError) {
+        console.error("Adaptive rating update failed:", adaptiveError);
+      }
+
+      try {
+        const rewardsService = new RewardsService();
+        const levelUp = await rewardsService.processLevelUp(
+          user.walletAddress,
+          oldPoints,
+          newPoints
+        );
+        if (levelUp) {
+          return NextResponse.json({
+            message: "Puzzle solved successfully",
+            points: userPuzzleData.points,
+            breakdown,
+            levelUp,
+            puzzle: updatedUserPuzzle,
+          });
+        }
+      } catch (rewardError) {
+        console.error("Milestone reward processing failed:", rewardError);
+      }
     }
 
     return NextResponse.json({
       message: "Puzzle solved successfully",
       points: userPuzzleData.points,
+      breakdown,
       puzzle: updatedUserPuzzle,
     });
   } catch (error: any) {

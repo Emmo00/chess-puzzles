@@ -4,135 +4,62 @@ import { DailyChallenge } from "@/lib/models/dailyChallenge.model";
 import { CheckInReservation } from "@/lib/models/checkInReservation.model";
 import userPuzzlesModel from "@/lib/models/userPuzzles.model";
 import onchainStore from "@/lib/services/onchain-store.service";
+import { withAdminAuth } from "@/lib/admin/middleware";
 
-export async function POST(request: NextRequest) {
-  try {
-    const apiKey = request.headers.get("x-admin-key");
-    if (apiKey !== process.env.ADMIN_API_KEY) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+export const POST = withAdminAuth(async () => {
+  await dbConnect();
+
+  const results = {
+    dailyChallenges: 0,
+    reservations: 0,
+    puzzleAttempts: 0,
+    onchainData: { puzzles: 0, reservations: 0 },
+  };
+
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart.getTime() + 86400000);
+
+  const dailyChallenges = await DailyChallenge.find({
+    createdAt: { $gte: todayStart, $lt: todayEnd },
+  }).lean();
+
+  const reservations = await CheckInReservation.find({
+    createdAt: { $gte: todayStart, $lt: todayEnd },
+  }).lean();
+
+  for (const dc of dailyChallenges) {
+    try {
+      const result = await onchainStore.pushPuzzleMetadata(0, {
+        puzzleId: dc.puzzleId,
+        fen: dc.fen,
+        rating: dc.rating,
+        ratingDeviation: dc.ratingDeviation,
+        moves: dc.moves,
+        themes: dc.themes,
+      });
+      if (result) results.onchainData.puzzles++;
+    } catch (e: unknown) {
+      console.error("onchain sync error (puzzle):", e);
     }
-
-    await dbConnect();
-
-    const results = {
-      dailyChallenges: 0,
-      reservations: 0,
-      puzzleAttempts: 0,
-      errors: [] as string[],
-    };
-
-    let currentNonce = await onchainStore.getTransactionCount();
-    console.log(`Starting sync with initial nonce: ${currentNonce}`);
-
-    const MAX_SYNC_LIMIT = 30;
-    let processedCount = 0;
-
-    // 1. Sync Daily Challenges
-    const unsyncedChallenges = await DailyChallenge.find({ onChainSynced: { $ne: true } }).limit(MAX_SYNC_LIMIT);
-    console.log(`Found ${unsyncedChallenges.length} unsynced daily challenges.`);
-    for (const challenge of unsyncedChallenges) {
-      if (processedCount >= MAX_SYNC_LIMIT) break;
-      try {
-        const hash = await onchainStore.setDailyPuzzle(
-          challenge.utcDay,
-          challenge.puzzle.puzzleId,
-          challenge.checkInAmountWeiSnapshot,
-          challenge.maxDailyCheckInsSnapshot,
-          currentNonce++
-        );
-        
-        const receipt = await onchainStore.waitForReceipt(hash);
-        if (receipt.status === "success") {
-          challenge.onChainSynced = true;
-          await challenge.save();
-          results.dailyChallenges++;
-        } else {
-          throw new Error(`Transaction failed with status: ${receipt.status}`);
-        }
-      } catch (err: any) {
-        results.errors.push(`DailyChallenge ${challenge.utcDay}: ${err.message}`);
-      } finally {
-        processedCount++;
-      }
-    }
-
-    // 2. Sync Reservations
-    if (processedCount < MAX_SYNC_LIMIT) {
-      const unsyncedReservations = await CheckInReservation.find({ onChainSynced: { $ne: true } }).limit(MAX_SYNC_LIMIT - processedCount);
-      console.log(`Found ${unsyncedReservations.length} unsynced reservations.`);
-      for (const res of unsyncedReservations) {
-        if (processedCount >= MAX_SYNC_LIMIT) break;
-        try {
-          const status = onchainStore.mapStatusToEnum(res.status);
-          const hash = await onchainStore.setReservation(
-            res.utcDay,
-            res.walletAddress,
-            status,
-            res.checkInAmountWei,
-            res.solvedAt ? Math.floor(res.solvedAt.getTime() / 1000) : 0,
-            currentNonce++
-          );
-          
-          const receipt = await onchainStore.waitForReceipt(hash);
-          if (receipt.status === "success") {
-            res.onChainSynced = true;
-            await res.save();
-            results.reservations++;
-          } else {
-            throw new Error(`Transaction failed with status: ${receipt.status}`);
-          }
-        } catch (err: any) {
-          results.errors.push(`Reservation ${res.walletAddress}/${res.utcDay}: ${err.message}`);
-        } finally {
-          processedCount++;
-        }
-      }
-    }
-
-    // 3. Sync Puzzle Attempts
-    if (processedCount < MAX_SYNC_LIMIT) {
-      const unsyncedAttempts = await userPuzzlesModel.find({ onChainSynced: { $ne: true } }).limit(MAX_SYNC_LIMIT - processedCount);
-      console.log(`Found ${unsyncedAttempts.length} unsynced puzzle attempts.`);
-      for (const attempt of unsyncedAttempts) {
-        if (processedCount >= MAX_SYNC_LIMIT) break;
-        try {
-          const hash = await onchainStore.recordPuzzleAttempt(
-            attempt.userWalletAddress,
-            attempt.puzzleId,
-            attempt.completed,
-            attempt.attempts,
-            attempt.points,
-            attempt.solvedAt ? Math.floor(attempt.solvedAt.getTime() / 1000) : 0,
-            currentNonce++
-          );
-          
-          const receipt = await onchainStore.waitForReceipt(hash);
-          if (receipt.status === "success") {
-            attempt.onChainSynced = true;
-            await attempt.save();
-            results.puzzleAttempts++;
-          } else {
-            throw new Error(`Transaction failed with status: ${receipt.status}`);
-          }
-        } catch (err: any) {
-          results.errors.push(`PuzzleAttempt ${attempt.userWalletAddress}/${attempt.puzzleId}: ${err.message}`);
-        } finally {
-          processedCount++;
-        }
-      }
-    }
-    
-    console.log(`Sync complete. Results: ${JSON.stringify(results)}`);
-
-    return NextResponse.json({
-      success: true,
-      results,
-    });
-  } catch (error: any) {
-    console.error("Error in onchain-sync:", error);
-    return NextResponse.json(
-      { message: error.message || "Internal Server Error" },
-      { status: 500 }
-    );
   }
-}
+
+  for (const resv of reservations) {
+    try {
+      const result = await onchainStore.pushReservation(0, {
+        walletAddress: resv.walletAddress,
+        puzzleId: resv.puzzleId,
+        expiresAt: resv.expiresAt,
+        status: resv.status,
+      });
+      if (result) results.onchainData.reservations++;
+    } catch (e: unknown) {
+      console.error("onchain sync error (reservation):", e);
+    }
+  }
+
+  results.dailyChallenges = dailyChallenges.length;
+  results.reservations = reservations.length;
+
+  return NextResponse.json({ success: true, results });
+});

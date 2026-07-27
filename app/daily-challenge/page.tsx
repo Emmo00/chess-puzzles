@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { sdk } from "@farcaster/miniapp-sdk";
 import confetti from "canvas-confetti";
-import { ArrowUpRight, AtSign, Coins, Send, Share2, TriangleAlert } from "lucide-react";
+import { ArrowUpRight, AtSign, Coins, Clock, Lightbulb, Send, Share2, TriangleAlert } from "lucide-react";
 import { useAccount } from "wagmi";
 import { celo } from "wagmi/chains";
 
@@ -13,8 +13,12 @@ import { WalletConnect } from "@/components/WalletConnect";
 import { useChainSwitching } from "@/lib/hooks/useChainSwitching";
 import { useCheckinClaim } from "@/lib/hooks/useCheckinClaim";
 import { useDailyCheckin } from "@/lib/hooks/useDailyCheckin";
+import { useUtcMidnightCountdown, formatCountdown } from "@/lib/hooks/useUtcMidnightCountdown";
+import { useHintBalance } from "@/lib/hooks/useHintBalance";
 import { Puzzle } from "@/lib/types";
 import { TelegramSupportLink } from "@/components/TelegramSupportLink";
+import { BottomNav } from "@/components/BottomNav";
+import { toast } from "sonner";
 
 type HintStage = "none" | "piece" | "move";
 
@@ -33,6 +37,7 @@ export default function DailyChallengePage() {
   const [isWrongMoveActive, setIsWrongMoveActive] = useState(false);
   const [isFarcasterMiniApp, setIsFarcasterMiniApp] = useState(false);
   const [isSolving, setIsSolving] = useState(false);
+  const autoReservedRef = useRef(false);
 
   const chessBoardRef = useRef<ChessBoardRef>(null);
   const claimCardRef = useRef<HTMLDivElement>(null);
@@ -57,6 +62,9 @@ export default function DailyChallengePage() {
     isSuccess: claimTxMined,
     claimError,
   } = useCheckinClaim();
+
+  const countdown = useUtcMidnightCountdown();
+  const { hintBalance, outOfHints, consume: consumeHint } = useHintBalance();
 
   const logClaimFlow = (step: string, details?: Record<string, unknown>) => {
     console.info("[ClaimFlow][DailyChallengePage]", step, details || {});
@@ -217,6 +225,15 @@ export default function DailyChallengePage() {
 
     return () => clearTimeout(timer);
   }, [claimMessage, claimError, error]);
+
+  useEffect(() => {
+    if (autoReservedRef.current || !isConnected || !status) return;
+    if (currentPuzzle || status.challenge?.reservation?.status === "claimed") return;
+    if (loading || puzzleLoading) return;
+    autoReservedRef.current = true;
+    handleReserveChallenge();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected, status, currentPuzzle, loading, puzzleLoading]);
 
   const pendingSeconds = useMemo(() => {
     const expiry = status?.reservation?.pendingExpiresAt;
@@ -381,8 +398,14 @@ export default function DailyChallengePage() {
     await openExternalUrl(twitterIntentUrl);
   };
 
-  const handleShowHint = () => {
+  const handleShowHint = async () => {
     if (hintStage === "none") {
+      const ok = await consumeHint();
+      if (!ok) {
+        toast.error("Out of hints", { description: "Buy more in the Store." });
+        return;
+      }
+      setHintCount((prev) => prev + 1);
       setHintStage("piece");
       const nextMove = chessBoardRef.current?.getNextMove();
       if (nextMove) {
@@ -392,8 +415,13 @@ export default function DailyChallengePage() {
     }
 
     if (hintStage === "piece") {
-      setHintStage("move");
+      const ok = await consumeHint();
+      if (!ok) {
+        toast.error("Out of hints", { description: "Buy more in the Store." });
+        return;
+      }
       setHintCount((prev) => prev + 1);
+      setHintStage("move");
       const nextMove = chessBoardRef.current?.getNextMove();
       if (nextMove) {
         setHighlightedSquares({ from: nextMove.from, to: nextMove.to });
@@ -440,7 +468,7 @@ export default function DailyChallengePage() {
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen w-full bg-white text-black flex flex-col">
+      <div className="h-dvh w-full app-paper-bg text-black flex flex-col overflow-hidden">
         <header className="pt-4 px-4 flex justify-between items-center shrink-0">
           <Link
             href="/"
@@ -448,9 +476,12 @@ export default function DailyChallengePage() {
           >
             ← BACK
           </Link>
+          <div className="px-2 py-1 font-black text-[11px] border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-yellow-300 text-black inline-flex items-center gap-1 font-mono tabular-nums">
+            <Clock className="w-3 h-3" /> {formatCountdown(countdown)}
+          </div>
         </header>
 
-        <main className="flex-1 flex items-center justify-center px-4 py-6">
+        <main className="flex-1 overflow-y-auto flex items-center justify-center px-4 py-6">
           <div className="w-full max-w-xs text-center bg-cyan-300 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-6 transform -rotate-1">
             <h1 className="text-xl font-black uppercase text-black mb-2">Connect Wallet</h1>
             <p className="text-sm font-bold text-black mb-4">
@@ -461,6 +492,8 @@ export default function DailyChallengePage() {
             </div>
           </div>
         </main>
+
+        <BottomNav />
       </div>
     );
   }
@@ -482,6 +515,9 @@ export default function DailyChallengePage() {
           ← BACK
         </Link>
         <div className="flex items-center gap-2">
+          <div className="px-3 py-2 font-black text-xs border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-yellow-300 text-black inline-flex items-center gap-1 font-mono tabular-nums">
+            <Clock className="w-3.5 h-3.5" /> {formatCountdown(countdown)}
+          </div>
           <div className="px-3 py-2 font-black text-xs border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-yellow-300 text-black">
             <span className="inline-flex items-center gap-1">
               <Coins className="w-3.5 h-3.5" /> {rewardLabel}
@@ -493,7 +529,15 @@ export default function DailyChallengePage() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-6 gap-4 min-h-0">
+      <main className="flex-1 overflow-y-auto flex flex-col items-center justify-center px-4 py-6 gap-4 min-h-0">
+        {isAlreadySolvedToday && (
+          <div className="w-full max-w-md bg-yellow-300 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3 text-center">
+            <div className="font-black text-sm uppercase text-black">You solved today&apos;s challenge!</div>
+            <div className="text-xs font-bold text-black/80 mt-1 inline-flex items-center gap-1 justify-center font-mono tabular-nums">
+              <Clock className="w-3 h-3" /> Next puzzle in {formatCountdown(countdown)}
+            </div>
+          </div>
+        )}
         {!isOnCorrectChain && (
           <button
             onClick={switchToPreferredChain}
@@ -505,41 +549,44 @@ export default function DailyChallengePage() {
 
         {!currentPuzzle && (
           <div className="w-full max-w-xs text-center space-y-6">
-            <div className="bg-orange-300 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 transform -rotate-1">
-              <h1 className="text-2xl font-black text-black uppercase mb-2">Daily Challenge</h1>
-              <p className="text-sm font-bold uppercase text-black">
-                Solve one high-rated puzzle.
-              </p>
-              {status?.hasSlots && (
-                <p className="text-xs font-black uppercase text-black mt-3 bg-white border-2 border-black py-1">
-                  Reward: {rewardLabel}
-                </p>
-              )}
-            </div>
-
-            {isAlreadySolvedToday ? (
-              <div className="bg-green-300 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-5 transform rotate-1">
-                <h3 className="text-lg font-black uppercase text-black mb-2">Puzzle Already Solved</h3>
+            {isAlreadySolvedToday && (
+              <div className="bg-green-300 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-5 transform rotate-1">
+                <h3 className="text-lg font-black uppercase text-black mb-2">Already Solved</h3>
                 <p className="text-sm font-bold uppercase text-black">
-                  You solved today's daily challenge. Come back tomorrow.
+                  You solved today's challenge. Next puzzle in {formatCountdown(countdown)}.
                 </p>
               </div>
-            ) : (
+            )}
+            {!isAlreadySolvedToday && puzzleLoading && (
+              <div className="bg-orange-300 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-4 border-black mx-auto mb-3"></div>
+                <p className="text-lg font-black text-black uppercase">Reserving puzzle...</p>
+              </div>
+            )}
+            {!isAlreadySolvedToday && !puzzleLoading && (
               <>
+                <div className="bg-orange-300 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 transform -rotate-1">
+                  <h1 className="text-2xl font-black text-black uppercase mb-2">Daily Challenge</h1>
+                  <p className="text-sm font-bold uppercase text-black">
+                    Solve one high-rated puzzle.
+                  </p>
+                  {status?.hasSlots && (
+                    <p className="text-xs font-black uppercase text-black mt-3 bg-white border-2 border-black py-1">
+                      Reward: {rewardLabel}
+                    </p>
+                  )}
+                </div>
                 <button
-                  onClick={handleReserveChallenge}
-                  disabled={puzzleLoading}
-                  className="w-full bg-green-400 text-black py-4 px-6 font-black text-lg border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50 disabled:hover:translate-x-0 disabled:hover:translate-y-0"
+                  onClick={() => { autoReservedRef.current = false; handleReserveChallenge(); }}
+                  className="w-full bg-green-400 text-black py-4 px-6 font-black text-lg border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
                 >
-                  {puzzleLoading ? "RESERVING..." : "START CHALLENGE"}
+                  START CHALLENGE
                 </button>
-
                 {status && !status.hasSlots && (
                   <p className="text-xs font-black uppercase text-gray-700">
                     Today's reward slots are taken up. You can still solve for streak and stats.
                   </p>
                 )}
-
                 {status?.reservation?.rewardEligible !== false && status?.reservation?.pendingExpiresAt && (
                   <p className="text-xs font-black uppercase text-gray-700">Reservation expires in {pendingSeconds}s</p>
                 )}
@@ -599,18 +646,28 @@ export default function DailyChallengePage() {
                 ) : (
                   <button
                     onClick={handleShowHint}
-                    disabled={hintStage === "move" || canGoForward || isCompleted}
-                    className={`flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
-                      hintStage === "move" || canGoForward || isCompleted
+                    disabled={hintStage === "move" || canGoForward || isCompleted || outOfHints}
+                    className={`flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${
+                      hintStage === "move" || canGoForward || isCompleted || outOfHints
                         ? "bg-yellow-200 opacity-50 cursor-not-allowed"
-                        : "bg-yellow-400"
+                        : hintCount > 0
+                          ? "bg-yellow-200"
+                          : "bg-yellow-400"
                     }`}
                   >
-                    {hintStage === "none"
-                      ? `HINT${hintCount > 0 ? ` (${hintCount})` : ""}`
-                      : hintStage === "piece"
-                        ? "SHOW MOVE"
-                        : "HINT SHOWN"}
+                    {outOfHints && hintStage === "none" ? (
+                      <span className="inline-flex items-center gap-1 text-xs">
+                        <Lightbulb className="w-4 h-4" /> NO HINTS · STORE
+                      </span>
+                    ) : hintStage === "none" ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Lightbulb className="w-4 h-4" /> HINT ({hintBalance})
+                      </span>
+                    ) : hintStage === "piece" ? (
+                      "SHOW MOVE"
+                    ) : (
+                      "HINT SHOWN"
+                    )}
                   </button>
                 )}
 
@@ -714,6 +771,8 @@ export default function DailyChallengePage() {
           </div>
         )}
       </main>
+
+      <BottomNav />
     </div>
   );
 }

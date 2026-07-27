@@ -580,8 +580,8 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
   }
 
   return (
-    <div className={`inline-block border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] ${isWrongMoveActive ? 'animate-pulse' : ''}`}>
-      <div 
+    <div className={`inline-block border-[6px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-[#fff9e9] p-1 ${isWrongMoveActive ? 'animate-pulse' : ''}`}>
+      <div
         style={{ width: "320px", height: "320px" }}
       >
         <Chessboard
@@ -595,8 +595,8 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
               borderRadius: "0px",
             },
             squareStyles: { ...optionSquares, ...wrongMoveSquares, ...hintSquareStyles },
-            lightSquareStyle: { backgroundColor: "#EEEED2" },
-            darkSquareStyle: { backgroundColor: "#739552" },
+            lightSquareStyle: { backgroundColor: "#fff9e9" },
+            darkSquareStyle: { backgroundColor: "#b08d57" },
             id: "click-to-move",
           }}
         />

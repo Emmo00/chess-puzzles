@@ -131,7 +131,13 @@ class UserService {
     if (lastPuzzleUtcDay === currentUtcDay - 1) {
       user.currentStreak += 1;
     } else {
-      user.currentStreak = 1;
+      const freezeCount = user.streakFreezes ?? 1;
+      if (freezeCount > 0) {
+        user.streakFreezes = freezeCount - 1;
+        user.currentStreak += 1;
+      } else {
+        user.currentStreak = 1;
+      }
     }
 
     user.longestStreak = Math.max(user.longestStreak, user.currentStreak);

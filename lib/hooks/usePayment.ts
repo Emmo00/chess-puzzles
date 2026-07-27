@@ -8,22 +8,35 @@ import {
   usePublicClient,
 } from "wagmi";
 import { encodeFunctionData, parseUnits } from "viem";
-import { CUSD_ABI, getCUSDAddress, PAYMENT_AMOUNTS, PAYMENT_RECIPIENT } from "../utils/payment";
+import { CUSD_ABI, getCUSDAddress, PAYMENT_RECIPIENT } from "../utils/payment";
 import { PaymentType } from "../types/payment";
 import { isOnCorrectChain } from "../config/wagmi";
 import { selectSupportedFeeCurrency } from "@/lib/utils/feeCurrency";
+
+export interface PaymentMeta {
+  itemId?: string;
+  itemCategory?: string;
+  itemName?: string;
+  itemQuantity?: number;
+}
 
 export function usePayment() {
   const { address, chainId } = useAccount();
   const publicClient = usePublicClient();
   const { sendTransaction, data: hash, isPending } = useSendTransaction();
   const [paymentType, setPaymentType] = useState<PaymentType | null>(null);
+  const [amountUsd, setAmountUsd] = useState<string | null>(null);
+  const [paymentMeta, setPaymentMeta] = useState<PaymentMeta | null>(null);
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   });
 
-  const makePayment = async (type: PaymentType) => {
+  const makePayment = async (
+    type: PaymentType,
+    usdAmount: string = "0.01",
+    meta?: PaymentMeta
+  ) => {
     if (!address || !chainId) {
       throw new Error("Wallet not connected");
     }
@@ -34,8 +47,10 @@ export function usePayment() {
 
     try {
       setPaymentType(type);
+      setAmountUsd(usdAmount);
+      setPaymentMeta(meta || null);
       const cusdAddress = getCUSDAddress(chainId);
-      const amount = PAYMENT_AMOUNTS.DAILY_ACCESS;
+      const amount = parseUnits(usdAmount, 18);
 
       const data = encodeFunctionData({
         abi: CUSD_ABI,
@@ -62,6 +77,8 @@ export function usePayment() {
       });
     } catch (error) {
       setPaymentType(null);
+      setAmountUsd(null);
+      setPaymentMeta(null);
       throw error;
     }
   };
@@ -72,38 +89,46 @@ export function usePayment() {
     }
 
     let retries = 0;
-    
+
     while (retries <= maxRetries) {
       try {
-        // Call backend to verify payment
+        const body: Record<string, unknown> = {
+          transactionHash: hash,
+          walletAddress: address,
+          paymentType,
+          chainId,
+          amountUsd,
+        };
+        if (paymentMeta) {
+          body.metadata = paymentMeta;
+        }
+
         const response = await fetch("/api/payments/verify", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            transactionHash: hash,
-            walletAddress: address,
-            paymentType,
-            chainId,
-          }),
+          body: JSON.stringify(body),
         });
 
         if (response.ok) {
           const result = await response.json();
           setPaymentType(null);
+          setAmountUsd(null);
+          setPaymentMeta(null);
           return result.verified;
         } else if (response.status === 202) {
-          // Transaction is still being processed, retry after delay
           const result = await response.json();
           console.log("Transaction still processing, retrying...", result.error);
-          
+
           if (retries < maxRetries) {
             retries++;
-            await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+            await new Promise((resolve) => setTimeout(resolve, 3000));
             continue;
           } else {
-            throw new Error("Transaction verification timed out. Please check your transaction status manually.");
+            throw new Error(
+              "Transaction verification timed out. Please check your transaction status manually."
+            );
           }
         } else {
           const errorResult = await response.json();
@@ -111,18 +136,24 @@ export function usePayment() {
         }
       } catch (error) {
         console.error("Payment verification error:", error);
-        
-        if (retries < maxRetries && error instanceof Error && error.message.includes("still being processed")) {
+
+        if (
+          retries < maxRetries &&
+          error instanceof Error &&
+          error.message.includes("still being processed")
+        ) {
           retries++;
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await new Promise((resolve) => setTimeout(resolve, 3000));
           continue;
         }
-        
+
         setPaymentType(null);
+        setAmountUsd(null);
+        setPaymentMeta(null);
         throw error;
       }
     }
-    
+
     return false;
   };
 
@@ -134,5 +165,6 @@ export function usePayment() {
     isSuccess,
     transactionHash: hash,
     paymentType,
+    amountUsd,
   };
 }

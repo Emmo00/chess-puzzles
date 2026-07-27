@@ -7,6 +7,7 @@ import { WalletProvider } from "../lib/providers/WalletProvider";
 import { FarcasterMiniAppReady } from "@/components/FarcasterMiniAppReady";
 import { BackgroundMusic } from "@/components/BackgroundMusic";
 import { GlobalErrorListener } from "@/components/GlobalErrorListener";
+import { Toaster } from "sonner";
 import { Inter, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 
 // Initialize fonts
@@ -97,7 +98,6 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="talentapp:project_verification" content="44156f46d8761b652f56dfd70ed3225d67f0125aca67276ace896a974edcfe491f5da33ad557bec3583760ec78463fa110f8d4f08c7fee73d932fe741b556953" />
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-TPBVDV2BQ9"
           strategy="afterInteractive"
@@ -117,6 +117,7 @@ export default function RootLayout({
           <FarcasterMiniAppReady />
           <BackgroundMusic />
           {children}
+          <Toaster position="top-center" toastOptions={{ style: { border: "3px solid #000", boxShadow: "4px 4px 0 #000", fontWeight: 800 } }} />
         </WalletProvider>
       </body>
     </html>

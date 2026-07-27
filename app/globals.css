@@ -164,3 +164,46 @@
 .animate-slide-down {
   animation: slide-down 0.3s ease-out forwards;
 }
+
+/* Shared neo-brutalist paper-grid background (matches the home map screen) */
+.app-paper-bg {
+  --paper: #fff9e9;
+  --ink: #111111;
+  background:
+    linear-gradient(rgba(17, 17, 17, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 17, 17, 0.055) 1px, transparent 1px),
+    var(--paper);
+  background-size: 28px 28px;
+  color: var(--ink);
+}
+
+@media (min-width: 700px) {
+  .app-paper-bg {
+    background-color: #dff9ff;
+  }
+}
+
+/* Points count-up pop-in */
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) translateY(6px);
+  }
+  60% {
+    transform: scale(1.08) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Piece move micro-animation (applied via board wrapper) */
+@keyframes squarePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 214, 0, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(255, 214, 0, 0.7);
+  }
+}

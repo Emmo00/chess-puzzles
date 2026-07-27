@@ -4,8 +4,7 @@ import { authenticateWalletUser } from "../../../../lib/auth";
 import PuzzleService from "../../../../lib/services/puzzles.service";
 import { Payment } from "../../../../lib/models/payment.model";
 import { PaymentType } from "../../../../lib/types/payment";
-
-const MAX_DAILY_PUZZLES = 3;
+import { getAccessConfig } from "../../../../lib/config/access";
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,15 +33,15 @@ export async function POST(request: NextRequest) {
     const count = await puzzleService.getNumberOfPuzzlesGivenToday(user.walletAddress);
     
     // Determine access limits based on payment status
+    const { dailyFreePuzzles } = await getAccessConfig();
     if (hasDailyAccess) {
-      // Daily access users get 3 puzzles
-      if (count >= MAX_DAILY_PUZZLES) {
+      if (count >= dailyFreePuzzles) {
         return NextResponse.json(
-          { message: "Daily access limit reached (3 puzzles total)" },
+          { message: `Daily access limit reached (${dailyFreePuzzles} puzzles total)` },
           { status: 429 }
         );
       }
-      console.log(`Daily access user ${user.walletAddress} accessing puzzle ${count + 1}/3`);
+      console.log(`Daily access user ${user.walletAddress} accessing puzzle ${count + 1}/${dailyFreePuzzles}`);
     } else {
       // Free users get no access
       return NextResponse.json(

@@ -13,7 +13,8 @@ export interface PaymentVerification {
 }
 
 export enum PaymentType {
-  DAILY_ACCESS = "daily_access"
+  DAILY_ACCESS = "daily_access",
+  STORE_PURCHASE = "store_purchase",
 }
 
 export interface UserPaymentData {

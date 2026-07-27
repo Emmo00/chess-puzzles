@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CircleHelp, Puzzle, Settings, Smartphone, Trophy } from "lucide-react";
+import { BottomNav } from "@/components/BottomNav";
 
 interface FAQItem {
   question: string;
@@ -16,35 +17,35 @@ const faqItems: FAQItem[] = [
   },
   {
     question: "What happens if I make a wrong move?",
-    answer: "Don't worry! If you make a wrong move, the board will highlight it in red. Click the RETRY button to undo your move and try again. Each mistake reduces your points slightly, but you can keep trying until you solve the puzzle."
+    answer: "Don't worry! If you make a wrong move, the board will highlight it in red. Click the RETRY button to undo your move and try again. Wrong moves pause play but no longer reduce your score directly — they're still recorded for your analysis."
   },
   {
     question: "How do hints work?",
-    answer: "Hints are revealed in two stages. First click shows you which piece to move (highlighted in yellow). Second click shows you where to move it (highlighted in green). Using hints deducts points from your puzzle reward, and multiple hints reduce your final reward further."
+    answer: "Hints are revealed in two stages: first click highlights the piece to move, second click highlights the destination. Each stage consumes one hint from your wallet's hint balance. New accounts start with 5 hints + 1 streak freeze. Hints don't refill passively — buy more in the Store. The first hint costs -30 pts, the second -60, and a third fully reveals the puzzle for 0 points."
   },
   {
     question: "How are points calculated?",
-    answer: "Points depend on puzzle difficulty (rating) and your performance. Base points: Easy (10), Medium (25), Hard (50), Expert (100). Multipliers are applied for mistakes (1 mistake = 80%, 2+ = 60%) and hints (see above). Both multipliers stack!"
+    answer: "Earned PTS = max(0, floor((Base − Hint Penalty) × Streak Multiplier) + Speed Bonus). Base is 100 for a standard puzzle and 200 for the Daily Challenge. Streak multiplier grows +10% per consecutive solve day up to 1.5×. Solve in ≤15 seconds with 0 hints for a +25 speed bonus."
   },
   {
     question: "How many puzzles can I solve per day?",
-    answer: "You can solve up to 5 puzzles per day. Your puzzle count resets at midnight UTC. Come back daily to keep your streak alive and climb the leaderboard!"
+    answer: "You get 3 free Classic puzzles per UTC day. Paying $0.01 USDT unlocks unlimited Classic puzzles for the rest of that day. The Daily Challenge is one shared puzzle per UTC day."
   },
   {
     question: "What is a streak?",
-    answer: "A streak counts consecutive days you've solved at least one puzzle. Maintaining a streak shows your dedication! If you miss a day, your streak resets to zero. Check your current streak on the home page."
+    answer: "A streak counts consecutive UTC days you've solved at least one puzzle. Longer streaks boost your points (up to 1.5×). If you miss a day, your streak resets. Use a Streak Freeze from the Store to protect it."
   },
   {
     question: "How does the leaderboard work?",
-    answer: "Players are ranked primarily by total puzzles solved, with total points as a tiebreaker. Solve more puzzles and solve them accurately to climb higher! The leaderboard shows all-time stats."
+    answer: "Leagues reset weekly (Monday 00:00 UTC). Your rank score = season points + streak bonus (max +100). Climb from ♟ Pawn → ♞ Knight (750 pts + 7 streak) → ♚ King (1800 pts + 14 streak). Lifetime points separately drive your map level."
+  },
+  {
+    question: "What are levels and the progress map?",
+    answer: "Your total lifetime points map to a level: L = floor(sqrt(points/100)) + 1. Each level is a node on the winding home map; every 5th level is a chest milestone. Solve puzzles to advance your token along the path."
   },
   {
     question: "Can I analyze a puzzle after solving it?",
     answer: "Yes! After completing a puzzle, you can close the completion modal and use the ← and → buttons to navigate through all the moves. This helps you understand the solution better."
-  },
-  {
-    question: "What do the puzzle ratings mean?",
-    answer: "Puzzle ratings indicate difficulty: Under 1000 (Easy), 1000-1400 (Medium), 1400-1800 (Hard), 1800+ (Expert). Higher-rated puzzles give more points but are more challenging!"
   },
 ];
 
@@ -56,7 +57,7 @@ export default function FAQPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-white text-black flex flex-col">
+    <div className="h-dvh w-full app-paper-bg text-black flex flex-col overflow-hidden">
       {/* Header */}
       <header className="pt-4 px-4 flex justify-between items-center shrink-0">
         <Link
@@ -71,9 +72,8 @@ export default function FAQPage() {
           </span>
         </div>
       </header>
-
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center px-4 py-6 gap-4">
+      <main className="flex-1 overflow-y-auto flex flex-col items-center px-4 py-6 gap-4">
         {/* Title Card */}
         <div className="w-full max-w-2xl bg-cyan-400 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 transform -rotate-1">
           <h1 className="font-black text-2xl text-black">FREQUENTLY ASKED QUESTIONS</h1>
@@ -126,7 +126,7 @@ export default function FAQPage() {
         {/* Quick Links */}
         <div className="w-full max-w-2xl flex flex-wrap gap-3 justify-center mt-2">
           <Link
-            href="/?openPuzzlesModal=1"
+            href="/solve-puzzles"
             className="bg-yellow-400 text-black px-4 py-2 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all inline-flex items-center gap-2"
           >
             <Puzzle className="w-4 h-4" /> START SOLVING
@@ -145,6 +145,8 @@ export default function FAQPage() {
           </Link>
         </div>
       </main>
+
+      <BottomNav />
     </div>
   );
 }
