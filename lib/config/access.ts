@@ -8,9 +8,9 @@ export interface AccessConfig {
 
 export const ACCESS_CONFIG_DEFAULTS: AccessConfig = {
   dailyFreePuzzles: 3,
-  unlockAmountUsd: "0.01",
+  unlockAmountUsd: "0.02",
   unlockDurationHours: 24,
-  defaultHints: 5,
+  defaultHints: 3,
   defaultStreakFreezes: 1,
 };
 

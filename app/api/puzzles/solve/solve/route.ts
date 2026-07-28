@@ -28,20 +28,7 @@ export async function POST(request: NextRequest) {
     const puzzleService = new PuzzleService();
     const userService = new UserService();
 
-    let currentUser;
-    try {
-      currentUser = await userService.getUser(user.walletAddress);
-    } catch (error: any) {
-      if (error.status === 404) {
-        await userService.createUser({
-          walletAddress: user.walletAddress,
-          displayName: user.displayName || user.walletAddress.slice(0, 8),
-        });
-        currentUser = await userService.getUser(user.walletAddress);
-      } else {
-        throw error;
-      }
-    }
+    const currentUser = await userService.ensureUser(user.walletAddress);
 
     const isNewScoring = useNewScoring();
     const scoringConfig = isNewScoring ? await getScoringConfig() : null;

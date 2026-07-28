@@ -34,7 +34,7 @@ export const SUPPORTED_CURRENCIES = [
     decimals: 6,
   },
   {
-    symbol: "cUSD",
+    symbol: "USDm",
     tokenAddress: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
     feeCurrencyAddress: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
     decimals: 18,
@@ -53,9 +53,13 @@ export const SUPPORTED_CURRENCIES = [
   },
 ] as const;
 
-// cUSD Contract Address (Celo mainnet only)
+export const ALLOWLISTED_STABLECOINS = SUPPORTED_CURRENCIES.filter(
+  (c) => c.symbol === "USDC" || c.symbol === "USDT" || c.symbol === "USDm"
+);
+
+// USDm Contract Address (Celo mainnet only)
 export const CUSD_ADDRESSES = {
-  [celo.id]: "0x765DE816845861e75A25fCA122bb6898B8B1282a", // Celo cUSD Mainnet
+  [celo.id]: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
 } as const;
 
 // Payment recipient address

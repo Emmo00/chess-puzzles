@@ -3,7 +3,7 @@ import { createPublicClient, http, parseUnits } from "viem";
 import { celo } from "viem/chains";
 import { Payment } from "../../../../lib/models/payment.model";
 import { PaymentType } from "../../../../lib/types/payment";
-import { PAYMENT_RECIPIENT, CUSD_ADDRESSES } from "../../../../lib/config/wagmi";
+import { PAYMENT_RECIPIENT, SUPPORTED_CURRENCIES } from "../../../../lib/config/wagmi";
 import HintsService from "../../../../lib/services/hints.service";
 import dbConnect from "../../../../lib/db";
 import { getAccessConfig } from "../../../../lib/config/access";
@@ -16,7 +16,7 @@ const celoClient = createPublicClient({
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
-    const { transactionHash, walletAddress, paymentType, chainId, amountUsd, metadata } =
+    const { transactionHash, walletAddress, paymentType, chainId, amountUsd, metadata, tokenAddress } =
       await request.json();
 
     console.log("Payment verification request:", {
@@ -91,9 +91,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Transaction failed" }, { status: 400 });
     }
 
-    const cusdAddress = CUSD_ADDRESSES[celo.id];
-    if (!cusdAddress) {
-      return NextResponse.json({ error: "cUSD not supported on this chain" }, { status: 400 });
+    const token = tokenAddress
+      ? SUPPORTED_CURRENCIES.find(
+          (c) => c.tokenAddress.toLowerCase() === tokenAddress.toLowerCase()
+        )
+      : SUPPORTED_CURRENCIES.find((c) => c.symbol === "USDm");
+
+    if (!token) {
+      return NextResponse.json({ error: "Unsupported payment token" }, { status: 400 });
     }
 
     const transferEventSignature =
@@ -101,14 +106,14 @@ export async function POST(request: NextRequest) {
 
     const transferLog = receipt.logs.find(
       (log) =>
-        log.address.toLowerCase() === cusdAddress.toLowerCase() &&
+        log.address.toLowerCase() === token.tokenAddress.toLowerCase() &&
         log.topics[0] === transferEventSignature &&
         log.topics[2] &&
         `0x${log.topics[2].slice(-40)}`.toLowerCase() === PAYMENT_RECIPIENT.toLowerCase()
     );
 
     if (!transferLog) {
-      return NextResponse.json({ error: "cUSD Transfer event not found in transaction" }, { status: 400 });
+      return NextResponse.json({ error: `${token.symbol} Transfer event not found in transaction` }, { status: 400 });
     }
 
     const fromAddress = `0x${transferLog.topics[1]?.slice(-40)}`;
@@ -120,9 +125,9 @@ export async function POST(request: NextRequest) {
     const usdValue = typeof amountUsd === "string" ? amountUsd : unlockAmountUsd;
     let expectedAmount: string;
     try {
-      expectedAmount = parseUnits(usdValue, 18).toString();
+      expectedAmount = parseUnits(usdValue, token.decimals).toString();
     } catch {
-      expectedAmount = parseUnits(unlockAmountUsd, 18).toString();
+      expectedAmount = parseUnits(unlockAmountUsd, token.decimals).toString();
     }
 
     if (

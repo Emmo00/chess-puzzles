@@ -105,16 +105,16 @@ export function useCheckinClaim() {
       const requiredCost = (estimatedCost * BigInt(12)) / BigInt(10);
 
       if (isMiniPay()) {
-        // Prioritize cUSD for fee abstraction as it's the most reliable in MiniPay
+        // Prioritize USDm for fee abstraction as it's the most reliable in MiniPay
         const feeCurrencies = [...SUPPORTED_CURRENCIES].sort((a, b) => {
-          if (a.symbol === "cUSD") return -1;
-          if (b.symbol === "cUSD") return 1;
+          if (a.symbol === "USDm") return -1;
+          if (b.symbol === "USDm") return 1;
           return 0;
         });
 
         for (const currency of feeCurrencies) {
           // Only use known Celo native fee currencies
-          if (!["cUSD", "cEUR", "cREAL"].includes(currency.symbol)) continue;
+          if (!["USDm", "cEUR", "cREAL"].includes(currency.symbol)) continue;
 
           try {
             const tokenBalance = await publicClient.readContract({
@@ -124,7 +124,7 @@ export function useCheckinClaim() {
               args: [address],
             });
 
-            // For cUSD/cEUR/cREAL, they all have 18 decimals, same as CELO
+            // For USDm/cEUR/cREAL, they all have 18 decimals, same as CELO
             // So we can compare directly with requiredCost (with a small safety buffer)
             const tokenRequiredCost = (requiredCost * BigInt(15)) / BigInt(10); // 50% buffer for stablecoins
 

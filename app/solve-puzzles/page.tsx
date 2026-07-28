@@ -4,10 +4,11 @@ import { useEffect, useState, useRef } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Ban, Check, Circle, Lightbulb, X, Zap } from "lucide-react";
+import { Ban, Castle, Check, Circle, Gift, Lightbulb, Loader2, X, Zap } from "lucide-react";
 import ChessBoard, { ChessBoardRef } from "../../components/chess-board";
 import { useUserStats } from "../../lib/hooks/useUserStats";
 import { useHintBalance } from "../../lib/hooks/useHintBalance";
+import { PaymentModal } from "@/components/PaymentModal";
 import { Puzzle } from "../../lib/types";
 import { getThemeById } from "../../lib/config/puzzleThemes";
 import { TelegramSupportLink } from "@/components/TelegramSupportLink";
@@ -67,7 +68,17 @@ export default function SolvePuzzlesPage() {
   const { address, isConnected } = useAccount();
   const router = useRouter();
   const { userStats } = useUserStats();
-  const { hintBalance, outOfHints, consume: consumeHint } = useHintBalance();
+  const { hintBalance, outOfHints, consume: consumeHint, refresh: refreshHintBalance } = useHintBalance();
+
+  // Payment / hint shop modal state
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentStoreItem, setPaymentStoreItem] = useState<any>(null);
+  const [paymentDefaultPrice, setPaymentDefaultPrice] = useState<string>("0.01");
+  const [showHintShop, setShowHintShop] = useState(false);
+  const [hintShopItems, setHintShopItems] = useState<any[]>([]);
+  const [hintShopLoading, setHintShopLoading] = useState(false);
+  const [selectedHintItem, setSelectedHintItem] = useState<any>(null);
+  const [paymentModalKey, setPaymentModalKey] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -242,7 +253,17 @@ export default function SolvePuzzlesPage() {
 
   const handleShowHint = async () => {
     if (hintBalance <= 0) {
-      router.push("/store");
+      setHintShopLoading(true);
+      setShowHintShop(true);
+      try {
+        const res = await fetch("/api/admin/store-items");
+        const data = res.ok ? await res.json() : [];
+        setHintShopItems((data || []).filter((it: any) => it.active && it.category === "hints"));
+      } catch {
+        setHintShopItems([]);
+      } finally {
+        setHintShopLoading(false);
+      }
       return;
     }
     if (hintStage === 'none') {
@@ -282,6 +303,32 @@ export default function SolvePuzzlesPage() {
 
   const handleRetry = () => {
     chessBoardRef.current?.undoWrongMove();
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentModal(false);
+    setPaymentStoreItem(null);
+    setSelectedHintItem(null);
+    refreshHintBalance();
+    checkPaymentStatus();
+    if (showHintShop) {
+      setShowHintShop(false);
+    }
+    toast.success("Purchase complete!");
+  };
+
+  const handleBuyHintItem = (item: any) => {
+    setSelectedHintItem(item);
+    setPaymentStoreItem(item);
+    setPaymentModalKey((k) => k + 1);
+    setShowPaymentModal(true);
+  };
+
+  const handleUnlockUnlimited = () => {
+    setPaymentStoreItem(null);
+    setPaymentDefaultPrice(accessConfig?.unlockAmountUsd || "0.01");
+    setPaymentModalKey((k) => k + 1);
+    setShowPaymentModal(true);
   };
 
   const handleHistoryChange = (back: boolean, forward: boolean) => {
@@ -372,7 +419,7 @@ export default function SolvePuzzlesPage() {
             }`}
           >
             <span className="inline-flex items-center gap-1">
-              <Zap className="w-4 h-4" /> PUZZLES ({solvedPuzzlesCount}/{MAX_DAILY_PUZZLES})
+              <Zap className="w-4 h-4" /> PUZZLES {paymentStatus?.hasDailyAccess ? `#${solvedPuzzlesCount}` : `(${solvedPuzzlesCount}/${MAX_DAILY_PUZZLES})`}
             </span>
           </div>
         </div>
@@ -438,12 +485,11 @@ export default function SolvePuzzlesPage() {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto flex flex-col items-center justify-center px-4 py-6 gap-3 min-h-0">
+      <main className="flex-1 overflow-y-auto flex flex-col lg:flex-row items-center lg:items-start justify-center px-4 py-6 gap-6 min-h-0">
         {/* Show puzzle interface if puzzle is loaded */}
         {currentPuzzle && (
           <>
-            {" "}
-            <div className="w-full max-w-xs shrink-0">
+            <div className="flex-1 w-full flex flex-col items-center">
               {/* Turn Indicator */}
               <div className="mb-3 text-center">
                 <div
@@ -482,7 +528,7 @@ export default function SolvePuzzlesPage() {
                 </div>
               )}
 
-              <div className={`transition-shadow duration-200 ${movePulse ? 'shadow-[0_0_0_4px_rgba(255,214,0,0.8)]' : ''}`}>
+              <div className={`w-full max-w-[560px] transition-shadow duration-200 ${movePulse ? 'shadow-[0_0_0_4px_rgba(255,214,0,0.8)]' : ''}`}>
                 <ChessBoard
                   ref={chessBoardRef}
                   puzzle={currentPuzzle}
@@ -497,7 +543,7 @@ export default function SolvePuzzlesPage() {
                 />
               </div>
             </div>
-            <div className="w-full max-w-xs shrink-0 space-y-3">
+            <div className="w-full lg:w-80 shrink-0 space-y-3">
               {/* Navigation and Hint Controls */}
               <div className="flex gap-2">
                 {/* Back Button */}
@@ -528,14 +574,7 @@ export default function SolvePuzzlesPage() {
                   >
                     RETRY
                   </button>
-                ) : (
-                  <button
-                    onClick={handleRetry}
-                    className="flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all bg-red-400"
-                  >
-                    RETRY
-                  </button>
-                )}
+                ) : null}
                 
                 {/* Next Button */}
                 <button
@@ -574,13 +613,6 @@ export default function SolvePuzzlesPage() {
               {!isCompleted && !isWrongMoveActive && hintStage === 'move' && (
                 <div className="w-full text-black py-3 px-4 font-black text-xs border-2 border-black bg-yellow-200 inline-flex items-center justify-center gap-2 opacity-60">
                   <Check className="w-4 h-4" /> HINT SHOWN
-                </div>
-              )}
-
-              {/* Hint count indicator */}
-              {hintCount > 0 && !isCompleted && (
-                <div className="text-center text-xs font-black uppercase text-black bg-yellow-200 border-2 border-black p-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                  Hints used: {hintCount} (−{hintCount >= 3 ? "all" : hintCount === 2 ? "60" : "30"} pts)
                 </div>
               )}
               
@@ -633,12 +665,12 @@ export default function SolvePuzzlesPage() {
               <TelegramSupportLink />
             </div>
 
-            <Link
-              href="/store"
-              className="inline-block w-full bg-lime-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
+            <button
+              onClick={handleUnlockUnlimited}
+              className="w-full bg-lime-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
             >
-              UNLOCK UNLIMITED · STORE
-            </Link>
+              UNLOCK UNLIMITED · ${accessConfig?.unlockAmountUsd ?? "0.01"}
+            </button>
 
             <Link
               href="/"
@@ -651,6 +683,72 @@ export default function SolvePuzzlesPage() {
       </main>
 
       <BottomNav />
+
+      {/* Hint Shop Modal */}
+      {showHintShop && (
+        <div className="fixed inset-0 z-50 p-4 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/80" onClick={() => setShowHintShop(false)} />
+          <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-sm w-full">
+            <div className="bg-yellow-400 border-b-4 border-black p-4">
+              <div className="flex justify-between items-center">
+                <h2 className="font-black text-lg uppercase text-black flex items-center gap-2">
+                  <Lightbulb className="w-5 h-5" /> BUY HINTS
+                </h2>
+                <button
+                  onClick={() => setShowHintShop(false)}
+                  className="w-7 h-7 bg-red-500 border-2 border-black text-black flex items-center justify-center"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-4 space-y-2">
+              {hintShopLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                </div>
+              ) : hintShopItems.length === 0 ? (
+                <p className="text-xs font-bold text-center uppercase text-gray-500 py-4">No hint packs available</p>
+              ) : (
+                hintShopItems.map((item: any) => (
+                  <div
+                    key={item._id}
+                    className="bg-cyan-200 border-2 border-black p-3 flex items-center gap-3"
+                  >
+                    <Gift className="w-5 h-5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-black text-sm uppercase truncate">{item.name}</div>
+                      <div className="text-[10px] font-bold text-black/70 truncate">
+                        {item.description || `×${item.quantity}`}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleBuyHintItem(item)}
+                      className="bg-black text-white px-3 py-1.5 text-xs font-black uppercase border-2 border-black shrink-0"
+                    >
+                      ${item.priceUsd}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      <PaymentModal
+        key={paymentModalKey}
+        isOpen={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setPaymentStoreItem(null);
+          setSelectedHintItem(null);
+        }}
+        onSuccess={handlePaymentSuccess}
+        storeItem={paymentStoreItem}
+        defaultPriceUsd={paymentDefaultPrice}
+      />
     </div>
   );
 }

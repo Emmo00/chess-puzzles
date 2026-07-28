@@ -1,6 +1,8 @@
 import { WalletUser, UserStats, UserSettings } from "../types";
 import userModel from "../models/users.model";
 import { getUtcDayNumber } from "@/lib/utils/time";
+import { generateDisplayName } from "../utils/nameGenerator";
+import { getAccessConfig } from "../config/access";
 
 export class HttpException extends Error {
   status: number;
@@ -22,32 +24,22 @@ const DEFAULT_SETTINGS: UserSettings = {
 class UserService {
   public users = userModel;
 
-  public async createUser(userData: WalletUser): Promise<WalletUser> {
-    const user = await this.users.findOne({ walletAddress: userData.walletAddress.toLowerCase() });
-    if (user) {
-      return {
-        walletAddress: user.walletAddress,
-        displayName: user.displayName || userData.displayName,
-        username: user.username,
-      };
-    }
-
-    const newUser = await this.users.create({
-      walletAddress: userData.walletAddress.toLowerCase(),
-      displayName: userData.displayName,
-      username: userData.username,
-      totalPoints: 0,
-      puzzlesSolved: 0,
-      currentStreak: 0,
-      longestStreak: 0,
-      lastLogin: new Date(),
-    });
-
-    return {
-      walletAddress: newUser.walletAddress,
-      displayName: newUser.displayName,
-      username: newUser.username,
-    };
+  public async ensureUser(walletAddress: string) {
+    const lower = walletAddress.toLowerCase();
+    const { defaultHints, defaultStreakFreezes } = await getAccessConfig();
+    await this.users.updateOne(
+      { walletAddress: lower },
+      {
+        $setOnInsert: {
+          walletAddress: lower,
+          displayName: generateDisplayName(lower),
+          hintBalance: defaultHints,
+          streakFreezes: defaultStreakFreezes,
+        },
+      },
+      { upsert: true }
+    );
+    return this.users.findOne({ walletAddress: lower });
   }
 
   // Backward compatibility method for FID-based queries
@@ -60,58 +52,9 @@ class UserService {
     return user;
   }
 
-  public async updateUserStreak(identifier: string) {
-    let query = { walletAddress: identifier.toLowerCase() };
-
-    const user = await this.users.findOne(query);
-    if (!user) {
-      throw new HttpException(404, "User not found");
-    }
-
-    // Update the user's streak
-    const today = new Date();
-    const lastLogin = new Date(user.lastLogin);
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-
-    // Normalize times to midnight for comparison
-    const todayMidnight = new Date(today);
-    todayMidnight.setHours(0, 0, 0, 0);
-    
-    const lastLoginMidnight = new Date(lastLogin);
-    lastLoginMidnight.setHours(0, 0, 0, 0);
-    
-    const yesterdayMidnight = new Date(yesterday);
-    yesterdayMidnight.setHours(0, 0, 0, 0);
-
-    console.log("Last login date:", lastLoginMidnight);
-    console.log("Yesterday date:", yesterdayMidnight);
-    console.log("Today date:", todayMidnight);
-    console.log("Current streak before update:", user.currentStreak);
-
-    if (lastLoginMidnight.getTime() === todayMidnight.getTime()) {
-      // Already logged in today, don't change streak
-      console.log("Already logged in today, keeping streak at:", user.currentStreak);
-    } else if (lastLoginMidnight.getTime() === yesterdayMidnight.getTime()) {
-      // Logged in yesterday, increment streak
-      user.currentStreak += 1;
-      console.log("Logged in yesterday, incrementing streak to:", user.currentStreak);
-    } else {
-      // Missed a day or more, reset streak
-      user.currentStreak = 1;
-      console.log("Missed days, resetting streak to 1");
-    }
-    
-    user.longestStreak = Math.max(user.longestStreak, user.currentStreak);
-    user.lastLogin = new Date(); // Update lastLogin here
-    await user.save();
-
-    return user;
-  }
-
   public async updateUserStreakByUTCDay(identifier: string, playedAt: Date = new Date()) {
     const query = { walletAddress: identifier.toLowerCase() };
-    const user = await this.users.findOne(query);
+    const user = await this.users.findOne(query).lean();
 
     if (!user) {
       throw new HttpException(404, "User not found");
@@ -122,30 +65,40 @@ class UserService {
       ? getUtcDayNumber(new Date(user.lastPuzzleDate))
       : null;
 
-    if (lastPuzzleUtcDay === currentUtcDay) {
-      user.lastLogin = playedAt;
-      await user.save();
-      return user;
-    }
+    let newStreak = user.currentStreak;
+    let newFreezes = user.streakFreezes ?? 1;
 
-    if (lastPuzzleUtcDay === currentUtcDay - 1) {
-      user.currentStreak += 1;
-    } else {
-      const freezeCount = user.streakFreezes ?? 1;
-      if (freezeCount > 0) {
-        user.streakFreezes = freezeCount - 1;
-        user.currentStreak += 1;
+    if (lastPuzzleUtcDay !== currentUtcDay) {
+      if (lastPuzzleUtcDay === currentUtcDay - 1) {
+        newStreak += 1;
       } else {
-        user.currentStreak = 1;
+        if (newFreezes > 0) {
+          newFreezes -= 1;
+          newStreak += 1;
+        } else {
+          newStreak = 1;
+        }
       }
     }
 
-    user.longestStreak = Math.max(user.longestStreak, user.currentStreak);
-    user.lastLogin = playedAt;
+    const newLongest = Math.max(user.longestStreak, newStreak);
 
-    await user.save();
+    const updated = await this.users.findOneAndUpdate(
+      query,
+      {
+        $set: {
+          currentStreak: newStreak,
+          longestStreak: newLongest,
+          streakFreezes: newFreezes,
+          lastLogin: playedAt,
+          lastPuzzleDate: playedAt.toISOString(),
+        },
+      },
+      { new: true }
+    );
 
-    return user;
+    if (!updated) throw new HttpException(404, "User not found");
+    return updated;
   }
 
   public async updateUserStats(identifier: string, stats: Partial<UserStats>): Promise<WalletUser | null> {

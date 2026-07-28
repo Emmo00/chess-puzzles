@@ -17,8 +17,10 @@ import {
   Target,
   X,
   Zap,
+  Wallet,
+  Fuel,
 } from "lucide-react";
-import { usePayment } from "../lib/hooks/usePayment";
+import { usePayment, PaymentQuote } from "../lib/hooks/usePayment";
 import { PaymentType } from "../lib/types/payment";
 import { TelegramSupportLink } from "./TelegramSupportLink";
 
@@ -36,6 +38,7 @@ interface PaymentModalProps {
   onClose: () => void;
   onSuccess: () => void;
   storeItem?: StoreItem | null;
+  defaultPriceUsd?: string;
 }
 
 export function PaymentModal({
@@ -43,11 +46,13 @@ export function PaymentModal({
   onClose,
   onSuccess,
   storeItem,
+  defaultPriceUsd,
 }: PaymentModalProps) {
   const { address } = useAccount();
   const {
     makePayment,
     verifyPayment,
+    quotePayment,
     isPaymentPending,
     isConfirming,
     isSuccess,
@@ -56,12 +61,34 @@ export function PaymentModal({
   } = usePayment();
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [quote, setQuote] = useState<PaymentQuote | null>(null);
+  const [isLoadingQuote, setIsLoadingQuote] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && address) {
+      loadQuote();
+    }
+  }, [isOpen, address]);
 
   useEffect(() => {
     if (isSuccess && transactionHash && !isVerifying) {
       handleVerifyPayment();
     }
   }, [isSuccess, transactionHash]);
+
+  const loadQuote = async () => {
+    const usd = storeItem ? storeItem.priceUsd : (defaultPriceUsd || "0.01");
+    setIsLoadingQuote(true);
+    setError(null);
+    try {
+      const q = await quotePayment(usd);
+      setQuote(q);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoadingQuote(false);
+    }
+  };
 
   const handlePayment = async () => {
     if (!address) {
@@ -74,7 +101,7 @@ export function PaymentModal({
       const type = storeItem
         ? PaymentType.STORE_PURCHASE
         : PaymentType.DAILY_ACCESS;
-      const usd = storeItem ? storeItem.priceUsd : "0.01";
+      const usd = storeItem ? storeItem.priceUsd : (defaultPriceUsd || "0.01");
       const meta = storeItem
         ? {
             itemId: storeItem._id,
@@ -83,7 +110,7 @@ export function PaymentModal({
             itemQuantity: storeItem.quantity,
           }
         : undefined;
-      await makePayment(type, usd, meta);
+      await makePayment(type, usd, meta, quote?.selectedToken.tokenAddress);
     } catch (err: any) {
       console.error("Payment error:", err);
       setError(err instanceof Error ? err.message : "Payment failed");
@@ -103,6 +130,7 @@ export function PaymentModal({
           onClose();
           setError(null);
           setIsVerifying(false);
+          setQuote(null);
         }, 1500);
       } else {
         setError("Payment verification failed. Please contact support.");
@@ -121,12 +149,13 @@ export function PaymentModal({
     if (isPaymentPending || isConfirming || isVerifying) return;
     onClose();
     setError(null);
+    setQuote(null);
   };
 
   const isStore = Boolean(storeItem);
   const displayAmount = storeItem
     ? `$${storeItem.priceUsd}`
-    : "$0.01";
+    : `$${defaultPriceUsd || "0.01"}`;
   const title = isStore
     ? storeItem!.name
     : "Daily Pass";
@@ -135,6 +164,95 @@ export function PaymentModal({
     : "Unlimited puzzles today";
 
   if (!isOpen) return null;
+
+  const renderQuote = () => {
+    if (isLoadingQuote) {
+      return (
+        <div className="bg-gray-100 border-4 border-black p-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] text-center">
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
+          <p className="font-black text-sm text-black uppercase">Checking balances...</p>
+        </div>
+      );
+    }
+
+    if (!quote) {
+      return (
+        <div className="bg-red-400 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
+          <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
+            <OctagonAlert className="w-4 h-4 shrink-0" /> Unable to load payment info
+          </div>
+          <button
+            onClick={loadQuote}
+            className="bg-black text-white px-3 py-1 text-xs font-black uppercase mt-2"
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+
+    if (!quote.sufficient) {
+      return (
+        <div className="space-y-4">
+          <div className="bg-red-400 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
+            <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
+              <OctagonAlert className="w-4 h-4 shrink-0" /> Insufficient balance
+            </div>
+            <div className="text-black font-bold text-xs space-y-1">
+              <p>Price: {quote.itemPrice} {quote.selectedToken.symbol}</p>
+              <p>Network fee: {quote.estimatedGasFee} {quote.selectedToken.symbol}</p>
+              <p>Total required: {quote.totalRequired} {quote.selectedToken.symbol}</p>
+              <p>Your balance: {quote.balance} {quote.selectedToken.symbol}</p>
+            </div>
+          </div>
+          <a
+            href="https://minipay.to"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full bg-black text-cyan-300 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-cyan-300 hover:bg-gray-800 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] inline-flex items-center justify-center gap-2"
+          >
+            <Wallet className="w-4 h-4" /> TOP UP WALLET
+          </a>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        <div className="bg-lime-200 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] text-left text-xs font-bold text-black space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="uppercase tracking-wide">Token</span>
+            <span className="font-black">{quote.selectedToken.symbol}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="uppercase tracking-wide">Price</span>
+            <span>{quote.itemPrice} {quote.selectedToken.symbol}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="uppercase tracking-wide flex items-center gap-1">
+              <Fuel className="w-3 h-3" /> Network fee
+            </span>
+            <span>{quote.estimatedGasFee} {quote.selectedToken.symbol}</span>
+          </div>
+          <div className="border-t-2 border-black pt-2 flex justify-between items-center font-black">
+            <span>Total</span>
+            <span>{quote.totalRequired} {quote.selectedToken.symbol}</span>
+          </div>
+          <div className="flex justify-between items-center text-[10px]">
+            <span>Balance</span>
+            <span>{quote.balance} {quote.selectedToken.symbol}</span>
+          </div>
+        </div>
+
+        <button
+          onClick={handlePayment}
+          className="w-full bg-black text-cyan-300 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-cyan-300 hover:bg-gray-800 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 flex items-center justify-center gap-2"
+        >
+          <Smartphone className="w-4 h-4" /> PAY {displayAmount} WITH {quote.selectedToken.symbol}
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-50 p-4 flex items-center justify-center pointer-events-auto">
@@ -186,7 +304,7 @@ export function PaymentModal({
                     {title}
                   </h3>
                   <span className="bg-black text-cyan-300 px-3 py-1 font-black text-xl border-2 border-cyan-300">
-                    {displayAmount} cUSD
+                    {displayAmount}
                   </span>
                 </div>
                 <p className="text-black font-bold text-sm mb-2 uppercase tracking-wide flex items-center gap-1">
@@ -200,13 +318,9 @@ export function PaymentModal({
                     </>
                   )}
                 </p>
-                <button
-                  onClick={handlePayment}
-                  className="w-full bg-black text-cyan-300 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-cyan-300 hover:bg-gray-800 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 flex items-center justify-center gap-2"
-                >
-                  <Smartphone className="w-4 h-4" /> PAY {displayAmount} cUSD
-                </button>
               </div>
+
+              {renderQuote()}
 
               <div className="bg-yellow-200 border-2 border-black p-3 transform rotate-1 mt-4">
                 <p className="text-xs font-bold text-black uppercase tracking-wide text-center flex items-center justify-center gap-1">
@@ -229,7 +343,7 @@ export function PaymentModal({
                   </span>
                 </h3>
                 <p className="font-bold text-black text-sm uppercase tracking-wide flex items-center justify-center gap-1">
-                  <Coins className="w-4 h-4" /> Paying {displayAmount} cUSD
+                  <Coins className="w-4 h-4" /> Paying {displayAmount}
                 </p>
                 {transactionHash && (
                   <div className="bg-black text-purple-400 p-2 mt-4 border-2 border-purple-400 text-xs font-mono break-all">

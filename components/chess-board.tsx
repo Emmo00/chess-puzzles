@@ -580,10 +580,8 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
   }
 
   return (
-    <div className={`inline-block border-[6px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-[#fff9e9] p-1 ${isWrongMoveActive ? 'animate-pulse' : ''}`}>
-      <div
-        style={{ width: "320px", height: "320px" }}
-      >
+    <div className={`w-full border-[6px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-[#fff9e9] p-1 ${isWrongMoveActive ? 'animate-pulse' : ''}`}>
+      <div className="w-full max-w-[560px] aspect-square mx-auto">
         <Chessboard
           options={{
             position: boardPosition,

@@ -123,6 +123,6 @@ export async function selectSupportedFeeCurrency({
   }
 
   throw new Error(
-    "No supported fee currency has enough balance to cover gas, or your wallet does not support Celo feeCurrency transactions. Use MiniPay/Valora and fund one of SUPPORTED_CURRENCIES."
+    "No supported fee currency has enough balance to cover gas. Fund one of USDC, USDT, or USDm on Celo."
   );
 }

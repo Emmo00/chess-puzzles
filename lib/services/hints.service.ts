@@ -1,35 +1,14 @@
 import userModel from "../models/users.model";
 import { HttpException } from "./users.service";
-import { getAccessConfig } from "../config/access";
-import { generateDisplayName } from "../utils/nameGenerator";
+import UserService from "./users.service";
 
 class HintsService {
   public users = userModel;
-
-  async ensureDefaults(walletAddress: string) {
-    const { defaultHints, defaultStreakFreezes } = await getAccessConfig();
-    const lower = walletAddress.toLowerCase();
-    await this.users.updateOne(
-      { walletAddress: lower },
-      {
-        $setOnInsert: {
-          walletAddress: lower,
-          displayName: generateDisplayName(lower),
-          hintBalance: defaultHints,
-          streakFreezes: defaultStreakFreezes,
-        },
-      },
-      { upsert: true }
-    );
-  }
+  private userService = new UserService();
 
   async getBalance(walletAddress: string) {
     const lower = walletAddress.toLowerCase();
-    await this.ensureDefaults(lower);
-    const user = await this.users
-      .findOne({ walletAddress: lower })
-      .select("hintBalance streakFreezes")
-      .lean();
+    const user = await this.userService.ensureUser(lower);
     return {
       hintBalance: user?.hintBalance ?? 0,
       streakFreezes: user?.streakFreezes ?? 0,
@@ -38,7 +17,7 @@ class HintsService {
 
   async consumeHint(walletAddress: string): Promise<{ hintBalance: number }> {
     const lower = walletAddress.toLowerCase();
-    await this.ensureDefaults(lower);
+    await this.userService.ensureUser(lower);
     const updated = await this.users.findOneAndUpdate(
       {
         walletAddress: lower,
@@ -56,7 +35,7 @@ class HintsService {
 
   async grantHints(walletAddress: string, amount: number) {
     const lower = walletAddress.toLowerCase();
-    await this.ensureDefaults(lower);
+    await this.userService.ensureUser(lower);
     const updated = await this.users.findOneAndUpdate(
       { walletAddress: lower },
       { $inc: { hintBalance: Math.max(0, Math.floor(amount)) } },
@@ -68,7 +47,7 @@ class HintsService {
 
   async grantStreakFreezes(walletAddress: string, amount: number) {
     const lower = walletAddress.toLowerCase();
-    await this.ensureDefaults(lower);
+    await this.userService.ensureUser(lower);
     const updated = await this.users.findOneAndUpdate(
       { walletAddress: lower },
       { $inc: { streakFreezes: Math.max(0, Math.floor(amount)) } },
