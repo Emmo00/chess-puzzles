@@ -99,349 +99,135 @@ class CheckInService {
     };
   }
 
-  public async reserveDailyChallenge(walletAddress: string, deviceFingerprint?: string) {
+  public async fetchDailyChallenge(walletAddress: string) {
     const utcDay: number = getUtcDayNumber();
     const normalizedWallet = walletAddress.toLowerCase();
-    const normalizedFingerprint = this.normalizeDeviceFingerprint(deviceFingerprint);
 
     const contractValues = await this.contractService.getCheckInContractValues();
-    let challenge = await this.ensureDailyChallenge(
+    const challenge = await this.ensureDailyChallenge(
       utcDay,
       normalizedWallet,
       contractValues.maxDailyCheckIns,
       contractValues.checkInAmountWei
     );
 
-    await this.expirePendingReservations(challenge);
-    const reloadedChallenge = await DailyChallenge.findById(challenge._id);
-    if (reloadedChallenge) {
-      challenge = reloadedChallenge;
-    }
-
-    const existingReservation: ICheckInReservation | null =
-      await CheckInReservation.findOne({
-      walletAddress: normalizedWallet,
-      utcDay,
-      });
-
-    if (existingReservation) {
-      if (existingReservation.status === "pending") {
-        if (existingReservation.pendingExpiresAt.getTime() > Date.now()) {
-          return this.toReservationResponse(
-            challenge,
-            existingReservation,
-            contractValues,
-            true
-          );
-        }
-
-        existingReservation.status = "expired";
-        await existingReservation.save();
-        if (this.countsTowardSlots(existingReservation)) {
-          const decrementedChallenge = await DailyChallenge.findByIdAndUpdate(
-            challenge._id,
-            {
-              $inc: { activeReservationCount: -1 },
-            },
-            { new: true }
-          );
-
-          if (decrementedChallenge) {
-            challenge = decrementedChallenge;
-          }
-        }
-      } else if (ACTIVE_STATUSES.includes(existingReservation.status)) {
-        if (normalizedFingerprint && !existingReservation.deviceFingerprint) {
-          existingReservation.deviceFingerprint = normalizedFingerprint;
-          await existingReservation.save();
-        }
-
-        return this.toReservationResponse(
-          challenge,
-          existingReservation,
-          contractValues,
-          true
-        );
-      }
-    }
-
-    const deviceHasRewardReservation = normalizedFingerprint
-      ? await CheckInReservation.exists({
-          utcDay,
-          deviceFingerprint: normalizedFingerprint,
-          rewardEligible: true,
-          status: { $in: ACTIVE_STATUSES },
-          walletAddress: { $ne: normalizedWallet },
-        })
-      : false;
-
-    let rewardEligible = !deviceHasRewardReservation;
-    let countsTowardSlots = !deviceHasRewardReservation;
-
-    if (countsTowardSlots) {
-      const incrementedChallenge = await DailyChallenge.findOneAndUpdate(
-        {
-          _id: challenge._id,
-          activeReservationCount: { $lt: contractValues.maxDailyCheckIns },
-        },
-        {
-          $inc: { activeReservationCount: 1 },
-        },
-        { new: true }
-      );
-
-      if (incrementedChallenge) {
-        challenge = incrementedChallenge;
-      } else {
-        rewardEligible = false;
-        countsTowardSlots = false;
-      }
-    } else {
-      rewardEligible = false;
-      countsTowardSlots = false;
-    }
-
-    const pendingExpiresAt = getDateAfterMinutes(CHECKIN_RESERVATION_TTL_MINUTES);
-
-    const reservationData = {
-      walletAddress: normalizedWallet,
-      utcDay,
-      dailyChallengeId: challenge._id,
-      deviceFingerprint: normalizedFingerprint,
-      puzzleId: challenge.puzzle.puzzleId,
-      status: "pending" as const,
-      rewardEligible,
-      countsTowardSlots,
+    return {
+      reusedReservation: false,
+      utcDay: challenge.utcDay,
       checkInAmountWei: contractValues.checkInAmountWei,
-      pendingExpiresAt,
-      solvedAt: undefined,
-      claimNonce: undefined,
-      claimDeadline: undefined,
-      claimSignature: undefined,
-      claimTxHash: undefined,
-      claimedAt: undefined,
-      errorMessage: undefined,
+      checkInAmountDisplay: contractValues.checkInAmountDisplay,
+      payoutTokenAddress: contractValues.payoutTokenAddress,
+      payoutTokenDecimals: contractValues.payoutTokenDecimals,
+      payoutTokenSymbol: contractValues.payoutTokenSymbol,
+      maxDailyCheckIns: contractValues.maxDailyCheckIns,
+      activeReservations: challenge.activeReservationCount,
+      slotsRemaining: Math.max(0, contractValues.maxDailyCheckIns - challenge.activeReservationCount),
+      hasSlots: challenge.activeReservationCount < contractValues.maxDailyCheckIns,
+      puzzle: {
+        puzzleid: challenge.puzzle.puzzleId,
+        fen: challenge.puzzle.fen,
+        rating: challenge.puzzle.rating,
+        ratingdeviation: challenge.puzzle.ratingDeviation,
+        moves: challenge.puzzle.moves,
+        themes: challenge.puzzle.themes,
+      },
     };
-
-    let reservation: ICheckInReservation;
-    if (existingReservation) {
-      const updatedReservation = await CheckInReservation.findByIdAndUpdate(
-        existingReservation._id,
-        { $set: reservationData },
-        { new: true }
-      );
-
-      if (!updatedReservation) {
-        if (countsTowardSlots) {
-          await DailyChallenge.findByIdAndUpdate(challenge._id, {
-            $inc: { activeReservationCount: -1 },
-          });
-        }
-        throw new HttpException(500, "Failed to refresh daily challenge reservation");
-      }
-
-      reservation = updatedReservation;
-    } else {
-      try {
-        reservation = await CheckInReservation.create(reservationData);
-      } catch (error: any) {
-        if (this.isDuplicateDeviceRewardSlotError(error) && countsTowardSlots) {
-          await DailyChallenge.findByIdAndUpdate(challenge._id, {
-            $inc: { activeReservationCount: -1 },
-          });
-
-          const downgradedReservationData = {
-            ...reservationData,
-            rewardEligible: false,
-            countsTowardSlots: false,
-          };
-
-          reservation = await CheckInReservation.create(downgradedReservationData);
-        } else {
-          if (countsTowardSlots) {
-            await DailyChallenge.findByIdAndUpdate(challenge._id, {
-              $inc: { activeReservationCount: -1 },
-            });
-          }
-          throw error;
-        }
-      }
-
-      if (!reservation) {
-        if (countsTowardSlots) {
-          await DailyChallenge.findByIdAndUpdate(challenge._id, {
-            $inc: { activeReservationCount: -1 },
-          });
-        }
-        throw new HttpException(500, "Failed to reserve daily challenge slot");
-      }
-    }
-
-    if (!reservation) {
-      if (countsTowardSlots) {
-        await DailyChallenge.findByIdAndUpdate(challenge._id, {
-          $inc: { activeReservationCount: -1 },
-        });
-      }
-      throw new HttpException(500, "Failed to reserve daily challenge slot");
-    }
-
-    const existingPuzzleAttempt = await userPuzzlesModel.findOne({
-      userWalletAddress: normalizedWallet,
-      puzzleId: challenge.puzzle.puzzleId,
-    });
-
-    if (!existingPuzzleAttempt) {
-      await userPuzzlesModel.create({
-        userWalletAddress: normalizedWallet,
-        puzzleId: challenge.puzzle.puzzleId,
-        type: "daily",
-      });
-    }
-
-    // Fire and forget on-chain reservation
-    onchainStore.setReservation(
-      reservation.utcDay,
-      reservation.walletAddress,
-      ReservationStatus.Pending,
-      reservation.checkInAmountWei
-    ).then(hash => {
-      if (hash) {
-        console.log(`On-chain reservation synced for ${reservation.walletAddress}. Updating DB...`);
-        CheckInReservationModel.findByIdAndUpdate(reservation._id, { onChainSynced: true }).exec();
-      }
-    }).catch(err => console.error("On-chain reservation failed:", err));
-
-    return this.toReservationResponse(challenge, reservation, contractValues, false);
   }
 
   public async solveDailyChallenge(walletAddress: string, puzzleId: string) {
     const utcDay: number = getUtcDayNumber();
     const normalizedWallet = walletAddress.toLowerCase();
 
-    const reservation = await CheckInReservation.findOne({
+    const challenge = await DailyChallenge.findOne({ utcDay });
+    if (!challenge) {
+      throw new HttpException(404, "No daily challenge found for today");
+    }
+
+    if (challenge.puzzle.puzzleId !== puzzleId) {
+      throw new HttpException(400, "Submitted puzzle does not match today's challenge");
+    }
+
+    const contractValues = await this.contractService.getCheckInContractValues();
+
+    // Check for existing reservation (already solved or claimed)
+    const existingReservation = await CheckInReservation.findOne({
       walletAddress: normalizedWallet,
       utcDay,
     });
 
-    if (!reservation) {
-      throw new HttpException(404, "No daily challenge reservation found for today");
-    }
-
-    const challenge = await DailyChallenge.findById(reservation.dailyChallengeId);
-    if (!challenge) {
-      throw new HttpException(500, "Daily challenge record is missing");
-    }
-
-    await this.expirePendingReservations(challenge);
-    const refreshedReservation = await CheckInReservation.findById(reservation._id);
-    if (!refreshedReservation) {
-      throw new HttpException(404, "Daily challenge reservation no longer exists");
-    }
-
-    const currentReservation = refreshedReservation;
-    const rewardEligible = this.isRewardEligible(currentReservation);
-
-    if (currentReservation.status === "claimed") {
-      return {
-        alreadyClaimed: true,
-        status: currentReservation.status,
-        puzzleId: challenge.puzzle.puzzleId,
-        rewardEligible,
-        canClaimReward: false,
-      };
-    }
-
-    if (currentReservation.status === "earned" || currentReservation.status === "claiming") {
-      return {
-        success: true,
-        firstSolve: false,
-        alreadySolved: true,
-        status: currentReservation.status,
-        checkInAmountWei: currentReservation.checkInAmountWei,
-        rewardEligible,
-        canClaimReward: this.canClaimReward(currentReservation),
-      };
-    }
-
-    if (currentReservation.status !== "pending") {
-      throw new HttpException(
-        409,
-        `Daily challenge is not solvable in '${currentReservation.status}' state`
-      );
-    }
-
-    if (
-      rewardEligible &&
-      currentReservation.pendingExpiresAt.getTime() <= Date.now()
-    ) {
-      currentReservation.status = "expired";
-      await currentReservation.save();
-      if (this.countsTowardSlots(currentReservation)) {
-        await DailyChallenge.findByIdAndUpdate(challenge._id, {
-          $inc: { activeReservationCount: -1 },
-        });
-      }
-      throw new HttpException(409, "Reservation expired. Please reserve again.");
-    }
-
-    if (currentReservation.puzzleId !== puzzleId) {
-      throw new HttpException(400, "Submitted puzzle does not match today's challenge");
-    }
-
-    const solvedAt = new Date();
-    const updatedReservation = await CheckInReservation.findOneAndUpdate(
-      {
-        _id: currentReservation._id,
-        status: "pending",
-      },
-      {
-        $set: {
-          status: "earned",
-          solvedAt,
-          claimNonce: undefined,
-          claimDeadline: undefined,
-          claimSignature: undefined,
-        },
-      },
-      { new: true }
-    );
-
-    if (!updatedReservation) {
-      const latestReservation = await CheckInReservation.findById(currentReservation._id);
-
-      if (!latestReservation) {
-        throw new HttpException(404, "Daily challenge reservation no longer exists");
-      }
-
-      const latestRewardEligible = this.isRewardEligible(latestReservation);
-
-      if (latestReservation.status === "claimed") {
+    if (existingReservation) {
+      if (existingReservation.status === "claimed") {
         return {
           alreadyClaimed: true,
-          status: latestReservation.status,
-          puzzleId: challenge.puzzle.puzzleId,
-          rewardEligible: latestRewardEligible,
+          status: existingReservation.status,
+          puzzleId,
+          rewardEligible: this.isRewardEligible(existingReservation),
           canClaimReward: false,
         };
       }
 
-      if (latestReservation.status === "earned" || latestReservation.status === "claiming") {
+      if (existingReservation.status === "earned" || existingReservation.status === "claiming") {
         return {
           success: true,
           firstSolve: false,
           alreadySolved: true,
-          status: latestReservation.status,
-          checkInAmountWei: latestReservation.checkInAmountWei,
-          rewardEligible: latestRewardEligible,
-          canClaimReward: this.canClaimReward(latestReservation),
+          status: existingReservation.status,
+          checkInAmountWei: existingReservation.checkInAmountWei,
+          rewardEligible: this.isRewardEligible(existingReservation),
+          canClaimReward: this.canClaimReward(existingReservation),
         };
       }
+    }
 
-      throw new HttpException(
-        409,
-        `Daily challenge is not solvable in '${latestReservation.status}' state`
+    const solvedAt = new Date();
+
+    // Atomically reserve a slot — only succeeds if under the daily limit
+    const slotChallenge = await DailyChallenge.findOneAndUpdate(
+      {
+        _id: challenge._id,
+        activeReservationCount: { $lt: contractValues.maxDailyCheckIns },
+      },
+      { $inc: { activeReservationCount: 1 } },
+      { new: true }
+    );
+
+    const hasSlot = !!slotChallenge;
+    const activeCount = slotChallenge?.activeReservationCount ?? challenge.activeReservationCount;
+
+    const pendingExpiresAt = getDateAfterMinutes(CHECKIN_RESERVATION_TTL_MINUTES);
+
+    // Create or update reservation
+    const reservationData = {
+      walletAddress: normalizedWallet,
+      utcDay,
+      dailyChallengeId: challenge._id,
+      puzzleId,
+      status: "earned" as const,
+      rewardEligible: hasSlot,
+      countsTowardSlots: hasSlot,
+      checkInAmountWei: contractValues.checkInAmountWei,
+      pendingExpiresAt,
+      solvedAt,
+    };
+
+    if (existingReservation) {
+      await CheckInReservation.findByIdAndUpdate(
+        existingReservation._id,
+        { $set: reservationData },
+        { new: true }
       );
+    } else {
+      try {
+        await CheckInReservation.create(reservationData);
+      } catch (err: any) {
+        // Roll back slot increment on reservation creation failure
+        if (hasSlot) {
+          await DailyChallenge.findByIdAndUpdate(challenge._id, {
+            $inc: { activeReservationCount: -1 },
+          });
+        }
+        throw err;
+      }
     }
 
     await userPuzzlesModel.findOneAndUpdate(
@@ -453,30 +239,36 @@ class CheckInService {
         type: "daily",
         solvedAt,
       },
-      { new: true }
+      { new: true, upsert: true }
     );
 
     // Fire and forget on-chain solve
-    onchainStore.setReservation(
-      updatedReservation.utcDay,
-      updatedReservation.walletAddress,
-      ReservationStatus.Earned,
-      updatedReservation.checkInAmountWei,
-      Math.floor(solvedAt.getTime() / 1000)
-    ).then(hash => {
-      if (hash) {
-        console.log(`On-chain solve synced for ${updatedReservation.walletAddress}. Updating DB...`);
-        CheckInReservationModel.findByIdAndUpdate(updatedReservation._id, { onChainSynced: true }).exec();
-      }
-    }).catch(err => console.error("On-chain solve update failed:", err));
+    if (hasSlot) {
+      onchainStore.setReservation(
+        utcDay,
+        normalizedWallet,
+        ReservationStatus.Earned,
+        contractValues.checkInAmountWei,
+        Math.floor(solvedAt.getTime() / 1000)
+      ).then(hash => {
+        if (hash) {
+          console.log(`On-chain solve synced for ${normalizedWallet}. Updating DB...`);
+          CheckInReservationModel.findOneAndUpdate(
+            { walletAddress: normalizedWallet, utcDay },
+            { onChainSynced: true }
+          ).exec();
+        }
+      }).catch(err => console.error("On-chain solve update failed:", err));
+    }
 
     return {
       success: true,
       firstSolve: true,
-      status: updatedReservation.status,
-      checkInAmountWei: updatedReservation.checkInAmountWei,
-      rewardEligible,
-      canClaimReward: this.canClaimReward(updatedReservation),
+      status: "earned",
+      checkInAmountWei: contractValues.checkInAmountWei,
+      rewardEligible: hasSlot,
+      canClaimReward: hasSlot,
+      slotsRemaining: Math.max(0, contractValues.maxDailyCheckIns - activeCount),
     };
   }
 

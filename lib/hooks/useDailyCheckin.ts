@@ -57,7 +57,6 @@ export interface DailyCheckinStatus {
 }
 
 interface ReserveResponse {
-  success: boolean;
   reusedReservation: boolean;
   utcDay: number;
   checkInAmountWei: string;
@@ -69,12 +68,6 @@ interface ReserveResponse {
   activeReservations: number;
   slotsRemaining: number;
   hasSlots: boolean;
-  reservation: {
-    status: string;
-    rewardEligible: boolean;
-    canClaimReward: boolean;
-    pendingExpiresAt: string;
-  };
   puzzle: DailyChallengePuzzle;
 }
 
@@ -86,6 +79,7 @@ interface SolveResponse {
   canClaimReward?: boolean;
   status: string;
   checkInAmountWei: string;
+  slotsRemaining?: number;
 }
 
 export function useDailyCheckin() {
@@ -142,7 +136,7 @@ export function useDailyCheckin() {
     }
   }, [address]);
 
-  const reserveDailyChallenge = useCallback(async (): Promise<ReserveResponse> => {
+  const fetchDailyChallenge = useCallback(async (): Promise<ReserveResponse> => {
     if (!address) {
       throw new Error("Wallet not connected");
     }
@@ -152,7 +146,6 @@ export function useDailyCheckin() {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${address}`,
-        [DEVICE_FINGERPRINT_HEADER]: getDeviceFingerprint(),
       },
     });
 
@@ -297,7 +290,7 @@ export function useDailyCheckin() {
     loading,
     error,
     refreshStatus,
-    reserveDailyChallenge,
+    fetchDailyChallenge,
     solveDailyChallenge,
     fetchClaimPayload,
     confirmClaim,
