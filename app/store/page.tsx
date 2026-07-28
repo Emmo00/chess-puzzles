@@ -14,6 +14,7 @@ import {
   Palette,
   Store as StoreIcon,
   Loader2,
+  Check,
 } from "lucide-react";
 
 interface CatalogItem {
@@ -50,13 +51,15 @@ const CATEGORY_ACCENTS: Record<string, string> = {
 const CATEGORY_ORDER = ["hints", "streak_freeze", "mystery_box", "cosmetic"];
 
 export default function StorePage() {
-  const { isConnected } = useAccount();
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null);
   const [showPayment, setShowPayment] = useState(false);
   const [accessConfig, setAccessConfig] = useState<{ unlockAmountUsd: string } | null>(null);
   const [showDailyAccess, setShowDailyAccess] = useState(false);
+  const [hasDailyAccess, setHasDailyAccess] = useState(false);
+
+  const { isConnected, address } = useAccount();
 
   useEffect(() => {
     window.fetch("/api/admin/store-items")
@@ -69,6 +72,17 @@ export default function StorePage() {
       .then((data) => data && setAccessConfig(data))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!isConnected || !address) {
+      setHasDailyAccess(false);
+      return;
+    }
+    window.fetch(`/api/payments/status?walletAddress=${address}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data && setHasDailyAccess(data.hasDailyAccess))
+      .catch(() => setHasDailyAccess(false));
+  }, [isConnected, address]);
 
   const handleBuy = (item: CatalogItem) => {
     if (!isConnected) {
@@ -119,25 +133,33 @@ export default function StorePage() {
 
         {/* Daily Pass — unlimited puzzles for a day */}
         {accessConfig && (
-          <div className="bg-orange-400 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3 flex items-center gap-3">
+          <div className={`${hasDailyAccess ? 'bg-lime-300' : 'bg-orange-400'} border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3 flex items-center gap-3`}>
             <div className="grid place-items-center w-10 h-10 border-2 border-black bg-white shrink-0">
               <Castle className="w-5 h-5" strokeWidth={3} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-black text-sm uppercase truncate">Daily Pass</div>
               <div className="text-xs font-bold text-black/70 truncate">
-                Unlimited puzzles for the rest of the day
+                {hasDailyAccess ? 'Active — unlimited puzzles today' : 'Unlimited puzzles for the rest of the day'}
               </div>
             </div>
             <div className="text-right shrink-0">
-              <div className="font-black text-sm">${accessConfig.unlockAmountUsd}</div>
-              <button
-                type="button"
-                onClick={handleBuyDailyAccess}
-                className="mt-1 bg-black text-white px-2 py-1 text-[10px] font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-              >
-                Buy
-              </button>
+              {hasDailyAccess ? (
+                <div className="flex items-center gap-1 mt-1 bg-black text-lime-300 px-2 py-1 text-[10px] font-black uppercase border-2 border-black">
+                  <Check className="w-3 h-3" /> Owned
+                </div>
+              ) : (
+                <>
+                  <div className="font-black text-sm">${accessConfig.unlockAmountUsd}</div>
+                  <button
+                    type="button"
+                    onClick={handleBuyDailyAccess}
+                    className="mt-1 bg-black text-white px-2 py-1 text-[10px] font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                  >
+                    Buy
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -160,7 +182,7 @@ export default function StorePage() {
               <section key={group.category} className="space-y-2">
                 <h2 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
                   <span className="inline-block w-2 h-4 bg-black" />
-                  {group.label}
+                  {group.label} [{group.items.length}]
                 </h2>
                 <div className="space-y-2">
                   {group.items.map((item) => (

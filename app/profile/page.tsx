@@ -12,7 +12,7 @@ import { generateDisplayName } from "@/lib/utils/nameGenerator";
 import { levelForPoints } from "@/lib/leveling";
 import { getLeague, type League } from "@/lib/leagues";
 import type { LeaderboardResponse } from "@/lib/services/leaderboard.service";
-import { Coins, Flame, Puzzle, Crown, User, Lightbulb, Snowflake } from "lucide-react";
+import { Coins, Flame, Puzzle, Crown, User, Lightbulb, Snowflake, Check, Castle } from "lucide-react";
 import Link from "next/link";
 
 export default function ProfilePage() {
@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const { hintBalance, streakFreezes } = useHintBalance();
   const [league, setLeague] = useState<League>("pawn");
   const [seasonPoints, setSeasonPoints] = useState(0);
+  const [hasDailyAccess, setHasDailyAccess] = useState(false);
 
   useEffect(() => {
     if (!address) return;
@@ -35,6 +36,10 @@ export default function ProfilePage() {
           setSeasonPoints(rank.seasonPoints);
         }
       })
+      .catch(() => {});
+    fetch(`/api/payments/status?walletAddress=${address}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (!cancelled && data) setHasDailyAccess(data.hasDailyAccess); })
       .catch(() => {});
     return () => {
       cancelled = true;
@@ -141,6 +146,13 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
+              {hasDailyAccess && (
+                <div className="mt-3 bg-lime-200 border-2 border-black p-2 flex items-center gap-2">
+                  <Check className="w-4 h-4 text-green-700" strokeWidth={3} />
+                  <span className="text-[10px] font-black uppercase tracking-wide flex-1">Daily Pass Active</span>
+                  <Castle className="w-4 h-4" strokeWidth={2.5} />
+                </div>
+              )}
             </div>
           </>
         )}

@@ -69,7 +69,9 @@ class UserService {
     let newFreezes = user.streakFreezes ?? 1;
 
     if (lastPuzzleUtcDay !== currentUtcDay) {
-      if (lastPuzzleUtcDay === currentUtcDay - 1) {
+      if (lastPuzzleUtcDay === null) {
+        newStreak = 1;
+      } else if (lastPuzzleUtcDay === currentUtcDay - 1) {
         newStreak += 1;
       } else {
         if (newFreezes > 0) {

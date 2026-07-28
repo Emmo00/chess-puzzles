@@ -570,11 +570,13 @@ export default function SolvePuzzlesPage() {
                 ) : isWrongMoveActive ? (
                   <button
                     onClick={handleRetry}
-                    className="flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all bg-red-400"
+                    className="flex-1 text-black py-2 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all animate-in fade-in duration-200 bg-red-400"
                   >
                     RETRY
                   </button>
-                ) : null}
+                ) : (
+                  <div className="flex-1" />
+                )}
                 
                 {/* Next Button */}
                 <button
@@ -590,29 +592,34 @@ export default function SolvePuzzlesPage() {
                 </button>
               </div>
 
-              {/* Full-width Hint Button */}
-              {!isCompleted && !isWrongMoveActive && hintStage !== 'move' && (
-                <button
-                  onClick={handleShowHint}
-                  className="w-full text-black py-3 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all bg-yellow-400 inline-flex items-center justify-center gap-2"
-                >
-                  <Lightbulb className="w-4 h-4" />
-                  {hintBalance > 0 ? (
-                    <>
-                      <span>Hint</span>
-                      <span className="bg-black text-yellow-400 px-2 py-0.5 text-xs font-black">{hintBalance}</span>
-                    </>
+              {/* Full-width Hint Button (animated collapse on wrong move) */}
+              {!isCompleted && (
+                <div className={`overflow-hidden transition-all duration-300 ${
+                  isWrongMoveActive ? 'max-h-0 opacity-0' : 'max-h-16 opacity-100'
+                }`}>
+                  {hintStage !== 'move' ? (
+                    <button
+                      onClick={handleShowHint}
+                      className="w-full text-black py-3 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all bg-yellow-400 inline-flex items-center justify-center gap-2"
+                    >
+                      <Lightbulb className="w-4 h-4" />
+                      {hintBalance > 0 ? (
+                        <>
+                          <span>Hint</span>
+                          <span className="bg-black text-yellow-400 px-2 py-0.5 text-xs font-black">{hintBalance}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Get Hints</span>
+                          <span className="bg-black text-yellow-400 px-1.5 py-0.5 text-xs font-black">+</span>
+                        </>
+                      )}
+                    </button>
                   ) : (
-                    <>
-                      <span>Get Hints</span>
-                      <span className="bg-black text-yellow-400 px-1.5 py-0.5 text-xs font-black">+</span>
-                    </>
+                    <div className="w-full text-black py-3 px-4 font-black text-xs border-2 border-black bg-yellow-200 inline-flex items-center justify-center gap-2 opacity-60">
+                      <Check className="w-4 h-4" /> HINT SHOWN
+                    </div>
                   )}
-                </button>
-              )}
-              {!isCompleted && !isWrongMoveActive && hintStage === 'move' && (
-                <div className="w-full text-black py-3 px-4 font-black text-xs border-2 border-black bg-yellow-200 inline-flex items-center justify-center gap-2 opacity-60">
-                  <Check className="w-4 h-4" /> HINT SHOWN
                 </div>
               )}
               
