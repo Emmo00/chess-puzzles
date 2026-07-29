@@ -21,7 +21,7 @@ const faqItems: FAQItem[] = [
   },
   {
     question: "How do hints work?",
-    answer: "Hints are revealed in two stages: first click highlights the piece to move, second click highlights the destination. Each stage consumes one hint from your wallet's hint balance. New accounts start with 5 hints + 1 streak freeze. Hints don't refill passively — buy more in the Store. The first hint costs -30 pts, the second -60, and a third fully reveals the puzzle for 0 points."
+    answer: "Hints are revealed in two stages: first click highlights the piece to move, second click highlights the destination. Each stage consumes one hint from your hint balance. New accounts start with 5 hints. Hints don't refill passively — buy Hint Packs in the Store using USDC, USDT, or USDm. The first hint costs -30 pts, the second -60, and a third fully reveals the puzzle for 0 points."
   },
   {
     question: "How are points calculated?",
@@ -33,11 +33,14 @@ const faqItems: FAQItem[] = [
   },
   {
     question: "What is a streak?",
-    answer: "A streak counts consecutive UTC days you've solved at least one puzzle. Longer streaks boost your points (up to 1.5×). If you miss a day, your streak resets. Use a Streak Freeze from the Store to protect it."
+    answer: "A streak counts consecutive UTC days you've solved at least one puzzle. Longer streaks boost your points multiplier (up to 1.5× at 5 days). If you miss a day, your streak resets back to 1. You'll get a notification if this happens."},
+  {
+    question: "What is a Streak Freeze?",
+    answer: "A Streak Freeze protects your streak if you miss a day. When you skip a day and have a freeze available, it's consumed automatically and your streak is preserved. New accounts start with 1 free streak freeze. Buy more in the Store under Streak Freezes using USDC, USDT, or USDm."
   },
   {
     question: "How does the leaderboard work?",
-    answer: "Leagues reset weekly (Monday 00:00 UTC). Your rank score = season points + streak bonus (max +100). Climb from ♟ Pawn → ♞ Knight (750 pts + 7 streak) → ♚ King (1800 pts + 14 streak). Lifetime points separately drive your map level."
+    answer: "Rankings run in weekly seasons (Monday 00:00 UTC). Your rank score = season points (this week's total) + streak bonus (max +100). Compete against others in your league. Climb from ♟ Pawn → ♞ Knight (750 lifetime pts + 7-day streak) → ♚ King (1,800 lifetime pts + 14-day streak). League membership is based on lifetime progress and doesn't reset between seasons."
   },
   {
     question: "What are levels and the progress map?",
