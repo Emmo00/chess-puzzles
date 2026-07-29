@@ -16,6 +16,12 @@ const userSchema = new mongoose.Schema({
   lastPuzzleDate: { type: String, default: null },
   hintBalance: { type: Number, default: 5 },
   streakFreezes: { type: Number, default: 1 },
+  streakFreezeUsedDays: { type: [Number], default: [] },
+  streakEvent: {
+    eventType: { type: String, enum: ["freeze_used", "streak_lost"], default: null },
+    day: { type: Number, default: null },
+    notified: { type: Boolean, default: false },
+  },
   effectiveRating: { type: Number, default: 1000 },
   // User settings
   settings: {

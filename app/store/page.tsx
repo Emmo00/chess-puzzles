@@ -6,16 +6,8 @@ import { toast } from "sonner";
 import { BottomNav } from "@/components/BottomNav";
 import { WalletConnect } from "@/components/WalletConnect";
 import { PaymentModal } from "@/components/PaymentModal";
-import {
-  Castle,
-  Lightbulb,
-  Snowflake,
-  Gift,
-  Palette,
-  Store as StoreIcon,
-  Loader2,
-  Check,
-} from "lucide-react";
+import { Castle, Lightbulb, Snowflake, Gift, Palette, Store as StoreIcon, Loader2, Check } from "lucide-react";
+import { useHintBalance } from "@/lib/hooks/useHintBalance";
 
 interface CatalogItem {
   _id: string;
@@ -59,15 +51,18 @@ export default function StorePage() {
   const [showDailyAccess, setShowDailyAccess] = useState(false);
   const [hasDailyAccess, setHasDailyAccess] = useState(false);
 
+  const { hintBalance, streakFreezes } = useHintBalance();
   const { isConnected, address } = useAccount();
 
   useEffect(() => {
-    window.fetch("/api/admin/store-items")
+    window
+      .fetch("/api/admin/store-items")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => setItems((data || []).filter((it: CatalogItem) => it.active)))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
-    window.fetch("/api/config/public")
+    window
+      .fetch("/api/config/public")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data && setAccessConfig(data))
       .catch(() => {});
@@ -78,7 +73,8 @@ export default function StorePage() {
       setHasDailyAccess(false);
       return;
     }
-    window.fetch(`/api/payments/status?walletAddress=${address}`)
+    window
+      .fetch(`/api/payments/status?walletAddress=${address}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data && setHasDailyAccess(data.hasDailyAccess))
       .catch(() => setHasDailyAccess(false));
@@ -109,13 +105,11 @@ export default function StorePage() {
     setShowDailyAccess(true);
   };
 
-  const grouped = CATEGORY_ORDER
-    .map((cat) => ({
-      category: cat,
-      label: CATEGORY_LABELS[cat],
-      items: items.filter((it) => it.category === cat),
-    }))
-    .filter((g) => g.items.length > 0);
+  const grouped = CATEGORY_ORDER.map((cat) => ({
+    category: cat,
+    label: CATEGORY_LABELS[cat],
+    items: items.filter((it) => it.category === cat),
+  })).filter((g) => g.items.length > 0);
 
   return (
     <div className="h-dvh w-full app-paper-bg text-black flex flex-col overflow-hidden">
@@ -133,14 +127,16 @@ export default function StorePage() {
 
         {/* Daily Pass — unlimited puzzles for a day */}
         {accessConfig && (
-          <div className={`${hasDailyAccess ? 'bg-lime-300' : 'bg-orange-400'} border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3 flex items-center gap-3`}>
+          <div
+            className={`${hasDailyAccess ? "bg-lime-300" : "bg-orange-400"} border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3 flex items-center gap-3`}
+          >
             <div className="grid place-items-center w-10 h-10 border-2 border-black bg-white shrink-0">
               <Castle className="w-5 h-5" strokeWidth={3} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-black text-sm uppercase truncate">Daily Pass</div>
               <div className="text-xs font-bold text-black/70 truncate">
-                {hasDailyAccess ? 'Active — unlimited puzzles today' : 'Unlimited puzzles for the rest of the day'}
+                {hasDailyAccess ? "Active — unlimited puzzles today" : "Unlimited puzzles for the rest of the day"}
               </div>
             </div>
             <div className="text-right shrink-0">
@@ -182,7 +178,10 @@ export default function StorePage() {
               <section key={group.category} className="space-y-2">
                 <h2 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
                   <span className="inline-block w-2 h-4 bg-black" />
-                  {group.label} [{group.items.length}]
+                  <span className="inline-flex items-center justify-between gap-1 w-full">
+                    <span>{group.label}</span>
+                    <span>[You have {group.category === "hints" ? hintBalance : group.category === "streak_freeze" ? streakFreezes : 0}]</span>
+                  </span>
                 </h2>
                 <div className="space-y-2">
                   {group.items.map((item) => (

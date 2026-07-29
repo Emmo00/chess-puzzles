@@ -1,7 +1,6 @@
 import { SCORING_CONFIG_DEFAULTS, type ScoringConfig } from "./config/scoring";
 
 export type { ScoringConfig } from "./config/scoring";
-export { useNewScoring } from "./config/scoring";
 
 export type PuzzleKind = "standard" | "daily";
 
@@ -96,30 +95,4 @@ export function calculateEarnedPoints(input: ScoringInput): ScoringBreakdown {
     points,
     failed: false,
   };
-}
-
-export function calculatePointsLegacy(input: {
-  rating: number;
-  mistakes: number;
-  hintCount: number;
-}): number {
-  const { rating, mistakes, hintCount } = input;
-  let basePoints: number;
-  if (rating < 1000) basePoints = 10;
-  else if (rating < 1400) basePoints = 25;
-  else if (rating < 1800) basePoints = 50;
-  else basePoints = 100;
-
-  let hintMultiplier: number;
-  if (hintCount === 0) hintMultiplier = 1.0;
-  else if (hintCount === 1) hintMultiplier = 0.5;
-  else if (hintCount === 2) hintMultiplier = 0.25;
-  else hintMultiplier = 0.0;
-
-  let mistakeMultiplier: number;
-  if (mistakes === 0) mistakeMultiplier = 1.0;
-  else if (mistakes === 1) mistakeMultiplier = 0.8;
-  else mistakeMultiplier = 0.6;
-
-  return Math.round(basePoints * hintMultiplier * mistakeMultiplier);
 }

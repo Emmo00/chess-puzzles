@@ -65,42 +65,107 @@ class UserService {
       ? getUtcDayNumber(new Date(user.lastPuzzleDate))
       : null;
 
-    let newStreak = user.currentStreak;
-    let newFreezes = user.streakFreezes ?? 1;
-
-    if (lastPuzzleUtcDay !== currentUtcDay) {
-      if (lastPuzzleUtcDay === null) {
-        newStreak = 1;
-      } else if (lastPuzzleUtcDay === currentUtcDay - 1) {
-        newStreak += 1;
-      } else {
-        if (newFreezes > 0) {
-          newFreezes -= 1;
-          newStreak += 1;
-        } else {
-          newStreak = 1;
-        }
-      }
+    // Already solved today — no change
+    if (lastPuzzleUtcDay === currentUtcDay) {
+      return this.users.findOne(query);
     }
 
-    const newLongest = Math.max(user.longestStreak, newStreak);
+    // First solve ever
+    if (lastPuzzleUtcDay === null) {
+      const updated = await this.users.findOneAndUpdate(
+        query,
+        {
+          $set: {
+            currentStreak: 1,
+            longestStreak: Math.max(user.longestStreak, 1),
+            lastLogin: playedAt,
+            lastPuzzleDate: playedAt.toISOString(),
+            "streakEvent.eventType": null,
+            "streakEvent.day": null,
+            "streakEvent.notified": false,
+          },
+        },
+        { new: true }
+      );
+      if (!updated) throw new HttpException(404, "User not found");
+      return updated;
+    }
 
-    const updated = await this.users.findOneAndUpdate(
-      query,
+    // Consecutive day — increment streak
+    if (lastPuzzleUtcDay === currentUtcDay - 1) {
+      const newStreak = (user.currentStreak ?? 0) + 1;
+      const newLongest = Math.max(user.longestStreak ?? 0, newStreak);
+      const updated = await this.users.findOneAndUpdate(
+        query,
+        {
+          $set: {
+            currentStreak: newStreak,
+            longestStreak: newLongest,
+            lastLogin: playedAt,
+            lastPuzzleDate: playedAt.toISOString(),
+          },
+        },
+        { new: true }
+      );
+      if (!updated) throw new HttpException(404, "User not found");
+      return updated;
+    }
+
+    // Gap > 1 day — use optimistic lock on lastPuzzleDate to prevent races
+    const oldLastPuzzleDate = user.lastPuzzleDate;
+    const newStreak = (user.currentStreak ?? 0) + 1;
+    const newLongest = Math.max(user.longestStreak ?? 0, newStreak);
+
+    // Try to consume a streak freeze atomically
+    if ((user.streakFreezes ?? 0) > 0) {
+      const freezeResult = await this.users.findOneAndUpdate(
+        {
+          ...query,
+          streakFreezes: { $gt: 0 },
+          lastPuzzleDate: oldLastPuzzleDate,
+        },
+        {
+          $inc: { streakFreezes: -1, currentStreak: 1 },
+          $set: {
+            longestStreak: newLongest,
+            lastLogin: playedAt,
+            lastPuzzleDate: playedAt.toISOString(),
+            "streakEvent.eventType": "freeze_used",
+            "streakEvent.day": currentUtcDay,
+            "streakEvent.notified": false,
+          },
+        },
+        { new: true }
+      );
+      if (freezeResult) return freezeResult;
+      // Race lost — another request already processed this day
+      return this.users.findOne(query);
+    }
+
+    // No streak freeze available — streak resets
+    const resetResult = await this.users.findOneAndUpdate(
+      {
+        ...query,
+        lastPuzzleDate: oldLastPuzzleDate,
+      },
       {
         $set: {
-          currentStreak: newStreak,
+          currentStreak: 1,
           longestStreak: newLongest,
-          streakFreezes: newFreezes,
           lastLogin: playedAt,
           lastPuzzleDate: playedAt.toISOString(),
+          "streakEvent.eventType": "streak_lost",
+          "streakEvent.day": currentUtcDay,
+          "streakEvent.notified": false,
         },
       },
       { new: true }
     );
-
-    if (!updated) throw new HttpException(404, "User not found");
-    return updated;
+    if (!resetResult) {
+      // Race lost — return current state
+      return this.users.findOne(query);
+    }
+    return resetResult;
   }
 
   public async updateUserStats(identifier: string, stats: Partial<UserStats>): Promise<WalletUser | null> {

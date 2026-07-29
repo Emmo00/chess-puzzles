@@ -3,9 +3,7 @@ import dbConnect from "../../../../../lib/db";
 import { authenticateWalletUser } from "../../../../../lib/auth";
 import PuzzleService from "../../../../../lib/services/puzzles.service";
 import UserService from "../../../../../lib/services/users.service";
-import { calculatePoints } from "../../../../../lib/utils/points";
-import { calculateEarnedPoints, useNewScoring } from "../../../../../lib/scoring";
-import { getScoringConfig } from "../../../../../lib/config/scoring";
+import { calculateEarnedPoints } from "../../../../../lib/scoring";
 import { UserPuzzle } from "../../../../../lib/types";
 
 export async function POST(request: NextRequest) {
@@ -26,28 +24,17 @@ export async function POST(request: NextRequest) {
     const puzzleService = new PuzzleService();
     const userService = new UserService();
 
-    const isNewScoring = useNewScoring();
-    const scoringConfig = isNewScoring ? await getScoringConfig() : null;
-
-    let points: number;
-    let breakdown: any = null;
-    if (isNewScoring && scoringConfig) {
-      const streakUser = await userService.updateUserStreakByUTCDay(user.walletAddress);
-      breakdown = calculateEarnedPoints({
-        kind: "daily",
-        hintCount,
-        streak: streakUser.currentStreak || 1,
-        solveTimeSec:
-          typeof solveTimeSec === "number" && Number.isFinite(solveTimeSec)
-            ? solveTimeSec
-            : Number.MAX_SAFE_INTEGER,
-        config: scoringConfig,
-      });
-      points = breakdown.points;
-    } else {
-      await userService.updateUserStreakByUTCDay(user.walletAddress);
-      points = calculatePoints({ rating, mistakes, hintCount });
-    }
+    const streakUser = await userService.updateUserStreakByUTCDay(user.walletAddress);
+    const breakdown = calculateEarnedPoints({
+      kind: "daily",
+      hintCount,
+      streak: streakUser.currentStreak || 1,
+      solveTimeSec:
+        typeof solveTimeSec === "number" && Number.isFinite(solveTimeSec)
+          ? solveTimeSec
+          : Number.MAX_SAFE_INTEGER,
+    });
+    const points = breakdown.points;
 
     const userPuzzleData: Partial<UserPuzzle> = {
       userWalletAddress: user.walletAddress,

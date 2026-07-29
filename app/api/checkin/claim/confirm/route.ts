@@ -132,11 +132,11 @@ export async function POST(request: NextRequest) {
         txHash,
       });
 
-      await checkInService.markFailedClaim(
-        user.walletAddress,
+      console.error("[ClaimFlow][API][confirm] transaction reverted", {
+        requestId,
         txHash,
-        "Transaction reverted"
-      );
+        wallet: maskAddress(user.walletAddress),
+      });
 
       return NextResponse.json(
         {
@@ -225,11 +225,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!claimFunctionMatches || !userMatches || !toMatches || (!senderMatchesServerSigner && !senderMatchesUser)) {
-      await checkInService.markFailedClaim(
-        user.walletAddress,
+      console.error("[ClaimFlow][API][confirm] calldata mismatch", {
+        requestId,
         txHash,
-        "Transaction calldata does not match daily claim"
-      );
+        wallet: maskAddress(user.walletAddress),
+        decodedInput,
+      });
 
       return NextResponse.json(
         {

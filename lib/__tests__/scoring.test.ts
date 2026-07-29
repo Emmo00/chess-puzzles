@@ -6,12 +6,11 @@ import {
   isFailed,
   streakMultiplier,
   speedBonus,
-  calculatePointsLegacy,
   type ScoringConfig,
 } from "@/lib/scoring";
-import { SCORING_CONFIG } from "@/lib/config/scoring";
+import { SCORING_CONFIG_DEFAULTS } from "@/lib/config/scoring";
 
-const CONFIG: ScoringConfig = SCORING_CONFIG;
+const CONFIG: ScoringConfig = SCORING_CONFIG_DEFAULTS;
 
 describe("getBasePoints", () => {
   it("uses 100 for standard puzzles", () => {
@@ -220,11 +219,3 @@ describe("calculateEarnedPoints (master formula)", () => {
   });
 });
 
-describe("calculatePointsLegacy (old formula, kept for parity tests)", () => {
-  it("matches the old base/mistake/hint math", () => {
-    expect(calculatePointsLegacy({ rating: 1900, mistakes: 0, hintCount: 0 })).toBe(100);
-    expect(calculatePointsLegacy({ rating: 1900, mistakes: 1, hintCount: 0 })).toBe(80);
-    expect(calculatePointsLegacy({ rating: 1900, mistakes: 2, hintCount: 0 })).toBe(60);
-    expect(calculatePointsLegacy({ rating: 1500, mistakes: 0, hintCount: 1 })).toBe(25);
-  });
-});

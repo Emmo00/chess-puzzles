@@ -400,25 +400,6 @@ class CheckInService {
     return reservation;
   }
 
-  public async markFailedClaim(walletAddress: string, txHash: string, error: string) {
-    const utcDay: number = getUtcDayNumber();
-    const reservation = await CheckInReservation.findOne({
-      walletAddress: walletAddress.toLowerCase(),
-      utcDay,
-    });
-
-    if (!reservation) {
-      throw new HttpException(404, "No daily check-in reservation found");
-    }
-
-    reservation.status = "earned";
-    reservation.claimTxHash = txHash.toLowerCase();
-    reservation.errorMessage = error;
-    await reservation.save();
-
-    return reservation;
-  }
-
   private async ensureDailyChallenge(
     utcDay: number,
     createdByWallet: string,

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
 
+export type StreakStatus = "alive" | "at_risk" | "broken";
+
 export interface UserStats {
   walletAddress: string
   displayName: string
@@ -11,6 +13,8 @@ export interface UserStats {
   longestStreak: number
   totalPuzzlesSolved: number
   points: number
+  streakStatus: StreakStatus
+  streakFreezes: number
   lastLogin: string
   lastPuzzleDate?: string | null
 }
@@ -38,7 +42,18 @@ export function useUserStats() {
       })
       if (response.ok) {
         const userData = await response.json()
-        setUserStats(userData)
+        setUserStats({
+          walletAddress: address,
+          displayName: '',
+          currentStreak: userData.currentStreak ?? 0,
+          longestStreak: userData.longestStreak ?? 0,
+          totalPuzzlesSolved: userData.totalPuzzlesSolved ?? 0,
+          points: userData.points ?? 0,
+          streakStatus: userData.streakStatus ?? 'alive',
+          streakFreezes: userData.streakFreezes ?? 0,
+          lastLogin: userData.lastLogin ?? '',
+          lastPuzzleDate: userData.lastPuzzleDate ?? null,
+        })
       } else {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch user stats' }))
         throw new Error(errorData.message || 'Failed to fetch user stats')

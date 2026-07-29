@@ -24,22 +24,6 @@ export const SCORING_CONFIG_DEFAULTS: ScoringConfig = {
   speedBonusThresholdSec: 15,
 };
 
-export const SCORING_CONFIG = SCORING_CONFIG_DEFAULTS;
-
-const FLAG_ENV_NAMES = [
-  "USE_NEW_SCORING",
-  "NEXT_PUBLIC_USE_NEW_SCORING",
-  "SCORING_USE_NEW",
-] as const;
-
-export function useNewScoring(): boolean {
-  if (process.env.NODE_ENV === "test") return true;
-  return FLAG_ENV_NAMES.some((name) => {
-    const value = process.env[name];
-    return value === "1" || value === "true";
-  });
-}
-
 let cachedScoringConfig: ScoringConfig | null = null;
 
 async function loadAppConfigModel() {

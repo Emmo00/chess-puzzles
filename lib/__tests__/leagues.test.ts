@@ -45,7 +45,7 @@ describe("season windows", () => {
 describe("getLeague", () => {
   it("places new players in Pawn", () => {
     expect(getLeague(0, 0)).toBe("pawn");
-    expect(getLeague(749, 20)).toBe("pawn");
+    expect(getLeague(749, 10)).toBe("pawn");
     expect(getLeague(2000, 6)).toBe("pawn");
   });
 
@@ -63,15 +63,15 @@ describe("getLeague", () => {
     expect(getLeague(3000, 5)).toBe("pawn");
   });
 
-  it("keeps a high-point player in Knight (below King streak) when streak >= 7", () => {
-    expect(getLeague(3000, 10)).toBe("knight");
+  it("keeps a high-point player in Knight (below King streak) when streak >= 10", () => {
+    expect(getLeague(3000, 15)).toBe("knight");
   });
 
   it("respects league thresholds from LEAGUES config", () => {
     expect(LEAGUES.king.minSeasonPoints).toBe(1800);
-    expect(LEAGUES.king.minStreak).toBe(14);
+    expect(LEAGUES.king.minStreak).toBe(20);
     expect(LEAGUES.knight.minSeasonPoints).toBe(750);
-    expect(LEAGUES.knight.minStreak).toBe(7);
+    expect(LEAGUES.knight.minStreak).toBe(10);
   });
 });
 

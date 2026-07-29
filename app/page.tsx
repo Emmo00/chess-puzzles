@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
-import { List, Puzzle } from "lucide-react";
+import { List, Puzzle, ShoppingCart, Snowflake, X } from "lucide-react";
 import { WalletConnect } from "@/components/WalletConnect";
 import { BottomNav } from "@/components/BottomNav";
 import { ModeSheet } from "@/components/home/ModeSheet";
@@ -12,6 +12,7 @@ import { PointsStreakPill } from "@/components/home/PointsStreakPill";
 import { ProgressMap } from "@/components/home/ProgressMap";
 import { LevelDetailsModal, type LevelModalData } from "@/components/home/LevelDetailsModal";
 import { useUserStats } from "@/lib/hooks/useUserStats";
+import type { StreakStatus } from "@/lib/hooks/useUserStats";
 import { useDailyCheckin } from "@/lib/hooks/useDailyCheckin";
 import { levelForPoints, pointsForLevel, levelProgressPercent, levelStateFor } from "@/lib/leveling";
 import styles from "./page.module.css";
@@ -25,12 +26,16 @@ export default function Home() {
 
   const points = Math.max(0, Math.floor(userStats?.points ?? 0));
   const streak = Math.max(0, Math.floor(userStats?.currentStreak ?? 0));
+  const streakStatus: StreakStatus = userStats?.streakStatus ?? "alive";
   const level = useMemo(() => levelForPoints(points), [points]);
 
   const [mounted, setMounted] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [currentNodeInView, setCurrentNodeInView] = useState(true);
   const [modalLevel, setModalLevel] = useState<number | null>(null);
+  const [streakPopupDismissed, setStreakPopupDismissed] = useState(false);
+
+  const showStreakPopup = streakStatus !== "alive" && !streakPopupDismissed && isConnected;
 
   const currentNodeRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -130,6 +135,7 @@ export default function Home() {
       <AvatarBubble
         visible={bubbleVisible}
         streak={streak}
+        streakStatus={streakStatus}
         level={level}
         name={userStats?.displayName}
       />
@@ -180,6 +186,67 @@ export default function Home() {
         onClose={() => setModalLevel(null)}
         onSolve={handleSolve}
       />
+
+      {/* Streak awareness popup — at_risk / broken */}
+      {showStreakPopup && (streakStatus === "at_risk" || streakStatus === "broken") && (
+        <div className="fixed inset-0 z-50 p-4 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/80" onClick={() => setStreakPopupDismissed(true)} />
+          <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-sm w-full">
+            <div className={`${streakStatus === "at_risk" ? "bg-orange-400" : "bg-red-400"} border-b-4 border-black p-4 flex justify-between items-center`}>
+              <h2 className="font-black text-lg uppercase text-black inline-flex items-center gap-2">
+                <Snowflake className="w-6 h-6" />
+                {streakStatus === "at_risk" ? "Streak at Risk!" : "Streak Ended"}
+              </h2>
+              <button
+                onClick={() => setStreakPopupDismissed(true)}
+                className="w-7 h-7 bg-red-500 border-2 border-black text-black flex items-center justify-center"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className={streakStatus === "at_risk" ? "bg-orange-100 p-5 space-y-3" : "bg-red-100 p-5 space-y-3"}>
+              {streakStatus === "at_risk" ? (
+                <>
+                  <p className="font-bold text-sm text-black">
+                    You missed a day! Your <span className="font-black">{streak}-day streak</span> is at risk.
+                    Solve a puzzle now and a Streak Freeze will protect it automatically.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setStreakPopupDismissed(true); router.push("/solve-puzzles"); }}
+                    className="w-full bg-black text-white py-3 font-black text-sm uppercase tracking-wide border-2 border-black hover:bg-gray-800 transition-all inline-flex items-center justify-center gap-2"
+                  >
+                    <Puzzle className="w-4 h-4" /> Solve Now
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="font-bold text-sm text-black">
+                    You missed a day and didn&apos;t have a Streak Freeze available.
+                  </p>
+                  <p className="text-xs font-bold text-black/70">
+                    Get a Streak Freeze so you&apos;re protected the next time you miss a day.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setStreakPopupDismissed(true); router.push("/store"); }}
+                    className="w-full bg-black text-white py-3 font-black text-sm uppercase tracking-wide border-2 border-black hover:bg-gray-800 transition-all inline-flex items-center justify-center gap-2"
+                  >
+                    <ShoppingCart className="w-4 h-4" /> Get Streak Freeze
+                  </button>
+                </>
+              )}
+
+              <button
+                onClick={() => setStreakPopupDismissed(true)}
+                className="w-full text-center text-xs font-bold text-black/50 hover:text-black transition-colors uppercase"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

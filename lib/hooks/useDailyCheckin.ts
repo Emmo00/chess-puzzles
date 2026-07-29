@@ -141,7 +141,7 @@ export function useDailyCheckin() {
       throw new Error("Wallet not connected");
     }
 
-    const response = await fetch("/api/checkin/reserve", {
+    const response = await fetch("/api/checkin/fetch", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

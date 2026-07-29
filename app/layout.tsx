@@ -7,6 +7,7 @@ import { WalletProvider } from "../lib/providers/WalletProvider";
 import { FarcasterMiniAppReady } from "@/components/FarcasterMiniAppReady";
 import { BackgroundMusic } from "@/components/BackgroundMusic";
 import { GlobalErrorListener } from "@/components/GlobalErrorListener";
+import { StreakNotification } from "@/components/StreakNotification";
 import { Toaster } from "sonner";
 import { Inter, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 
@@ -116,6 +117,7 @@ export default function RootLayout({
           <GlobalErrorListener />
           <FarcasterMiniAppReady />
           <BackgroundMusic />
+          <StreakNotification />
           {children}
           <Toaster position="top-center" toastOptions={{ style: { border: "3px solid #000", boxShadow: "4px 4px 0 #000", fontWeight: 800 } }} />
         </WalletProvider>

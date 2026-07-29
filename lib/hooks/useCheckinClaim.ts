@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   useAccount,
   usePublicClient,
@@ -9,7 +9,7 @@ import {
 } from "wagmi";
 import { erc20Abi } from "viem";
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
-import { PAYOUT_CLAIM_CONTRACT, isMiniPay, SUPPORTED_CURRENCIES } from "@/lib/config/wagmi";
+import { PAYOUT_CLAIM_CONTRACT, SUPPORTED_CURRENCIES } from "@/lib/config/wagmi";
 import {
   DEVICE_FINGERPRINT_HEADER,
   getDeviceFingerprint,
@@ -33,22 +33,10 @@ export function useCheckinClaim() {
     hash: txHash,
   });
   const [claimError, setClaimError] = useState<string | null>(null);
-  const [submissionMode, setSubmissionMode] = useState<"wallet" | "sponsored" | null>(null);
 
   const logClaimFlow = (step: string, details?: Record<string, unknown>) => {
     console.info("[ClaimFlow][useCheckinClaim]", step, details || {});
   };
-
-  useEffect(() => {
-    logClaimFlow("tx.state", {
-      txHash,
-      isPending,
-      isConfirming,
-      isSuccess,
-      claimError,
-      submissionMode,
-    });
-  }, [txHash, isPending, isConfirming, isSuccess, claimError, submissionMode]);
 
   const fetchClaimPayload = async (requestId: string): Promise<ClaimPayload> => {
     if (!address) {
@@ -74,130 +62,58 @@ export function useCheckinClaim() {
     return data.claim as ClaimPayload;
   };
 
-  const checkPaymentOptions = async (claim: ClaimPayload): Promise<{ canSendFromWallet: boolean; feeCurrency?: `0x${string}`; gas?: bigint }> => {
+  const selectFeeCurrency = async (claim: ClaimPayload, gasEstimate: bigint): Promise<{ feeCurrency?: `0x${string}`; gas?: bigint } | "insufficient"> => {
     if (!address || !publicClient) {
-      return { canSendFromWallet: false };
+      return "insufficient";
     }
 
     try {
-      const args = [
-        claim.user,
-        BigInt(claim.day),
-        BigInt(claim.nonce),
-        BigInt(claim.deadline),
-        claim.signature,
-      ] as const;
+      const feeCurrencyCandidates = SUPPORTED_CURRENCIES.filter(
+        (c) => c.feeCurrencyAddress && ["USDm", "USDC", "USDT", "cEUR", "cREAL"].includes(c.symbol)
+      );
 
-      const [balance, gasPrice, gasEstimate] = await Promise.all([
-        publicClient.getBalance({ address }),
-        publicClient.getGasPrice(),
-        publicClient.estimateContractGas({
-          account: address,
-          address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
-          abi: PAYOUT_CLAIMS_ABI,
-          functionName: "claimDailyCheckIn",
-          args,
-        }),
-      ]);
-
-      const estimatedCost = gasEstimate * gasPrice;
-      // Add 20% headroom to reduce false positives on volatile gas.
-      const requiredCost = (estimatedCost * BigInt(12)) / BigInt(10);
-
-      if (isMiniPay()) {
-        // Prioritize USDm for fee abstraction as it's the most reliable in MiniPay
-        const feeCurrencies = [...SUPPORTED_CURRENCIES].sort((a, b) => {
-          if (a.symbol === "USDm") return -1;
-          if (b.symbol === "USDm") return 1;
-          return 0;
-        });
-
-        for (const currency of feeCurrencies) {
-          // Only use known Celo native fee currencies
-          if (!["USDm", "cEUR", "cREAL"].includes(currency.symbol)) continue;
-
+      const balances = await Promise.all(
+        feeCurrencyCandidates.map(async (currency) => {
           try {
-            const tokenBalance = await publicClient.readContract({
+            const balance = await publicClient.readContract({
               address: currency.tokenAddress as `0x${string}`,
               abi: erc20Abi,
               functionName: "balanceOf",
               args: [address],
             });
-
-            // For USDm/cEUR/cREAL, they all have 18 decimals, same as CELO
-            // So we can compare directly with requiredCost (with a small safety buffer)
-            const tokenRequiredCost = (requiredCost * BigInt(15)) / BigInt(10); // 50% buffer for stablecoins
-
-            if (tokenBalance >= tokenRequiredCost) {
-              logClaimFlow("sendClaim.feeAbstraction", {
-                token: currency.symbol,
-                balance: tokenBalance.toString(),
-                required: tokenRequiredCost.toString(),
-                gasLimit: gasEstimate.toString(),
-              });
-              return {
-                canSendFromWallet: true,
-                feeCurrency: currency.feeCurrencyAddress as `0x${string}`,
-                gas: (gasEstimate * BigInt(15)) / BigInt(10), // Provide explicit gas limit with buffer
-              };
-            }
-          } catch (e) {
-            console.error(`[ClaimFlow] Error checking balance for ${currency.symbol}`, e);
+            return { currency, balance };
+          } catch {
+            return { currency, balance: 0n };
           }
+        })
+      );
+
+      const gasWithBuffer = (gasEstimate * BigInt(15)) / BigInt(10);
+
+      const sorted = balances
+        .filter((b) => b.balance > 0)
+        .sort((a, b) => (b.balance > a.balance ? 1 : -1));
+
+      for (const { currency, balance } of sorted) {
+        if (balance >= gasWithBuffer) {
+          logClaimFlow("feeCurrency.selected", {
+            symbol: currency.symbol,
+            balance: balance.toString(),
+            gasEstimate: gasEstimate.toString(),
+          });
+          return {
+            feeCurrency: currency.feeCurrencyAddress as `0x${string}`,
+            gas: gasWithBuffer,
+          };
         }
-        
-        // If we reach here, they don't have enough stablecoins
-        logClaimFlow("sendClaim.minipay.insufficientFunds", {
-          reason: "no_sufficient_stablecoin_balance",
-        });
-        return { canSendFromWallet: false };
       }
 
-      logClaimFlow("sendClaim.balanceCheck", {
-        balanceWei: balance.toString(),
-        gasPriceWei: gasPrice.toString(),
-        gasEstimate: gasEstimate.toString(),
-        requiredCostWei: requiredCost.toString(),
-      });
-
-      return { canSendFromWallet: balance >= requiredCost };
+      logClaimFlow("feeCurrency.insufficient", { reason: "no_token_covers_gas" });
+      return "insufficient";
     } catch (error: any) {
-      logClaimFlow("sendClaim.balanceCheck.error", {
-        message: error?.message,
-      });
-      return { canSendFromWallet: false };
+      logClaimFlow("feeCurrency.error", { message: error?.message });
+      return "insufficient";
     }
-  };
-
-  const submitSponsoredClaim = async (requestId: string) => {
-    if (!address) {
-      throw new Error("Wallet not connected");
-    }
-
-    const response = await fetch("/api/checkin/claim/sponsored", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${address}`,
-        "x-claim-debug-id": requestId,
-        [DEVICE_FINGERPRINT_HEADER]: getDeviceFingerprint(),
-      },
-    });
-
-    const relayResult = await response.json();
-
-    logClaimFlow("sendClaim.sponsored.response", {
-      requestId,
-      status: response.status,
-      ok: response.ok,
-      relayResult,
-    });
-
-    if (!response.ok || !relayResult?.txHash) {
-      throw new Error(relayResult?.message || "Sponsored transaction submission failed");
-    }
-
-    return relayResult.txHash as `0x${string}`;
   };
 
   const sendClaim = async () => {
@@ -221,27 +137,15 @@ export function useCheckinClaim() {
 
     setClaimError(null);
     setIsPending(true);
-    setSubmissionMode(null);
 
     try {
       const claim = await fetchClaimPayload(requestId);
-      const paymentOption = await checkPaymentOptions(claim);
 
-      let submittedTxHash: `0x${string}`;
-
-      if (paymentOption.canSendFromWallet) {
-        setSubmissionMode("wallet");
-        logClaimFlow("sendClaim.wallet.request", {
-          requestId,
-          user: claim.user,
-          day: claim.day,
-          nonce: claim.nonce,
-          deadline: claim.deadline,
-          feeCurrency: paymentOption.feeCurrency,
-        });
-
-        // Use standard transaction or fee abstraction depending on feeCurrency
-        const txArgs: any = {
+      // Estimate gas with the real claim payload
+      let gasEstimate: bigint;
+      try {
+        gasEstimate = await publicClient!.estimateContractGas({
+          account: address,
           address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
           abi: PAYOUT_CLAIMS_ABI,
           functionName: "claimDailyCheckIn",
@@ -252,40 +156,57 @@ export function useCheckinClaim() {
             BigInt(claim.deadline),
             claim.signature,
           ],
-        };
-
-        if (paymentOption.feeCurrency) {
-          txArgs.feeCurrency = paymentOption.feeCurrency;
-        }
-
-        if (paymentOption.gas) {
-          txArgs.gas = paymentOption.gas;
-        }
-
-        submittedTxHash = await writeContractAsync(txArgs);
-
-        logClaimFlow("sendClaim.wallet.submitted", {
-          requestId,
-          txHash: submittedTxHash,
         });
-      } else {
-        setSubmissionMode("sponsored");
-        logClaimFlow("sendClaim.sponsored.request", {
-          requestId,
-          reason: "insufficient_funds_for_gas",
-        });
-        submittedTxHash = await submitSponsoredClaim(requestId);
+      } catch {
+        throw new Error("Failed to estimate gas for claim transaction");
       }
 
-      setTxHash(submittedTxHash);
+      const feeOption = await selectFeeCurrency(claim, gasEstimate);
 
-      logClaimFlow("sendClaim.submitted", {
+      if (feeOption === "insufficient") {
+        throw new Error(
+          "Insufficient balance to pay network fee. Top up with USDC, USDT, or USDm to claim your reward."
+        );
+      }
+
+      logClaimFlow("sendClaim.wallet.request", {
         requestId,
-        connectedAddress: address,
-        txHash: submittedTxHash,
-        contract: PAYOUT_CLAIM_CONTRACT,
-        mode: paymentOption.canSendFromWallet ? "wallet" : "sponsored",
+        user: claim.user,
+        day: claim.day,
+        nonce: claim.nonce,
+        deadline: claim.deadline,
+        feeCurrency: feeOption.feeCurrency,
       });
+
+      const txArgs: any = {
+        address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+        abi: PAYOUT_CLAIMS_ABI,
+        functionName: "claimDailyCheckIn",
+        args: [
+          claim.user,
+          BigInt(claim.day),
+          BigInt(claim.nonce),
+          BigInt(claim.deadline),
+          claim.signature,
+        ],
+      };
+
+      if (feeOption.feeCurrency) {
+        txArgs.feeCurrency = feeOption.feeCurrency;
+      }
+
+      if (feeOption.gas) {
+        txArgs.gas = feeOption.gas;
+      }
+
+      const submittedTxHash = await writeContractAsync(txArgs);
+
+      logClaimFlow("sendClaim.wallet.submitted", {
+        requestId,
+        txHash: submittedTxHash,
+      });
+
+      setTxHash(submittedTxHash);
     } catch (error: any) {
       const message = error?.shortMessage || error?.message || "Claim transaction failed";
       logClaimFlow("sendClaim.error", {
@@ -305,10 +226,8 @@ export function useCheckinClaim() {
     sendClaim,
     txHash,
     claimError,
-    submissionMode,
     isPending,
     isConfirming,
     isSuccess,
   };
 }
-

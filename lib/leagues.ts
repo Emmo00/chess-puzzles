@@ -53,13 +53,13 @@ export function seasonId(date: Date = new Date()): number {
   return getCurrentSeasonStart(date).getTime();
 }
 
-export function getLeague(seasonPoints: number, streak: number): League {
-  const points = Math.max(0, seasonPoints);
+export function getLeague(totalPoints: number, streak: number): League {
+  const pts = Math.max(0, totalPoints);
   const s = Math.max(0, streak);
-  if (points >= LEAGUES.king.minSeasonPoints && s >= LEAGUES.king.minStreak) {
+  if (pts >= LEAGUES.king.minSeasonPoints && s >= LEAGUES.king.minStreak) {
     return "king";
   }
-  if (points >= LEAGUES.knight.minSeasonPoints && s >= LEAGUES.knight.minStreak) {
+  if (pts >= LEAGUES.knight.minSeasonPoints && s >= LEAGUES.knight.minStreak) {
     return "knight";
   }
   return "pawn";

@@ -20,6 +20,13 @@ export interface UserStats {
   longestStreak: number;
   totalPuzzlesSolved: number;
   lastPuzzleDate: string | null;
+  streakFreezes: number;
+  streakFreezeUsedDays?: number[];
+  streakEvent?: {
+    eventType: "freeze_used" | "streak_lost" | null;
+    day: number | null;
+    notified: boolean;
+  };
 }
 
 export interface UserPuzzle {

@@ -136,13 +136,13 @@ class LeaderboardService {
       const lower = userWalletAddress.toLowerCase();
       const userRow = ranked.find((row) => row.walletAddress?.toLowerCase() === lower);
       if (userRow) {
-        userLeague = getLeague(userRow.seasonPoints, userRow.currentStreak);
+        userLeague = getLeague(userRow.totalPoints, userRow.currentStreak);
       }
     }
 
     const filtered = leagueFilter
       ? ranked.filter(
-          (row) => getLeague(row.seasonPoints, row.currentStreak) === leagueFilter
+          (row) => getLeague(row.totalPoints, row.currentStreak) === leagueFilter
         )
       : ranked;
 
@@ -160,7 +160,7 @@ class LeaderboardService {
       longestStreak: row.longestStreak,
       seasonPoints: row.seasonPoints,
       rankScore: row.rankScore,
-      league: getLeague(row.seasonPoints, row.currentStreak),
+      league: getLeague(row.totalPoints, row.currentStreak),
     }));
 
     let userRank: LeaderboardEntry | null = null;
@@ -179,7 +179,7 @@ class LeaderboardService {
           longestStreak: row.longestStreak,
           seasonPoints: row.seasonPoints,
           rankScore: row.rankScore,
-          league: getLeague(row.seasonPoints, row.currentStreak),
+          league: getLeague(row.totalPoints, row.currentStreak),
         };
       }
     }
