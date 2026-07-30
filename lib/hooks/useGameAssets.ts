@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useAccount, usePublicClient, useWriteContract, useChainId, useSwitchChain } from "wagmi";
+import { celo } from "wagmi/chains";
+import { isOnCorrectChain } from "@/lib/config/wagmi";
 import { GAME_ASSETS_CONTRACT, GAME_ASSET_TYPES, ALLOWLISTED_STABLECOINS } from "@/lib/config/wagmi";
 import { GAME_ASSETS_ABI } from "@/lib/abi/gameAssets";
 import { type Hex, parseUnits } from "viem";
@@ -61,10 +63,30 @@ export function useGameAssetsBalances(): AssetBalanceState {
 
 export function useGameAssetsPurchase() {
   const { address } = useAccount();
+  const chainId = useChainId();
+  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   const [isPending, setIsPending] = useState(false);
   const [txHash, setTxHash] = useState<Hex | undefined>(undefined);
+
+  const isCorrectChain = isOnCorrectChain(chainId);
+
+  const ensureCorrectChain = async (): Promise<boolean> => {
+    if (isCorrectChain) return true;
+    
+    if (!address) {
+      throw new Error("Wallet not connected");
+    }
+    
+    try {
+      await switchChain({ chainId: celo.id });
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to switch to Celo Mainnet";
+      throw new Error(message);
+    }
+  };
 
   const ensureApproval = async (tokenAddress: Hex, amount: bigint) => {
     if (!address || !publicClient || !GAME_ASSETS_CONTRACT) return;
@@ -95,6 +117,9 @@ export function useGameAssetsPurchase() {
     if (!address || !publicClient || !GAME_ASSETS_CONTRACT) {
       throw new Error("Wallet not connected");
     }
+    
+    await ensureCorrectChain();
+    
     setIsPending(true);
     try {
       const amount = parseUnits(usdAmount, tokenDecimals);
@@ -122,6 +147,9 @@ export function useGameAssetsPurchase() {
     if (!address || !publicClient || !GAME_ASSETS_CONTRACT) {
       throw new Error("Wallet not connected");
     }
+    
+    await ensureCorrectChain();
+    
     setIsPending(true);
     try {
       const amount = parseUnits(usdAmount, tokenDecimals);
@@ -147,6 +175,9 @@ export function useGameAssetsPurchase() {
     if (!address || !publicClient || !GAME_ASSETS_CONTRACT) {
       throw new Error("Wallet not connected");
     }
+    
+    await ensureCorrectChain();
+    
     setIsPending(true);
     try {
       const hash = await writeContractAsync({
@@ -163,16 +194,37 @@ export function useGameAssetsPurchase() {
     }
   };
 
-  return { buyAsset, buyAssetPack, buyDailyPass, isPending, txHash };
+  return { buyAsset, buyAssetPack, buyDailyPass, isPending, txHash, isCorrectChain, isSwitchingChain };
 }
 
 export function useGameAssetsAdmin() {
   const { address } = useAccount();
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
 
+  const isCorrectChain = isOnCorrectChain(chainId);
+
+  const ensureCorrectChain = async (): Promise<boolean> => {
+    if (isCorrectChain) return true;
+    
+    if (!address) {
+      throw new Error("Wallet not connected");
+    }
+    
+    try {
+      await switchChain({ chainId: celo.id });
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to switch to Celo Mainnet";
+      throw new Error(message);
+    }
+  };
+
   const grantAsset = async (to: Hex, assetType: Hex, quantity: number) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
+    await ensureCorrectChain();
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
@@ -183,6 +235,7 @@ export function useGameAssetsAdmin() {
 
   const grantDailyPass = async (to: Hex) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
+    await ensureCorrectChain();
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
@@ -193,6 +246,7 @@ export function useGameAssetsAdmin() {
 
   const grantAssetPack = async (to: Hex, packId: number) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
+    await ensureCorrectChain();
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
@@ -203,6 +257,7 @@ export function useGameAssetsAdmin() {
 
   const createAssetPack = async (name: string, assetType: Hex, quantity: number, price: number) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
+    await ensureCorrectChain();
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
@@ -213,6 +268,7 @@ export function useGameAssetsAdmin() {
 
   const updateAssetPack = async (packId: number, price: number, active: boolean) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
+    await ensureCorrectChain();
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
@@ -223,6 +279,7 @@ export function useGameAssetsAdmin() {
 
   const setUnitPrice = async (assetType: Hex, price: number) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
+    await ensureCorrectChain();
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
@@ -233,6 +290,7 @@ export function useGameAssetsAdmin() {
 
   const setDailyPassPrice = async (price: number) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
+    await ensureCorrectChain();
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
@@ -243,6 +301,7 @@ export function useGameAssetsAdmin() {
 
   const setDailyPassDuration = async (duration: number) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
+    await ensureCorrectChain();
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
@@ -253,6 +312,7 @@ export function useGameAssetsAdmin() {
 
   const updateTreasury = async (newTreasury: Hex) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
+    await ensureCorrectChain();
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
@@ -266,5 +326,6 @@ export function useGameAssetsAdmin() {
     createAssetPack, updateAssetPack,
     setUnitPrice, setDailyPassPrice, setDailyPassDuration,
     updateTreasury,
+    isCorrectChain,
   };
 }

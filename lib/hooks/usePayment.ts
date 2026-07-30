@@ -6,11 +6,14 @@ import {
   useWaitForTransactionReceipt,
   useSendTransaction,
   usePublicClient,
+  useChainId,
+  useSwitchChain,
 } from "wagmi";
 import { encodeFunctionData, parseUnits, formatUnits } from "viem";
+import { celo } from "wagmi/chains";
+import { isOnCorrectChain, ALLOWLISTED_STABLECOINS, SUPPORTED_CURRENCIES } from "../config/wagmi";
 import { CUSD_ABI, getCUSDAddress, PAYMENT_RECIPIENT } from "../utils/payment";
 import { PaymentType } from "../types/payment";
-import { isOnCorrectChain, ALLOWLISTED_STABLECOINS, SUPPORTED_CURRENCIES } from "../config/wagmi";
 
 export interface PaymentMeta {
   itemId?: string;
@@ -45,6 +48,7 @@ const GAS_SAFETY_DENOMINATOR = BigInt(10);
 
 export function usePayment() {
   const { address, chainId } = useAccount();
+  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
   const publicClient = usePublicClient();
   const { sendTransaction, data: hash, isPending } = useSendTransaction();
   const [paymentType, setPaymentType] = useState<PaymentType | null>(null);
@@ -55,6 +59,22 @@ export function usePayment() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   });
+
+  const ensureCorrectChain = async (): Promise<boolean> => {
+    if (isOnCorrectChain(chainId)) return true;
+    
+    if (!address) {
+      throw new Error("Wallet not connected");
+    }
+    
+    try {
+      await switchChain({ chainId: celo.id });
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to switch to Celo Mainnet";
+      throw new Error(message);
+    }
+  };
 
   const fetchBalances = async () => {
     if (!address || !publicClient) throw new Error("Wallet not connected");
@@ -77,13 +97,11 @@ export function usePayment() {
   const quotePayment = async (
     usdAmount: string
   ): Promise<PaymentQuote> => {
-    if (!address || !chainId || !publicClient) {
+    if (!address || !publicClient) {
       throw new Error("Wallet not connected");
     }
 
-    if (!isOnCorrectChain(chainId)) {
-      throw new Error("Please switch to Celo network to make payments");
-    }
+    await ensureCorrectChain();
 
     const balances = await fetchBalances();
     const sorted = [...balances].sort((a, b) => {
@@ -160,13 +178,11 @@ export function usePayment() {
     meta?: PaymentMeta,
     tokenAddress?: string
   ) => {
-    if (!address || !chainId) {
+    if (!address) {
       throw new Error("Wallet not connected");
     }
 
-    if (!isOnCorrectChain(chainId)) {
-      throw new Error("Please switch to Celo network to make payments");
-    }
+    await ensureCorrectChain();
 
     try {
       setPaymentType(type);
@@ -293,5 +309,6 @@ export function usePayment() {
     transactionHash: hash,
     paymentType,
     amountUsd,
+    isSwitchingChain,
   };
 }

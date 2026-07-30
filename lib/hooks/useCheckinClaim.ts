@@ -6,14 +6,22 @@ import {
   usePublicClient,
   useWaitForTransactionReceipt,
   useWriteContract,
+  useChainId,
+  useSwitchChain,
 } from "wagmi";
 import { erc20Abi } from "viem";
+import { celo } from "wagmi/chains";
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
 import { PAYOUT_CLAIM_CONTRACT, SUPPORTED_CURRENCIES } from "@/lib/config/wagmi";
 import {
   DEVICE_FINGERPRINT_HEADER,
   getDeviceFingerprint,
 } from "@/lib/utils/deviceFingerprint";
+
+const isOnCorrectChain = (chainId?: number): boolean => {
+  if (!chainId) return false;
+  return chainId === celo.id;
+};
 
 interface ClaimPayload {
   user: `0x${string}`;
@@ -25,6 +33,8 @@ interface ClaimPayload {
 
 export function useCheckinClaim() {
   const { address } = useAccount();
+  const chainId = useChainId();
+  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
   const publicClient = usePublicClient();
   const { writeContractAsync, data: txHash } = useWriteContract();
   const [isPending, setIsPending] = useState(false);
@@ -33,9 +43,29 @@ export function useCheckinClaim() {
   });
   const [claimError, setClaimError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  
+  const isCorrectChain = isOnCorrectChain(chainId);
+  const isSwitching = isSwitchingChain;
 
   const logClaimFlow = (step: string, details?: Record<string, unknown>) => {
     console.info("[ClaimFlow][useCheckinClaim]", step, details || {});
+  };
+
+  const ensureCorrectChain = async (): Promise<boolean> => {
+    if (isCorrectChain) return true;
+    
+    if (!address) {
+      throw new Error("Wallet not connected");
+    }
+    
+    try {
+      await switchChain({ chainId: celo.id });
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to switch to Celo Mainnet";
+      setClaimError(message);
+      throw new Error(message);
+    }
   };
 
   const fetchClaimPayload = async (requestId: string): Promise<ClaimPayload> => {
@@ -135,6 +165,9 @@ export function useCheckinClaim() {
     }
     if (inFlight.current) return;
     inFlight.current = true;
+
+    // Ensure user is on Celo Mainnet before proceeding
+    await ensureCorrectChain();
 
     const requestId =
       typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -271,5 +304,7 @@ export function useCheckinClaim() {
     isPending,
     isConfirming,
     isSuccess,
+    isCorrectChain,
+    isSwitchingChain: isSwitching,
   };
 }
