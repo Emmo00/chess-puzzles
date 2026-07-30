@@ -198,10 +198,52 @@ export function useCheckinClaim() {
         ],
       });
 
+      // Estimate gas with feeCurrency — MiniPay requires explicit gas when
+      // using CIP-64, otherwise eth_estimateGas returns "permission denied".
+      let claimGas: bigint | undefined;
+      if (feeOption.feeCurrency) {
+        try {
+          const g = await publicClient!.estimateContractGas({
+            account: address,
+            address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+            abi: PAYOUT_CLAIMS_ABI,
+            functionName: "claimDailyCheckIn",
+            args: [
+              claim.user,
+              BigInt(claim.day),
+              BigInt(claim.nonce),
+              BigInt(claim.deadline),
+              claim.signature,
+            ],
+            ...{ feeCurrency: feeOption.feeCurrency },
+          });
+          claimGas = (g * 12n) / 10n;
+        } catch {
+          try {
+            const g = await publicClient!.estimateContractGas({
+              account: address,
+              address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+              abi: PAYOUT_CLAIMS_ABI,
+              functionName: "claimDailyCheckIn",
+              args: [
+                claim.user,
+                BigInt(claim.day),
+                BigInt(claim.nonce),
+                BigInt(claim.deadline),
+                claim.signature,
+              ],
+            });
+            claimGas = (g * 12n) / 10n + 60_000n;
+          } catch {
+            claimGas = 300_000n;
+          }
+        }
+      }
+
       await sendTransaction({
         to: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
         data,
-        ...(feeOption.feeCurrency ? { feeCurrency: feeOption.feeCurrency } : {}),
+        ...(feeOption.feeCurrency ? { feeCurrency: feeOption.feeCurrency, gas: claimGas } : {}),
       });
 
       logClaimFlow("sendClaim.wallet.submitted", {

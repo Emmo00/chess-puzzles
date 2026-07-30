@@ -161,12 +161,40 @@ export function PaymentModal({
     const amount = parseUnits(usdAmount, selectedToken.decimals);
     setUserMessage("Confirm with your wallet to authorize the store");
     try {
+      // MiniPay requires explicit gas when feeCurrency is set
+      let approveGas: bigint | undefined;
+      try {
+        const g = await publicClient.estimateContractGas({
+          account: address,
+          address: selectedToken.tokenAddress as Hex,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [GAME_ASSETS_CONTRACT, amount],
+          ...{ feeCurrency: selectedToken.feeCurrencyAddress as Hex },
+        });
+        approveGas = (g * 12n) / 10n;
+      } catch {
+        try {
+          const g = await publicClient.estimateContractGas({
+            account: address,
+            address: selectedToken.tokenAddress as Hex,
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [GAME_ASSETS_CONTRACT, amount],
+          });
+          approveGas = (g * 12n) / 10n + 60_000n;
+        } catch {
+          approveGas = 150_000n;
+        }
+      }
+
       const hash = await writeContractAsync({
         address: selectedToken.tokenAddress as Hex,
         abi: erc20Abi,
         functionName: "approve",
         args: [GAME_ASSETS_CONTRACT, amount],
         feeCurrency: selectedToken.feeCurrencyAddress as Hex,
+        gas: approveGas,
       });
       setTxHash(hash);
     } catch (err: any) {
@@ -182,34 +210,114 @@ export function PaymentModal({
     setTxHash(undefined);
     setUserMessage("Confirm with your wallet to complete the purchase");
     try {
+      const feeCurrency = selectedToken.feeCurrencyAddress as Hex;
+
       if (!storeItem) {
         // Daily pass
+        let buyGas: bigint;
+        try {
+          const g = await publicClient.estimateContractGas({
+            account: address,
+            address: GAME_ASSETS_CONTRACT,
+            abi: GAME_ASSETS_ABI,
+            functionName: "purchaseDailyPass",
+            args: [selectedToken.tokenAddress as Hex],
+            ...{ feeCurrency },
+          });
+          buyGas = (g * 12n) / 10n;
+        } catch {
+          try {
+            const g = await publicClient.estimateContractGas({
+              account: address,
+              address: GAME_ASSETS_CONTRACT,
+              abi: GAME_ASSETS_ABI,
+              functionName: "purchaseDailyPass",
+              args: [selectedToken.tokenAddress as Hex],
+            });
+            buyGas = (g * 12n) / 10n + 100_000n;
+          } catch {
+            buyGas = 300_000n;
+          }
+        }
         const hash = await writeContractAsync({
           address: GAME_ASSETS_CONTRACT,
           abi: GAME_ASSETS_ABI,
           functionName: "purchaseDailyPass",
           args: [selectedToken.tokenAddress as Hex],
-          feeCurrency: selectedToken.feeCurrencyAddress as Hex,
+          feeCurrency,
+          gas: buyGas,
         });
         setTxHash(hash);
       } else if (storeItem?.packId !== undefined) {
+        let buyGas: bigint;
+        try {
+          const g = await publicClient.estimateContractGas({
+            account: address,
+            address: GAME_ASSETS_CONTRACT,
+            abi: GAME_ASSETS_ABI,
+            functionName: "purchaseAssetPack",
+            args: [BigInt(storeItem.packId), selectedToken.tokenAddress as Hex],
+            ...{ feeCurrency },
+          });
+          buyGas = (g * 12n) / 10n;
+        } catch {
+          try {
+            const g = await publicClient.estimateContractGas({
+              account: address,
+              address: GAME_ASSETS_CONTRACT,
+              abi: GAME_ASSETS_ABI,
+              functionName: "purchaseAssetPack",
+              args: [BigInt(storeItem.packId), selectedToken.tokenAddress as Hex],
+            });
+            buyGas = (g * 12n) / 10n + 100_000n;
+          } catch {
+            buyGas = 300_000n;
+          }
+        }
         const hash = await writeContractAsync({
           address: GAME_ASSETS_CONTRACT,
           abi: GAME_ASSETS_ABI,
           functionName: "purchaseAssetPack",
           args: [BigInt(storeItem.packId), selectedToken.tokenAddress as Hex],
-          feeCurrency: selectedToken.feeCurrencyAddress as Hex,
+          feeCurrency,
+          gas: buyGas,
         });
         setTxHash(hash);
       } else {
         const assetType = storeItem?.category === "streak_freeze" ? GAME_ASSET_TYPES.STREAK_FREEZE : GAME_ASSET_TYPES.HINT;
         const quantity = storeItem?.quantity || 1;
+        let buyGas: bigint;
+        try {
+          const g = await publicClient.estimateContractGas({
+            account: address,
+            address: GAME_ASSETS_CONTRACT,
+            abi: GAME_ASSETS_ABI,
+            functionName: "purchaseAsset",
+            args: [assetType, BigInt(quantity), selectedToken.tokenAddress as Hex],
+            ...{ feeCurrency },
+          });
+          buyGas = (g * 12n) / 10n;
+        } catch {
+          try {
+            const g = await publicClient.estimateContractGas({
+              account: address,
+              address: GAME_ASSETS_CONTRACT,
+              abi: GAME_ASSETS_ABI,
+              functionName: "purchaseAsset",
+              args: [assetType, BigInt(quantity), selectedToken.tokenAddress as Hex],
+            });
+            buyGas = (g * 12n) / 10n + 100_000n;
+          } catch {
+            buyGas = 300_000n;
+          }
+        }
         const hash = await writeContractAsync({
           address: GAME_ASSETS_CONTRACT,
           abi: GAME_ASSETS_ABI,
           functionName: "purchaseAsset",
           args: [assetType, BigInt(quantity), selectedToken.tokenAddress as Hex],
-          feeCurrency: selectedToken.feeCurrencyAddress as Hex,
+          feeCurrency,
+          gas: buyGas,
         });
         setTxHash(hash);
       }
