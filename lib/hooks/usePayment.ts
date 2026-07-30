@@ -114,7 +114,7 @@ export function usePayment() {
 
       let gasPrice = BigInt(0);
       try {
-        gasPrice = await publicClient.request({
+        gasPrice = await (publicClient as any).request({
           method: "eth_gasPrice",
           params: [selected.feeCurrencyAddress],
         });
