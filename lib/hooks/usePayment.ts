@@ -117,8 +117,8 @@ export function usePayment() {
     const selected = sorted[0];
     const priceBig = parseUnits(usdAmount, selected.decimals);
 
-    // Estimate gas for the transfer
-    const cusdAddress = getCUSDAddress(chainId);
+    // Estimate gas for the transfer - use Celo Mainnet chain ID after chain switch
+    const cusdAddress = getCUSDAddress(celo.id);
     const data = encodeFunctionData({
       abi: CUSD_ABI,
       functionName: "transfer",
