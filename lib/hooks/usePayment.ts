@@ -87,8 +87,12 @@ export function usePayment() {
 
     const balances = await fetchBalances();
     const sorted = [...balances].sort((a, b) => {
-      if (b.balance > a.balance) return 1;
-      if (b.balance < a.balance) return -1;
+      const aNormed =
+        a.decimals === 18 ? a.balance : a.balance * 10n ** BigInt(18 - a.decimals);
+      const bNormed =
+        b.decimals === 18 ? b.balance : b.balance * 10n ** BigInt(18 - b.decimals);
+      if (bNormed > aNormed) return 1;
+      if (bNormed < aNormed) return -1;
       return 0;
     });
 

@@ -92,7 +92,17 @@ export function useCheckinClaim() {
 
       const sorted = balances
         .filter((b) => b.balance > 0)
-        .sort((a, b) => (b.balance > a.balance ? 1 : -1));
+        .sort((a, b) => {
+          const aNormed =
+            a.currency.decimals === 18
+              ? a.balance
+              : a.balance * 10n ** BigInt(18 - a.currency.decimals);
+          const bNormed =
+            b.currency.decimals === 18
+              ? b.balance
+              : b.balance * 10n ** BigInt(18 - b.currency.decimals);
+          return bNormed > aNormed ? 1 : -1;
+        });
 
       for (const { currency, balance } of sorted) {
         if (balance >= gasWithBuffer) {
