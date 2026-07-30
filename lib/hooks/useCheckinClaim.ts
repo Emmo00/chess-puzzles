@@ -5,9 +5,9 @@ import {
   useAccount,
   usePublicClient,
   useWaitForTransactionReceipt,
-  useWriteContract,
+  useSendTransaction,
 } from "wagmi";
-import { erc20Abi } from "viem";
+import { erc20Abi, encodeFunctionData } from "viem";
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
 import { PAYOUT_CLAIM_CONTRACT, SUPPORTED_CURRENCIES } from "@/lib/config/wagmi";
 import {
@@ -26,8 +26,7 @@ interface ClaimPayload {
 export function useCheckinClaim() {
   const { address } = useAccount();
   const publicClient = usePublicClient();
-  const { writeContractAsync } = useWriteContract();
-  const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
+  const { sendTransaction, data: txHash } = useSendTransaction();
   const [isPending, setIsPending] = useState(false);
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
@@ -62,7 +61,7 @@ export function useCheckinClaim() {
     return data.claim as ClaimPayload;
   };
 
-  const selectFeeCurrency = async (claim: ClaimPayload, gasEstimate: bigint): Promise<{ feeCurrency?: `0x${string}`; gas?: bigint } | "insufficient"> => {
+  const selectFeeCurrency = async (claim: ClaimPayload, gasEstimate: bigint): Promise<{ feeCurrency: `0x${string}` } | "insufficient"> => {
     if (!address || !publicClient) {
       return "insufficient";
     }
@@ -113,7 +112,6 @@ export function useCheckinClaim() {
           });
           return {
             feeCurrency: currency.feeCurrencyAddress as `0x${string}`,
-            gas: gasWithBuffer,
           };
         }
       }
@@ -188,8 +186,7 @@ export function useCheckinClaim() {
         feeCurrency: feeOption.feeCurrency,
       });
 
-      const txArgs: any = {
-        address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+      const data = encodeFunctionData({
         abi: PAYOUT_CLAIMS_ABI,
         functionName: "claimDailyCheckIn",
         args: [
@@ -199,20 +196,18 @@ export function useCheckinClaim() {
           BigInt(claim.deadline),
           claim.signature,
         ],
-      };
+      });
 
-      if (feeOption.feeCurrency) {
-        txArgs.feeCurrency = feeOption.feeCurrency;
-      }
-
-      const submittedTxHash = await writeContractAsync(txArgs);
+      await sendTransaction({
+        to: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+        data,
+        ...(feeOption.feeCurrency ? { feeCurrency: feeOption.feeCurrency } : {}),
+      });
 
       logClaimFlow("sendClaim.wallet.submitted", {
         requestId,
-        txHash: submittedTxHash,
+        txHash,
       });
-
-      setTxHash(submittedTxHash);
     } catch (error: any) {
       const message = error?.shortMessage || error?.message || "Claim transaction failed";
       logClaimFlow("sendClaim.error", {
