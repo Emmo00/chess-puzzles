@@ -41,8 +41,8 @@ export async function getScoringConfig(): Promise<ScoringConfig> {
     if (doc?.value && typeof doc.value === "object") {
       const merged: ScoringConfig = { ...SCORING_CONFIG_DEFAULTS };
       for (const key of Object.keys(SCORING_CONFIG_DEFAULTS)) {
-        const v = (doc.value as Record<string, unknown>)[key];
-        if (typeof v === "number") (merged as Record<string, unknown>)[key] = v;
+        const v = (doc.value as unknown as Record<string, unknown>)[key];
+        if (typeof v === "number") (merged as unknown as Record<string, unknown>)[key] = v;
       }
       cachedScoringConfig = merged;
       return merged;
@@ -59,12 +59,12 @@ export async function saveScoringConfig(config: ScoringConfig): Promise<ScoringC
   await dbConnect();
   const merged: ScoringConfig = { ...SCORING_CONFIG_DEFAULTS };
   for (const key of Object.keys(SCORING_CONFIG_DEFAULTS)) {
-    const v = (config as Record<string, unknown>)[key];
-    if (typeof v === "number") (merged as Record<string, unknown>)[key] = v;
+    const v = (config as unknown as Record<string, unknown>)[key];
+    if (typeof v === "number") (merged as unknown as Record<string, unknown>)[key] = v;
   }
   await appConfigModel.updateOne(
     { key: "scoring" },
-    { $set: { value: merged as Record<string, unknown> } },
+    { $set: { value: merged as unknown as Record<string, unknown> } },
     { upsert: true }
   );
   cachedScoringConfig = merged;
