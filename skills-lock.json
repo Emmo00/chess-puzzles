@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "celopedia-skill": {
+      "source": "celo-org/celopedia-skills",
+      "sourceType": "github",
+      "skillPath": "skills/celopedia-skill/SKILL.md",
+      "computedHash": "1877a4526604277d8801eff88504ca3ebe442fb378365b27b3fe239b348d72db"
+    },
     "chess-payout-claims": {
       "source": "emmo00/chess-puzzles-contracts",
       "sourceType": "github",

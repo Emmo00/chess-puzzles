@@ -205,8 +205,6 @@ export function useCheckinClaim() {
         txArgs.feeCurrency = feeOption.feeCurrency;
       }
 
-      txArgs.type = "legacy";
-
       const submittedTxHash = await writeContractAsync(txArgs);
 
       logClaimFlow("sendClaim.wallet.submitted", {

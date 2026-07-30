@@ -167,7 +167,6 @@ export function PaymentModal({
         functionName: "approve",
         args: [GAME_ASSETS_CONTRACT, amount],
         feeCurrency: selectedToken.feeCurrencyAddress as Hex,
-        type: "legacy",
       });
       setTxHash(hash);
     } catch (err: any) {
@@ -191,7 +190,6 @@ export function PaymentModal({
           functionName: "purchaseDailyPass",
           args: [selectedToken.tokenAddress as Hex],
           feeCurrency: selectedToken.feeCurrencyAddress as Hex,
-          type: "legacy",
         });
         setTxHash(hash);
       } else if (storeItem?.packId !== undefined) {
@@ -201,7 +199,6 @@ export function PaymentModal({
           functionName: "purchaseAssetPack",
           args: [BigInt(storeItem.packId), selectedToken.tokenAddress as Hex],
           feeCurrency: selectedToken.feeCurrencyAddress as Hex,
-          type: "legacy",
         });
         setTxHash(hash);
       } else {
@@ -213,7 +210,6 @@ export function PaymentModal({
           functionName: "purchaseAsset",
           args: [assetType, BigInt(quantity), selectedToken.tokenAddress as Hex],
           feeCurrency: selectedToken.feeCurrencyAddress as Hex,
-          type: "legacy",
         });
         setTxHash(hash);
       }
