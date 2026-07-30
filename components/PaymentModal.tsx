@@ -118,7 +118,8 @@ export function PaymentModal({
         )
       );
       let best = sorted[0];
-      let bestBalance = 0n;
+      let bestRawBal = 0n;
+      let bestNormed = 0n;
       for (let i = 0; i < sorted.length; i++) {
         if (results[i].status === "fulfilled") {
           const bal = (results[i] as PromiseFulfilledResult<bigint>).value;
@@ -126,16 +127,16 @@ export function PaymentModal({
             sorted[i].decimals === 18
               ? bal
               : bal * 10n ** BigInt(18 - sorted[i].decimals);
-          if (normed > bestBalance) { bestBalance = normed; best = sorted[i]; }
+          if (normed > bestNormed) { bestNormed = normed; bestRawBal = bal; best = sorted[i]; }
         }
       }
+      setBalance(bestRawBal);
       setSelectedToken(best);
-      setBalance(bestBalance);
 
       if (GAME_ASSETS_CONTRACT) {
         const amount = parseUnits(usdAmount, best.decimals);
-        if (bestBalance < amount) {
-          setError(`Insufficient ${best.symbol} balance. Price: ${usdAmount} ${best.symbol}, balance: ${formatBalance(bestBalance, best.decimals)}`);
+        if (bestRawBal < amount) {
+          setError(`Insufficient ${best.symbol} balance. Price: ${usdAmount} ${best.symbol}, balance: ${formatBalance(bestRawBal, best.decimals)}`);
           setUserMessage("");
           return;
         }
