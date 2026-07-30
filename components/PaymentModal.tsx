@@ -122,7 +122,11 @@ export function PaymentModal({
       for (let i = 0; i < sorted.length; i++) {
         if (results[i].status === "fulfilled") {
           const bal = (results[i] as PromiseFulfilledResult<bigint>).value;
-          if (bal > bestBalance) { bestBalance = bal; best = sorted[i]; }
+          const normed =
+            sorted[i].decimals === 18
+              ? bal
+              : bal * 10n ** BigInt(18 - sorted[i].decimals);
+          if (normed > bestBalance) { bestBalance = normed; best = sorted[i]; }
         }
       }
       setSelectedToken(best);
