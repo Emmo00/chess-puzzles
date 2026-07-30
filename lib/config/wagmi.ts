@@ -1,13 +1,22 @@
-import { http, createConfig } from "wagmi";
+import { http, fallback, createConfig } from "wagmi";
 import { celo } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
-import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
+
+const rpcUrl = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || "https://forno.celo.org";
 
 export const config = createConfig({
   chains: [celo],
-  connectors: [farcasterMiniApp(), injected()],
+  connectors: [injected()],
+  ssr: true,
   transports: {
-    [celo.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || "https://forno.celo.org"),
+    [celo.id]: fallback(
+      [
+        http(rpcUrl, { timeout: 6_000 }),
+        http("https://celo.drpc.org", { timeout: 10_000 }),
+        http("https://rpc.ankr.com/celo", { timeout: 10_000 }),
+      ],
+      { rank: true, retryCount: 2 },
+    ),
   },
 });
 
@@ -38,19 +47,7 @@ export const SUPPORTED_CURRENCIES = [
     tokenAddress: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
     feeCurrencyAddress: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
     decimals: 18,
-  },
-  {
-    symbol: "cEUR",
-    tokenAddress: "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73",
-    feeCurrencyAddress: "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73",
-    decimals: 18,
-  },
-  {
-    symbol: "cREAL",
-    tokenAddress: "0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787",
-    feeCurrencyAddress: "0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787",
-    decimals: 18,
-  },
+  }
 ] as const;
 
 export const ALLOWLISTED_STABLECOINS = SUPPORTED_CURRENCIES.filter(

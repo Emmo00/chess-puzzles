@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   useAccount,
   usePublicClient,
   useWaitForTransactionReceipt,
-  useSendTransaction,
+  useWriteContract,
 } from "wagmi";
-import { erc20Abi, encodeFunctionData } from "viem";
+import { erc20Abi } from "viem";
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
 import { PAYOUT_CLAIM_CONTRACT, SUPPORTED_CURRENCIES } from "@/lib/config/wagmi";
 import {
@@ -26,12 +26,13 @@ interface ClaimPayload {
 export function useCheckinClaim() {
   const { address } = useAccount();
   const publicClient = usePublicClient();
-  const { sendTransaction, data: txHash } = useSendTransaction();
+  const { writeContractAsync, data: txHash } = useWriteContract();
   const [isPending, setIsPending] = useState(false);
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
   });
   const [claimError, setClaimError] = useState<string | null>(null);
+  const inFlight = useRef(false);
 
   const logClaimFlow = (step: string, details?: Record<string, unknown>) => {
     console.info("[ClaimFlow][useCheckinClaim]", step, details || {});
@@ -132,6 +133,9 @@ export function useCheckinClaim() {
     if (!address) {
       throw new Error("Wallet not connected");
     }
+    if (inFlight.current) return;
+    inFlight.current = true;
+
     const requestId =
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
@@ -186,22 +190,26 @@ export function useCheckinClaim() {
         feeCurrency: feeOption.feeCurrency,
       });
 
-      const data = encodeFunctionData({
-        abi: PAYOUT_CLAIMS_ABI,
-        functionName: "claimDailyCheckIn",
-        args: [
-          claim.user,
-          BigInt(claim.day),
-          BigInt(claim.nonce),
-          BigInt(claim.deadline),
-          claim.signature,
-        ],
-      });
-
       // Estimate gas with feeCurrency — MiniPay requires explicit gas when
       // using CIP-64, otherwise eth_estimateGas returns "permission denied".
       let claimGas: bigint | undefined;
-      if (feeOption.feeCurrency) {
+      try {
+        const g = await publicClient!.estimateContractGas({
+          account: address,
+          address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+          abi: PAYOUT_CLAIMS_ABI,
+          functionName: "claimDailyCheckIn",
+          args: [
+            claim.user,
+            BigInt(claim.day),
+            BigInt(claim.nonce),
+            BigInt(claim.deadline),
+            claim.signature,
+          ],
+          ...({ feeCurrency: feeOption.feeCurrency } as any),
+        });
+        claimGas = (g * 12n) / 10n;
+      } catch {
         try {
           const g = await publicClient!.estimateContractGas({
             account: address,
@@ -215,35 +223,25 @@ export function useCheckinClaim() {
               BigInt(claim.deadline),
               claim.signature,
             ],
-            ...{ feeCurrency: feeOption.feeCurrency },
           });
-          claimGas = (g * 12n) / 10n;
+          claimGas = (g * 12n) / 10n + 60_000n;
         } catch {
-          try {
-            const g = await publicClient!.estimateContractGas({
-              account: address,
-              address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
-              abi: PAYOUT_CLAIMS_ABI,
-              functionName: "claimDailyCheckIn",
-              args: [
-                claim.user,
-                BigInt(claim.day),
-                BigInt(claim.nonce),
-                BigInt(claim.deadline),
-                claim.signature,
-              ],
-            });
-            claimGas = (g * 12n) / 10n + 60_000n;
-          } catch {
-            claimGas = 300_000n;
-          }
+          claimGas = 300_000n;
         }
       }
 
-      await sendTransaction({
-        to: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
-        data,
-        ...(feeOption.feeCurrency ? { feeCurrency: feeOption.feeCurrency, gas: claimGas } : {}),
+      await writeContractAsync({
+        address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+        abi: PAYOUT_CLAIMS_ABI,
+        functionName: "claimDailyCheckIn",
+        args: [
+          claim.user,
+          BigInt(claim.day),
+          BigInt(claim.nonce),
+          BigInt(claim.deadline),
+          claim.signature,
+        ],
+        ...({ feeCurrency: feeOption.feeCurrency, gas: claimGas } as any),
       });
 
       logClaimFlow("sendClaim.wallet.submitted", {
@@ -262,6 +260,7 @@ export function useCheckinClaim() {
       throw new Error(message);
     } finally {
       setIsPending(false);
+      inFlight.current = false;
     }
   };
 
