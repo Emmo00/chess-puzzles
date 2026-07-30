@@ -205,9 +205,7 @@ export function useCheckinClaim() {
         txArgs.feeCurrency = feeOption.feeCurrency;
       }
 
-      if (feeOption.gas) {
-        txArgs.gas = feeOption.gas;
-      }
+      txArgs.type = "legacy";
 
       const submittedTxHash = await writeContractAsync(txArgs);
 

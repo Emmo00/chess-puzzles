@@ -196,6 +196,7 @@ export function usePayment() {
         to: token.tokenAddress as `0x${string}`,
         data,
         feeCurrency: token.feeCurrencyAddress as `0x${string}`,
+        type: "legacy",
       });
     } catch (error) {
       setPaymentType(null);

@@ -166,6 +166,8 @@ export function PaymentModal({
         abi: erc20Abi,
         functionName: "approve",
         args: [GAME_ASSETS_CONTRACT, amount],
+        feeCurrency: selectedToken.feeCurrencyAddress as Hex,
+        type: "legacy",
       });
       setTxHash(hash);
     } catch (err: any) {
@@ -188,6 +190,8 @@ export function PaymentModal({
           abi: GAME_ASSETS_ABI,
           functionName: "purchaseDailyPass",
           args: [selectedToken.tokenAddress as Hex],
+          feeCurrency: selectedToken.feeCurrencyAddress as Hex,
+          type: "legacy",
         });
         setTxHash(hash);
       } else if (storeItem?.packId !== undefined) {
@@ -196,6 +200,8 @@ export function PaymentModal({
           abi: GAME_ASSETS_ABI,
           functionName: "purchaseAssetPack",
           args: [BigInt(storeItem.packId), selectedToken.tokenAddress as Hex],
+          feeCurrency: selectedToken.feeCurrencyAddress as Hex,
+          type: "legacy",
         });
         setTxHash(hash);
       } else {
@@ -206,6 +212,8 @@ export function PaymentModal({
           abi: GAME_ASSETS_ABI,
           functionName: "purchaseAsset",
           args: [assetType, BigInt(quantity), selectedToken.tokenAddress as Hex],
+          feeCurrency: selectedToken.feeCurrencyAddress as Hex,
+          type: "legacy",
         });
         setTxHash(hash);
       }
