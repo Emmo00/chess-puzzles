@@ -7,7 +7,7 @@ export const config = createConfig({
   chains: [celo],
   connectors: [farcasterMiniApp(), injected()],
   transports: {
-    [celo.id]: http(),
+    [celo.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || "https://forno.celo.org"),
   },
 });
 
