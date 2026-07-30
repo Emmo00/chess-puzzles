@@ -32,6 +32,8 @@ class UserService {
         $setOnInsert: {
           walletAddress: lower,
           displayName: generateDisplayName(lower),
+          hintBalance: 3,
+          streakFreezes: 1,
         },
       },
       { upsert: true }
@@ -108,19 +110,43 @@ class UserService {
       return updated;
     }
 
-    // Gap > 1 day — try to consume a streak freeze on-chain
+    // Gap > 1 day — try to consume a streak freeze from DB first, then on-chain
     const oldLastPuzzleDate = user.lastPuzzleDate;
     const newLongest = Math.max(user.longestStreak ?? 0, (user.currentStreak ?? 0) + 1);
 
+    // Try DB free allowance first
+    const dbFreeze = await this.users.findOneAndUpdate(
+      { ...query, streakFreezes: { $gt: 0 } },
+      { $inc: { streakFreezes: -1 } },
+      { new: true }
+    );
+
+    if (dbFreeze) {
+      const freezeResult = await this.users.findOneAndUpdate(
+        { ...query, lastPuzzleDate: oldLastPuzzleDate },
+        {
+          $inc: { currentStreak: 1 },
+          $set: {
+            longestStreak: newLongest,
+            lastLogin: playedAt,
+            lastPuzzleDate: playedAt.toISOString(),
+            "streakEvent.eventType": "freeze_used",
+            "streakEvent.day": currentUtcDay,
+            "streakEvent.notified": false,
+          },
+        },
+        { new: true }
+      );
+      if (freezeResult) return freezeResult;
+      return this.users.findOne(query);
+    }
+
+    // Fall through to contract for purchased streak freezes
     try {
       const hintsService = new HintsService();
       await hintsService.consumeStreakFreeze(identifier);
-      // Freeze consumed — keep streak alive
       const freezeResult = await this.users.findOneAndUpdate(
-        {
-          ...query,
-          lastPuzzleDate: oldLastPuzzleDate,
-        },
+        { ...query, lastPuzzleDate: oldLastPuzzleDate },
         {
           $inc: { currentStreak: 1 },
           $set: {
@@ -137,12 +163,8 @@ class UserService {
       if (freezeResult) return freezeResult;
       return this.users.findOne(query);
     } catch {
-      // No streak freeze available on-chain — streak resets
       const resetResult = await this.users.findOneAndUpdate(
-        {
-          ...query,
-          lastPuzzleDate: oldLastPuzzleDate,
-        },
+        { ...query, lastPuzzleDate: oldLastPuzzleDate },
         {
           $set: {
             currentStreak: 1,

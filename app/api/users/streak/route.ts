@@ -88,12 +88,20 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    const streakFreezes = await getContractStreakFreezes(user.walletAddress);
+    const [contractFreezes, dbUser] = await Promise.all([
+      getContractStreakFreezes(user.walletAddress),
+      userModel.findOne(
+        { walletAddress: user.walletAddress.toLowerCase() },
+        { streakFreezes: 1 }
+      ).lean(),
+    ]);
+    const dbFreezes = (dbUser?.streakFreezes ?? 0);
+    const totalStreakFreezes = contractFreezes + dbFreezes;
 
     const { effectiveStreak, streakStatus } = computeEffectiveStreak(
       userData.currentStreak || 0,
       userData.lastPuzzleDate,
-      streakFreezes
+      totalStreakFreezes
     );
 
     return NextResponse.json({
@@ -102,7 +110,7 @@ export async function GET(request: NextRequest) {
       totalPuzzlesSolved: userData.totalPuzzlesSolved || 0,
       points: userData.totalPoints || 0,
       streakStatus,
-      streakFreezes,
+      streakFreezes: totalStreakFreezes,
       lastLogin: userData.lastLogin,
       lastPuzzleDate: userData.lastPuzzleDate,
     });

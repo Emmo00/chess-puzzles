@@ -14,8 +14,8 @@ const userSchema = new mongoose.Schema({
   longestStreak: { type: Number, default: 1 },
   totalPuzzlesSolved: { type: Number, default: 0 },
   lastPuzzleDate: { type: String, default: null },
-  hintBalance: { type: Number, default: 5 },
-  streakFreezes: { type: Number, default: 1 },
+  hintBalance: { type: Number, default: 0 },
+  streakFreezes: { type: Number, default: 0 },
   streakFreezeUsedDays: { type: [Number], default: [] },
   streakEvent: {
     eventType: { type: String, enum: ["freeze_used", "streak_lost"], default: null },
