@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Ban, Castle, Check, Circle, Gift, Lightbulb, Loader2, X, Zap } from "lucide-react";
+import { Ban, Castle, Check, Circle, Gift, Lightbulb, Loader2, X, Zap, Snowflake } from "lucide-react";
 import ChessBoard, { ChessBoardRef } from "../../components/chess-board";
 import { useUserStats } from "../../lib/hooks/useUserStats";
 import { useHintBalance } from "../../lib/hooks/useHintBalance";
@@ -15,10 +15,13 @@ import { TelegramSupportLink } from "@/components/TelegramSupportLink";
 import { BottomNav } from "@/components/BottomNav";
 import { PointsCountUp } from "@/components/PointsCountUp";
 import { toast } from "sonner";
+import { GAME_ASSETS_CONTRACT, GAME_ASSET_TYPES } from "@/lib/config/wagmi";
+import { GAME_ASSETS_ABI } from "@/lib/abi/gameAssets";
 
 type HintStage = 'none' | 'piece' | 'move';
 
 export default function SolvePuzzlesPage() {
+  const publicClient = usePublicClient();
   const [mounted, setMounted] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<{
     hasAccess: boolean;
@@ -256,9 +259,52 @@ export default function SolvePuzzlesPage() {
       setHintShopLoading(true);
       setShowHintShop(true);
       try {
-        const res = await fetch("/api/admin/store-items");
-        const data = res.ok ? await res.json() : [];
-        setHintShopItems((data || []).filter((it: any) => it.active && it.category === "hints"));
+        if (!GAME_ASSETS_CONTRACT || !publicClient) {
+          setHintShopItems([]);
+          return;
+        }
+        const [hintUnit, count] = await Promise.all([
+          publicClient.readContract({
+            address: GAME_ASSETS_CONTRACT,
+            abi: GAME_ASSETS_ABI,
+            functionName: "unitPrices",
+            args: [GAME_ASSET_TYPES.HINT],
+          }),
+          publicClient.readContract({
+            address: GAME_ASSETS_CONTRACT,
+            abi: GAME_ASSETS_ABI,
+            functionName: "getAssetPackCount",
+          }),
+        ]);
+        const items: any[] = [];
+        if (Number(hintUnit) > 0) {
+          items.push({
+            id: "hint-unit",
+            name: "1 Hint",
+            category: "hints",
+            priceUsd: (Number(hintUnit) / 1_000_000).toFixed(2),
+            quantity: 1,
+          });
+        }
+        for (let i = 0; i < Number(count); i++) {
+          const pack = await publicClient.readContract({
+            address: GAME_ASSETS_CONTRACT,
+            abi: GAME_ASSETS_ABI,
+            functionName: "getAssetPack",
+            args: [BigInt(i)],
+          }) as any;
+          if (pack.active && String(pack.assetType).toLowerCase() === String(GAME_ASSET_TYPES.HINT).toLowerCase()) {
+            items.push({
+              id: `pack-${i}`,
+              name: pack.name,
+              category: "hints",
+              priceUsd: (Number(pack.price) / 1_000_000).toFixed(2),
+              quantity: Number(pack.quantity),
+              packId: i,
+            });
+          }
+        }
+        setHintShopItems(items);
       } catch {
         setHintShopItems([]);
       } finally {
@@ -719,14 +765,14 @@ export default function SolvePuzzlesPage() {
               ) : (
                 hintShopItems.map((item: any) => (
                   <div
-                    key={item._id}
+                    key={item.id}
                     className="bg-cyan-200 border-2 border-black p-3 flex items-center gap-3"
                   >
                     <Gift className="w-5 h-5 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="font-black text-sm uppercase truncate">{item.name}</div>
                       <div className="text-[10px] font-bold text-black/70 truncate">
-                        {item.description || `×${item.quantity}`}
+                        ×{item.quantity}
                       </div>
                     </div>
                     <button

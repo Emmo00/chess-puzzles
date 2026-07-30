@@ -79,7 +79,7 @@ export async function saveAccessConfig(config: AccessConfig): Promise<AccessConf
   };
   await appConfigModel.updateOne(
     { key: "access" },
-    { $set: { value: merged as Record<string, unknown> } },
+    { $set: { value: merged as unknown as Record<string, unknown> } },
     { upsert: true }
   );
   cachedAccessConfig = merged;

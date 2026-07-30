@@ -8,7 +8,6 @@ export const POST = withAdminAuth(async () => {
   await dbConnect();
 
   const utcDay = getUtcDayNumber(new Date());
-  const ns = new NotificationService();
-  const sent = await ns.sendDailyChallengeNotifications(utcDay);
+  const sent = await NotificationService.sendDailyChallengeNotifications(utcDay);
   return NextResponse.json({ success: true, sent });
 });

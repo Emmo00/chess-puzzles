@@ -134,15 +134,17 @@ export default function DailyChallengePage() {
     }
 
     // Only auto-set puzzle if user hasn't already manually loaded one
+    const challenge = status.challenge;
+    if (!challenge) return;
     setCurrentPuzzle((prev) => {
       if (prev) return prev;
       return {
-        puzzleid: status.challenge.puzzleId,
-        fen: status.challenge.fen,
-        rating: status.challenge.rating,
-        ratingdeviation: status.challenge.ratingDeviation,
-        moves: status.challenge.moves,
-        themes: status.challenge.themes,
+        puzzleid: challenge.puzzleId,
+        fen: challenge.fen,
+        rating: challenge.rating,
+        ratingdeviation: challenge.ratingDeviation,
+        moves: challenge.moves,
+        themes: challenge.themes,
       };
     });
   }, [status]);

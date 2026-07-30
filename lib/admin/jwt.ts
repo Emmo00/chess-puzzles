@@ -16,14 +16,14 @@ function toBase64Url(buf: ArrayBuffer): string {
     .replace(/=+$/, "");
 }
 
-function fromBase64Url(str: string): Uint8Array {
+function fromBase64Url(str: string): Uint8Array<ArrayBuffer> {
   const padded = str.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - str.length % 4) % 4);
-  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0)) as Uint8Array<ArrayBuffer>;
 }
 
 async function createKey(secret: string): Promise<CryptoKey> {
   const enc = new TextEncoder().encode(secret);
-  return crypto.subtle.importKey("raw", enc, { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+  return crypto.subtle.importKey("raw", enc as unknown as ArrayBuffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
 }
 
 export async function signSession(session: AdminSession, expiresInSec = 86400): Promise<string> {
@@ -35,12 +35,12 @@ export async function signSession(session: AdminSession, expiresInSec = 86400): 
     exp: now + expiresInSec,
   };
 
-  const headerB64 = toBase64Url(new TextEncoder().encode(JSON.stringify(header)));
-  const payloadB64 = toBase64Url(new TextEncoder().encode(JSON.stringify(payload)));
+  const headerB64 = toBase64Url(new TextEncoder().encode(JSON.stringify(header)) as unknown as ArrayBuffer);
+  const payloadB64 = toBase64Url(new TextEncoder().encode(JSON.stringify(payload)) as unknown as ArrayBuffer);
   const message = `${headerB64}.${payloadB64}`;
 
   const key = await createKey(getSecret());
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message) as unknown as ArrayBuffer);
   const sigB64 = toBase64Url(sig);
 
   return `${message}.${sigB64}`;
@@ -55,7 +55,7 @@ export async function verifySession(token: string): Promise<AdminSession | null>
     const message = `${headerB64}.${payloadB64}`;
 
     const key = await createKey(getSecret());
-    const sigValid = await crypto.subtle.verify("HMAC", key, fromBase64Url(sigB64), new TextEncoder().encode(message));
+    const sigValid = await crypto.subtle.verify("HMAC", key, fromBase64Url(sigB64) as unknown as ArrayBuffer, new TextEncoder().encode(message) as unknown as ArrayBuffer);
     if (!sigValid) return null;
 
     const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(payloadB64)));

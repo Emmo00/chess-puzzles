@@ -114,6 +114,56 @@ export class NotificationService {
     };
   }
 
+  static async sendDailyChallengeNotifications(utcDay: number) {
+    return NotificationService.sendToAll({
+      title: "Daily Puzzle Available",
+      body: "A new daily chess puzzle is waiting for you!",
+      targetUrl: "https://chesspuzzles.app/daily-challenge",
+      type: "daily",
+      date: String(utcDay),
+    });
+  }
+
+  static async sendReminderNotifications(inactiveDays?: number) {
+    if (inactiveDays) {
+      return NotificationService.sendToInactive({
+        title: "Don't Lose Your Streak!",
+        body: "Come back and solve a puzzle to keep your streak alive.",
+        targetUrl: "https://chesspuzzles.app/solve-puzzles",
+        type: "reminder",
+      }, inactiveDays);
+    }
+    return NotificationService.sendToInactive({
+      title: "Don't Lose Your Streak!",
+      body: "Come back and solve a puzzle to keep your streak alive.",
+      targetUrl: "https://chesspuzzles.app/solve-puzzles",
+      type: "reminder",
+    });
+  }
+
+  static async sendCustomNotification(params: { title: string; description: string; destinationUrl?: string }) {
+    const { title, description, destinationUrl } = params;
+    const tokens = await FarcasterNotificationToken.find({ enabled: true });
+    if (tokens.length === 0) {
+      return { success: true, message: "No enabled tokens found", recipientCount: 0 };
+    }
+    const url = tokens[0].notificationUrl;
+    if (!url) return { success: false, message: "No notification URL configured" };
+    try {
+      await axios.post(url, {
+        notificationId: `custom-${Date.now()}`,
+        title,
+        body: description,
+        targetUrl: destinationUrl || "",
+        tokens: tokens.map(t => t.token),
+      });
+      return { success: true, sent: tokens.length };
+    } catch (error: any) {
+      console.error("Failed to send custom notification:", error.message);
+      return { success: false, message: error.message };
+    }
+  }
+
   static async sendToInactive(params: SendNotificationParams, inactiveDays: number = 3) {
     const { title, body, targetUrl, type } = params;
 

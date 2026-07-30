@@ -13,7 +13,6 @@ export const POST = withAdminAuth(async (request: NextRequest) => {
     return NextResponse.json({ error: "title and description are required" }, { status: 400 });
   }
 
-  const ns = new NotificationService();
-  const sent = await ns.sendCustomNotification({ title, description, destinationUrl });
+  const sent = await NotificationService.sendCustomNotification({ title, description, destinationUrl });
   return NextResponse.json({ success: true, sent });
 });

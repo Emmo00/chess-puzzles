@@ -7,7 +7,6 @@ export const POST = withAdminAuth(async (request: NextRequest) => {
   await dbConnect();
 
   const inactiveDays = parseInt(request.nextUrl.searchParams.get("days") || "3");
-  const ns = new NotificationService();
-  const sent = await ns.sendReminderNotifications(inactiveDays);
+  const sent = await NotificationService.sendReminderNotifications(inactiveDays);
   return NextResponse.json({ success: true, sent });
 });

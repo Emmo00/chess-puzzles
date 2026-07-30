@@ -1,206 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-/* ---- Store Item Manager ---- */
-
-interface StoreItemData {
-  _id?: string;
-  name: string;
-  description: string;
-  category: string;
-  subtype?: string;
-  priceUsd: string;
-  quantity: number;
-  active: boolean;
-  sortOrder: number;
-}
-
-const EMPTY_ITEM: StoreItemData = {
-  name: "",
-  description: "",
-  category: "hints",
-  priceUsd: "0.01",
-  quantity: 1,
-  active: true,
-  sortOrder: 0,
-};
-
-export function StoreItemsAdmin() {
-  const [items, setItems] = useState<StoreItemData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState<StoreItemData>({ ...EMPTY_ITEM });
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await window.fetch("/api/admin/store-items");
-      if (res.ok) setItems(await res.json());
-    } catch { /* ignore */ }
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const save = async () => {
-    if (!form.name || !form.category || !form.priceUsd) return;
-    setMessage(null);
-    try {
-      const method = editingId ? "PATCH" : "POST";
-      const url = editingId ? `/api/admin/store-items?id=${editingId}` : "/api/admin/store-items";
-      const res = await window.fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (res.ok) {
-        setMessage(editingId ? "Updated" : "Created");
-        setForm({ ...EMPTY_ITEM });
-        setEditingId(null);
-        load();
-      } else {
-        const err = await res.json();
-        setMessage(err.message || "Save failed");
-      }
-    } catch (e: any) {
-      setMessage(e.message);
-    }
-  };
-
-  const del = async (id: string) => {
-    if (!confirm("Delete this item?")) return;
-    await window.fetch(`/api/admin/store-items?id=${id}`, { method: "DELETE" });
-    setMessage("Deleted");
-    load();
-  };
-
-  const edit = (item: StoreItemData) => {
-    setForm({ ...item });
-    setEditingId(item._id || null);
-  };
-
-  const canCancel = editingId || form.name;
-
-  return (
-    <section className="bg-white border-4 border-black p-4 shadow-[6px_6px_0px_rgba(0,0,0,1)]">
-      <h2 className="text-xl font-black uppercase text-black">Store Items</h2>
-      <p className="text-xs font-bold uppercase text-black/80 mt-1">Create, edit, or deactivate store catalog items.</p>
-
-      <div className="mt-4 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <label className="block text-xs font-black uppercase text-black">
-            Name
-            <input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold"
-            />
-          </label>
-          <label className="block text-xs font-black uppercase text-black">
-            Description
-            <input
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold"
-            />
-          </label>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <label className="block text-xs font-black uppercase text-black">
-            Category
-            <select
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold bg-white"
-            >
-              <option value="hints">Hints</option>
-              <option value="streak_freeze">Streak Freeze</option>
-              <option value="mystery_box">Mystery Box</option>
-              <option value="cosmetic">Cosmetic</option>
-            </select>
-          </label>
-          <label className="block text-xs font-black uppercase text-black">
-            Price (USDT)
-            <input
-              value={form.priceUsd}
-              onChange={(e) => setForm({ ...form, priceUsd: e.target.value })}
-              className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold"
-            />
-          </label>
-          <label className="block text-xs font-black uppercase text-black">
-            Qty
-            <input
-              type="number"
-              value={form.quantity}
-              onChange={(e) => setForm({ ...form, quantity: Math.max(1, parseInt(e.target.value) || 1) })}
-              className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold"
-            />
-          </label>
-          <label className="block text-xs font-black uppercase text-black">
-            Sort
-            <input
-              type="number"
-              value={form.sortOrder}
-              onChange={(e) => setForm({ ...form, sortOrder: parseInt(e.target.value) || 0 })}
-              className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold"
-            />
-          </label>
-        </div>
-        <label className="inline-flex items-center gap-2 text-xs font-bold uppercase text-black">
-          <input
-            type="checkbox"
-            checked={form.active}
-            onChange={(e) => setForm({ ...form, active: e.target.checked })}
-          />
-          Active
-        </label>
-
-        <div className="flex gap-2">
-          <button
-            onClick={save}
-            className="bg-black text-cyan-300 py-2 px-4 font-black text-xs uppercase border-2 border-cyan-300"
-          >
-            {editingId ? "Update Item" : "Create Item"}
-          </button>
-          {canCancel && (
-            <button
-              onClick={() => { setForm({ ...EMPTY_ITEM }); setEditingId(null); }}
-              className="bg-gray-300 text-black py-2 px-4 font-black text-xs uppercase border-2 border-black"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-
-        {message && (
-          <div className="bg-yellow-200 border-2 border-black p-2 text-xs font-black uppercase">{message}</div>
-        )}
-
-        {loading ? (
-          <div className="text-xs font-bold">Loading...</div>
-        ) : (
-          <div className="divide-y-2 divide-black max-h-64 overflow-y-auto">
-            {items.map((item) => (
-              <div key={item._id} className="py-2 px-2 flex items-center gap-2 text-xs font-bold justify-between">
-                <div className="flex-1 min-w-0">
-                  <span className="font-black">{item.name}</span>
-                  <span className="text-black/60 ml-2">{item.category} · ${item.priceUsd}</span>
-                  {!item.active && <span className="ml-2 bg-red-300 px-1 border border-black text-[10px]">OFF</span>}
-                </div>
-                <div className="flex gap-1 shrink-0">
-                  <button onClick={() => edit(item)} className="bg-cyan-300 px-2 py-0.5 border border-black text-[10px] font-black">EDIT</button>
-                  <button onClick={() => del(item._id!)} className="bg-red-300 px-2 py-0.5 border border-black text-[10px] font-black">DEL</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
+import { useAccount, usePublicClient } from "wagmi";
+import { GAME_ASSETS_CONTRACT, GAME_ASSET_TYPES } from "@/lib/config/wagmi";
+import { GAME_ASSETS_ABI } from "@/lib/abi/gameAssets";
+import { useGameAssetsAdmin } from "@/lib/hooks/useGameAssets";
 
 /* ---- Scoring Config Admin ---- */
 
@@ -288,29 +92,31 @@ export function ScoringConfigAdmin() {
 /* ---- Perk Distribution ---- */
 
 export function PerkDistributionAdmin() {
+  const { address } = useAccount();
   const [wallet, setWallet] = useState("");
   const [perk, setPerk] = useState<"hints" | "streakFreezes">("hints");
   const [amount, setAmount] = useState(1);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const { grantAsset } = useGameAssetsAdmin();
 
   const grant = async () => {
     if (!/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
       setMessage("Valid wallet address required");
       return;
     }
+    if (!GAME_ASSETS_CONTRACT) {
+      setMessage("GameAssets contract not deployed yet");
+      return;
+    }
     setPending(true);
     setMessage(null);
     try {
-      const res = await window.fetch("/api/admin/grant-perk", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: wallet, perk, amount: Math.max(1, Math.floor(amount)) }),
-      });
-      const data = await res.json();
-      setMessage(res.ok ? data.message : data.message || "Grant failed");
+      const assetType = perk === "hints" ? GAME_ASSET_TYPES.HINT : GAME_ASSET_TYPES.STREAK_FREEZE;
+      const hash = await grantAsset(wallet as `0x${string}`, assetType, Math.max(1, Math.floor(amount)));
+      setMessage(`Granted ${amount} ${perk === "hints" ? "hint(s)" : "streak freeze(s)"} — TX: ${hash.slice(0, 10)}...`);
     } catch (e: any) {
-      setMessage(e.message);
+      setMessage(e?.shortMessage || e?.message || "Transaction failed");
     }
     setPending(false);
   };
@@ -318,7 +124,7 @@ export function PerkDistributionAdmin() {
   return (
     <section className="bg-white border-4 border-black p-4 shadow-[6px_6px_0px_rgba(0,0,0,1)]">
       <h2 className="text-xl font-black uppercase text-black">Grant Perks</h2>
-      <p className="text-xs font-bold uppercase text-black/80 mt-1">Manually give hints or streak freezes to a player.</p>
+      <p className="text-xs font-bold uppercase text-black/80 mt-1">Manually give hints or streak freezes via smart contract.</p>
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
         <label className="block text-xs font-black uppercase text-black">
           Wallet
@@ -361,10 +167,244 @@ export function PerkDistributionAdmin() {
         </div>
       </div>
       {message && (
-        <div className={`mt-2 border-2 border-black p-2 text-xs font-black uppercase ${message.startsWith("Granted") ? "bg-green-300" : "bg-yellow-200"}`}>
+        <div className={`mt-2 border-2 border-black p-2 text-xs font-black uppercase ${message?.startsWith("Granted") ? "bg-green-300" : "bg-yellow-200"}`}>
           {message}
         </div>
       )}
+    </section>
+  );
+}
+
+/* ---- Game Assets Admin ---- */
+
+export function GameAssetsAdmin() {
+  const publicClient = usePublicClient();
+  const [packs, setPacks] = useState<any[]>([]);
+  const [message, setMessage] = useState<string | null>(null);
+  const { createAssetPack, updateAssetPack, setUnitPrice, setDailyPassPrice, setDailyPassDuration, grantDailyPass } = useGameAssetsAdmin();
+  const [grantWallet, setGrantWallet] = useState("");
+
+  const [packName, setPackName] = useState("");
+  const [packType, setPackType] = useState<"hints" | "streak_freeze">("hints");
+  const [packQty, setPackQty] = useState(1);
+  const [packPrice, setPackPrice] = useState("");
+
+  const [unitHintPrice, setUnitHintPrice] = useState("");
+  const [unitFreezePrice, setUnitFreezePrice] = useState("");
+
+  const [dailyPassPriceStr, setDailyPassPriceStr] = useState("");
+  const [dailyPassDurationStr, setDailyPassDurationStr] = useState("");
+
+  useEffect(() => {
+    loadPacks();
+  }, [publicClient]);
+
+  const loadPacks = async () => {
+    if (!GAME_ASSETS_CONTRACT || !publicClient) return;
+    try {
+      const count = await publicClient.readContract({
+        address: GAME_ASSETS_CONTRACT,
+        abi: GAME_ASSETS_ABI,
+        functionName: "getAssetPackCount",
+      });
+      const loaded = [];
+      for (let i = 0; i < Number(count); i++) {
+        const pack = await publicClient.readContract({
+          address: GAME_ASSETS_CONTRACT,
+          abi: GAME_ASSETS_ABI,
+          functionName: "getAssetPack",
+          args: [BigInt(i)],
+        });
+        loaded.push({ id: i, ...pack });
+      }
+      setPacks(loaded);
+    } catch { /* ignore */ }
+  };
+
+  const handleCreatePack = async () => {
+    if (!GAME_ASSETS_CONTRACT || !packName || !packPrice) {
+      setMessage("Fill in all fields");
+      return;
+    }
+    setMessage(null);
+    try {
+      const assetType = packType === "hints" ? GAME_ASSET_TYPES.HINT : GAME_ASSET_TYPES.STREAK_FREEZE;
+      const price = Math.round(parseFloat(packPrice) * 1_000_000); // convert USD to 6-dec
+      await createAssetPack(packName, assetType, packQty, price);
+      setMessage("Pack created");
+      setPackName(""); setPackPrice(""); setPackQty(1);
+      loadPacks();
+    } catch (e: any) {
+      setMessage(e?.shortMessage || e?.message || "Failed");
+    }
+  };
+
+  const handleTogglePack = async (id: number, active: boolean, price: number) => {
+    try {
+      await updateAssetPack(id, price, !active);
+      loadPacks();
+    } catch (e: any) {
+      setMessage(e?.shortMessage || e?.message);
+    }
+  };
+
+  const handleSetUnitPrice = async () => {
+    if (!GAME_ASSETS_CONTRACT) return;
+    try {
+      if (unitHintPrice) {
+        await setUnitPrice(GAME_ASSET_TYPES.HINT, Math.round(parseFloat(unitHintPrice) * 1_000_000));
+      }
+      if (unitFreezePrice) {
+        await setUnitPrice(GAME_ASSET_TYPES.STREAK_FREEZE, Math.round(parseFloat(unitFreezePrice) * 1_000_000));
+      }
+      setMessage("Unit prices updated");
+    } catch (e: any) {
+      setMessage(e?.shortMessage || e?.message);
+    }
+  };
+
+  if (!GAME_ASSETS_CONTRACT) {
+    return (
+      <section className="bg-white border-4 border-black p-4 shadow-[6px_6px_0px_rgba(0,0,0,1)] opacity-50">
+        <h2 className="text-xl font-black uppercase text-black">Game Assets (Contract)</h2>
+        <p className="text-xs font-bold uppercase text-black/80 mt-1">Deploy the GameAssets contract and set GAME_ASSETS_CONTRACT in config/wagmi.ts to enable.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="bg-white border-4 border-black p-4 shadow-[6px_6px_0px_rgba(0,0,0,1)]">
+      <h2 className="text-xl font-black uppercase text-black">Game Assets Contract</h2>
+      <p className="text-xs font-bold uppercase text-black/80 mt-1 break-all">Contract: {GAME_ASSETS_CONTRACT}</p>
+
+      <div className="mt-4 space-y-6">
+        {/* Unit Prices */}
+        <div>
+          <h3 className="font-black text-sm uppercase text-black">Unit Prices (USD)</h3>
+          <div className="mt-2 grid grid-cols-2 gap-3">
+            <label className="block text-xs font-black uppercase text-black">
+              Hint (single)
+              <input value={unitHintPrice} onChange={(e) => setUnitHintPrice(e.target.value)} placeholder="0.01" className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold" />
+            </label>
+            <label className="block text-xs font-black uppercase text-black">
+              Streak Freeze (single)
+              <input value={unitFreezePrice} onChange={(e) => setUnitFreezePrice(e.target.value)} placeholder="0.05" className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold" />
+            </label>
+          </div>
+          <button onClick={handleSetUnitPrice} className="mt-2 bg-black text-cyan-300 py-2 px-4 font-black text-xs uppercase border-2 border-cyan-300">
+            Set Prices
+          </button>
+        </div>
+
+        {/* Create Pack */}
+        <div>
+          <h3 className="font-black text-sm uppercase text-black">Create Pack</h3>
+          <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <label className="block text-xs font-black uppercase text-black">
+              Name
+              <input value={packName} onChange={(e) => setPackName(e.target.value)} placeholder="5 Hints" className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold" />
+            </label>
+            <label className="block text-xs font-black uppercase text-black">
+              Type
+              <select value={packType} onChange={(e) => setPackType(e.target.value as any)} className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold bg-white">
+                <option value="hints">Hints</option>
+                <option value="streak_freeze">Streak Freeze</option>
+              </select>
+            </label>
+            <label className="block text-xs font-black uppercase text-black">
+              Qty
+              <input type="number" value={packQty} onChange={(e) => setPackQty(parseInt(e.target.value) || 1)} className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold" min={1} />
+            </label>
+            <label className="block text-xs font-black uppercase text-black">
+              Price (USD)
+              <input value={packPrice} onChange={(e) => setPackPrice(e.target.value)} placeholder="0.04" className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold" />
+            </label>
+          </div>
+          <button onClick={handleCreatePack} className="mt-2 bg-black text-cyan-300 py-2 px-4 font-black text-xs uppercase border-2 border-cyan-300">
+            Create Pack
+          </button>
+        </div>
+
+        {/* Existing Packs */}
+        {packs.length > 0 && (
+          <div>
+            <h3 className="font-black text-sm uppercase text-black">Existing Packs</h3>
+            <div className="mt-2 divide-y-2 divide-black max-h-48 overflow-y-auto">
+              {packs.map((pack: any) => (
+                <div key={pack.id} className="py-2 px-1 flex items-center gap-2 text-xs font-bold justify-between">
+                  <span className="font-black">{pack.name}</span>
+                  <span>{(Number(pack.price) / 1_000_000).toFixed(2)} USD · {String(pack.quantity)}x</span>
+                  <button
+                    onClick={() => handleTogglePack(pack.id, pack.active, Number(pack.price))}
+                    className={`px-2 py-0.5 border border-black text-[10px] font-black ${pack.active ? "bg-green-300" : "bg-red-300"}`}
+                  >
+                    {pack.active ? "Active" : "Off"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Daily Pass */}
+        <div>
+          <h3 className="font-black text-sm uppercase text-black">Daily Pass</h3>
+          <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <label className="block text-xs font-black uppercase text-black">
+              Price (6-dec USD)
+              <input value={dailyPassPriceStr} onChange={(e) => setDailyPassPriceStr(e.target.value)} placeholder="0.01" className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold" />
+            </label>
+            <label className="block text-xs font-black uppercase text-black">
+              Duration (hours)
+              <input value={dailyPassDurationStr} onChange={(e) => setDailyPassDurationStr(e.target.value)} placeholder="24" className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold" />
+            </label>
+            <div className="flex items-end gap-2">
+              <button
+                onClick={async () => {
+                  if (!dailyPassPriceStr) return;
+                  try {
+                    await setDailyPassPrice(Math.round(parseFloat(dailyPassPriceStr) * 1_000_000));
+                    if (dailyPassDurationStr) {
+                      await setDailyPassDuration(parseInt(dailyPassDurationStr) * 3600);
+                    }
+                    setMessage("Daily pass config updated");
+                  } catch (e: any) {
+                    setMessage(e?.shortMessage || e?.message || "Failed");
+                  }
+                }}
+                className="bg-black text-cyan-300 py-2 px-4 font-black text-xs uppercase border-2 border-cyan-300"
+              >
+                Set
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <label className="block text-xs font-black uppercase text-black flex-1">
+              Grant Daily Pass to wallet
+              <input value={grantWallet} onChange={(e) => setGrantWallet(e.target.value)} placeholder="0x..." className="mt-1 w-full border-2 border-black px-3 py-2 text-xs font-bold" />
+            </label>
+            <button
+              onClick={async () => {
+                if (!/^0x[a-fA-F0-9]{40}$/.test(grantWallet)) { setMessage("Valid address required"); return; }
+                try {
+                  await grantDailyPass(grantWallet as `0x${string}`);
+                  setMessage(`Daily pass granted to ${grantWallet.slice(0, 10)}...`);
+                  setGrantWallet("");
+                } catch (e: any) {
+                  setMessage(e?.shortMessage || e?.message || "Failed");
+                }
+              }}
+              className="bg-black text-cyan-300 py-3 px-4 font-black text-xs uppercase border-2 border-cyan-300 self-end"
+            >
+              Grant
+            </button>
+          </div>
+        </div>
+
+        {message && (
+          <div className="bg-yellow-200 border-2 border-black p-2 text-xs font-black uppercase">{message}</div>
+        )}
+      </div>
     </section>
   );
 }
@@ -414,8 +454,6 @@ export function AccessConfigAdmin() {
     { key: "dailyFreePuzzles", label: "Free Puzzles / Day" },
     { key: "unlockAmountUsd", label: "Unlock Amount (USD)" },
     { key: "unlockDurationHours", label: "Unlock Duration (hours)" },
-    { key: "defaultHints", label: "Default Hints (new users)" },
-    { key: "defaultStreakFreezes", label: "Default Streak Freezes (new users)" },
   ];
 
   if (!Object.keys(config).length) return null;

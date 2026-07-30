@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
+import { useState, useEffect, useCallback } from "react";
+import { useAccount, usePublicClient, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { erc20Abi, type Hex, parseUnits } from "viem";
 import {
   BadgeCheck,
   Castle,
@@ -14,14 +15,15 @@ import {
   Search,
   Smartphone,
   Store,
-  Target,
   X,
   Zap,
   Wallet,
   Fuel,
+  Lock,
+  Pointer,
 } from "lucide-react";
-import { usePayment, PaymentQuote } from "../lib/hooks/usePayment";
-import { PaymentType } from "../lib/types/payment";
+import { ALLOWLISTED_STABLECOINS, GAME_ASSETS_CONTRACT, GAME_ASSET_TYPES } from "@/lib/config/wagmi";
+import { GAME_ASSETS_ABI } from "@/lib/abi/gameAssets";
 import { TelegramSupportLink } from "./TelegramSupportLink";
 
 interface StoreItem {
@@ -31,6 +33,7 @@ interface StoreItem {
   description?: string;
   priceUsd: string;
   quantity: number;
+  packId?: number;
 }
 
 interface PaymentModalProps {
@@ -41,6 +44,12 @@ interface PaymentModalProps {
   defaultPriceUsd?: string;
 }
 
+type Step = "quote" | "approving" | "purchasing" | "done" | "error";
+
+const ERC20_BALANCE_ABI = [
+  { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
+] as const;
+
 export function PaymentModal({
   isOpen,
   onClose,
@@ -48,171 +57,208 @@ export function PaymentModal({
   storeItem,
   defaultPriceUsd,
 }: PaymentModalProps) {
-  const { address } = useAccount();
-  const {
-    makePayment,
-    verifyPayment,
-    quotePayment,
-    isPaymentPending,
-    isConfirming,
-    isSuccess,
-    transactionHash,
-    amountUsd,
-  } = usePayment();
+  const { address, chainId } = useAccount();
+  const publicClient = usePublicClient();
+  const { writeContractAsync } = useWriteContract();
+  const [step, setStep] = useState<Step>("quote");
   const [error, setError] = useState<string | null>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [quote, setQuote] = useState<PaymentQuote | null>(null);
-  const [isLoadingQuote, setIsLoadingQuote] = useState(false);
+  const [txHash, setTxHash] = useState<Hex | undefined>();
+  const [selectedToken, setSelectedToken] = useState<(typeof ALLOWLISTED_STABLECOINS)[number] | null>(null);
+  const [balance, setBalance] = useState<bigint>(0n);
+  const [needsApproval, setNeedsApproval] = useState(false);
+  const [userMessage, setUserMessage] = useState("");
+
+  const { isLoading: isConfirming, isSuccess: txConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
   useEffect(() => {
-    if (isOpen && address) {
-      loadQuote();
+    if (isOpen) {
+      setStep("quote");
+      setError(null);
+      setTxHash(undefined);
+      setNeedsApproval(false);
+      setUserMessage("");
+      if (address) loadQuote();
     }
   }, [isOpen, address]);
 
   useEffect(() => {
-    if (isSuccess && transactionHash && !isVerifying) {
-      handleVerifyPayment();
+    if (txConfirmed && step === "purchasing") {
+      setStep("done");
+      setUserMessage("");
     }
-  }, [isSuccess, transactionHash]);
+  }, [txConfirmed, step]);
+
+  useEffect(() => {
+    if (txConfirmed && step === "approving") {
+      doPurchase();
+    }
+  }, [txConfirmed, step]);
+
+  const usdAmount = storeItem ? storeItem.priceUsd : (defaultPriceUsd || "0.01");
+  const displayAmount = `$${usdAmount}`;
+  const title = storeItem ? storeItem.name : "Daily Pass";
+  const subtitle = storeItem
+    ? `×${storeItem.quantity} · ${storeItem.description || storeItem.category.replace(/_/g, " ")}`
+    : "Unlimited puzzles today";
+  const isStore = Boolean(storeItem);
 
   const loadQuote = async () => {
-    const usd = storeItem ? storeItem.priceUsd : (defaultPriceUsd || "0.01");
-    setIsLoadingQuote(true);
-    setError(null);
+    if (!address || !publicClient || !chainId) return;
+    setUserMessage("Checking balances...");
     try {
-      const q = await quotePayment(usd);
-      setQuote(q);
+      const sorted = [...ALLOWLISTED_STABLECOINS].map((c) => ({ ...c }));
+      const results = await Promise.allSettled(
+        sorted.map((c) =>
+          publicClient.readContract({
+            address: c.tokenAddress as Hex,
+            abi: ERC20_BALANCE_ABI,
+            functionName: "balanceOf",
+            args: [address as Hex],
+          })
+        )
+      );
+      let best = sorted[0];
+      let bestBalance = 0n;
+      for (let i = 0; i < sorted.length; i++) {
+        if (results[i].status === "fulfilled") {
+          const bal = (results[i] as PromiseFulfilledResult<bigint>).value;
+          if (bal > bestBalance) { bestBalance = bal; best = sorted[i]; }
+        }
+      }
+      setSelectedToken(best);
+      setBalance(bestBalance);
+
+      if (GAME_ASSETS_CONTRACT) {
+        const amount = parseUnits(usdAmount, best.decimals);
+        if (bestBalance < amount) {
+          setError(`Insufficient ${best.symbol} balance. Price: ${usdAmount} ${best.symbol}, balance: ${formatBalance(bestBalance, best.decimals)}`);
+          setUserMessage("");
+          return;
+        }
+        const allowance = await publicClient.readContract({
+          address: best.tokenAddress as Hex,
+          abi: erc20Abi,
+          functionName: "allowance",
+          args: [address as Hex, GAME_ASSETS_CONTRACT],
+        });
+        setNeedsApproval(allowance < amount);
+      }
+      setUserMessage("");
     } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoadingQuote(false);
+      setError(err.message || "Failed to load quote");
+      setUserMessage("");
     }
   };
 
-  const handlePayment = async () => {
-    if (!address) {
-      setError("Please connect your wallet first");
-      return;
-    }
-
+  const doApproval = async () => {
+    if (!address || !selectedToken || !publicClient || !GAME_ASSETS_CONTRACT) return;
+    setStep("approving");
+    const amount = parseUnits(usdAmount, selectedToken.decimals);
+    setUserMessage("Confirm with your wallet to authorize the store");
     try {
-      setError(null);
-      const type = storeItem
-        ? PaymentType.STORE_PURCHASE
-        : PaymentType.DAILY_ACCESS;
-      const usd = storeItem ? storeItem.priceUsd : (defaultPriceUsd || "0.01");
-      const meta = storeItem
-        ? {
-            itemId: storeItem._id,
-            itemCategory: storeItem.category,
-            itemName: storeItem.name,
-            itemQuantity: storeItem.quantity,
-          }
-        : undefined;
-      await makePayment(type, usd, meta, quote?.selectedToken.tokenAddress);
+      const hash = await writeContractAsync({
+        address: selectedToken.tokenAddress as Hex,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [GAME_ASSETS_CONTRACT, amount],
+      });
+      setTxHash(hash);
     } catch (err: any) {
-      console.error("Payment error:", err);
-      setError(err instanceof Error ? err.message : "Payment failed");
+      setError(err?.shortMessage || err?.message || "Approval cancelled");
+      setStep("quote");
+      setUserMessage("");
     }
   };
 
-  const handleVerifyPayment = async () => {
-    if (isVerifying) return;
-
+  const doPurchase = async () => {
+    if (!address || !selectedToken || !publicClient || !GAME_ASSETS_CONTRACT) return;
+    setStep("purchasing");
+    setTxHash(undefined);
+    setUserMessage("Confirm with your wallet to complete the purchase");
     try {
-      setIsVerifying(true);
-      setError(null);
-      const verified = await verifyPayment();
-      if (verified) {
-        onSuccess();
-        setTimeout(() => {
-          onClose();
-          setError(null);
-          setIsVerifying(false);
-          setQuote(null);
-        }, 1500);
+      if (!storeItem) {
+        // Daily pass
+        const hash = await writeContractAsync({
+          address: GAME_ASSETS_CONTRACT,
+          abi: GAME_ASSETS_ABI,
+          functionName: "purchaseDailyPass",
+          args: [selectedToken.tokenAddress as Hex],
+        });
+        setTxHash(hash);
+      } else if (storeItem?.packId !== undefined) {
+        const hash = await writeContractAsync({
+          address: GAME_ASSETS_CONTRACT,
+          abi: GAME_ASSETS_ABI,
+          functionName: "purchaseAssetPack",
+          args: [BigInt(storeItem.packId), selectedToken.tokenAddress as Hex],
+        });
+        setTxHash(hash);
       } else {
-        setError("Payment verification failed. Please contact support.");
-        setIsVerifying(false);
+        const assetType = storeItem?.category === "streak_freeze" ? GAME_ASSET_TYPES.STREAK_FREEZE : GAME_ASSET_TYPES.HINT;
+        const quantity = storeItem?.quantity || 1;
+        const hash = await writeContractAsync({
+          address: GAME_ASSETS_CONTRACT,
+          abi: GAME_ASSETS_ABI,
+          functionName: "purchaseAsset",
+          args: [assetType, BigInt(quantity), selectedToken.tokenAddress as Hex],
+        });
+        setTxHash(hash);
       }
     } catch (err: any) {
-      console.error("Verification error:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to verify payment"
-      );
-      setIsVerifying(false);
+      setError(err?.shortMessage || err?.message || "Purchase failed");
+      setStep("quote");
+      setUserMessage("");
+    }
+  };
+
+  const handlePay = async () => {
+    setError(null);
+    if (!GAME_ASSETS_CONTRACT) {
+      setError("Store contract not deployed yet. Please try again later.");
+      return;
+    }
+    if (needsApproval) {
+      await doApproval();
+    } else {
+      await doPurchase();
     }
   };
 
   const handleClose = () => {
-    if (isPaymentPending || isConfirming || isVerifying) return;
+    if (step === "approving" || step === "purchasing") return;
     onClose();
-    setError(null);
-    setQuote(null);
   };
 
-  const isStore = Boolean(storeItem);
-  const displayAmount = storeItem
-    ? `$${storeItem.priceUsd}`
-    : `$${defaultPriceUsd || "0.01"}`;
-  const title = isStore
-    ? storeItem!.name
-    : "Daily Pass";
-  const subtitle = isStore
-    ? `×${storeItem!.quantity} · ${storeItem!.description || storeItem!.category.replace(/_/g, " ")}`
-    : "Unlimited puzzles today";
+  const handleSuccess = () => {
+    onSuccess();
+    onClose();
+  };
+
+  const formatBalance = (b: bigint, d: number) => {
+    const s = b.toString();
+    if (s.length <= d) return `0.${s.padStart(d, "0")}`;
+    return `${s.slice(0, s.length - d)}.${s.slice(-d)}`;
+  };
 
   if (!isOpen) return null;
 
   const renderQuote = () => {
-    if (isLoadingQuote) {
+    if (userMessage && step === "quote") {
       return (
         <div className="bg-gray-100 border-4 border-black p-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] text-center">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
-          <p className="font-black text-sm text-black uppercase">Checking balances...</p>
+          <p className="font-black text-sm text-black uppercase">{userMessage}</p>
         </div>
       );
     }
 
-    if (!quote) {
+    if (!selectedToken) {
       return (
         <div className="bg-red-400 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
           <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
             <OctagonAlert className="w-4 h-4 shrink-0" /> Unable to load payment info
           </div>
-          <button
-            onClick={loadQuote}
-            className="bg-black text-white px-3 py-1 text-xs font-black uppercase mt-2"
-          >
-            Retry
-          </button>
-        </div>
-      );
-    }
-
-    if (!quote.sufficient) {
-      return (
-        <div className="space-y-4">
-          <div className="bg-red-400 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
-            <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
-              <OctagonAlert className="w-4 h-4 shrink-0" /> Insufficient balance
-            </div>
-            <div className="text-black font-bold text-xs space-y-1">
-              <p>Price: {quote.itemPrice} {quote.selectedToken.symbol}</p>
-              <p>Network fee: {quote.estimatedGasFee} {quote.selectedToken.symbol}</p>
-              <p>Total required: {quote.totalRequired} {quote.selectedToken.symbol}</p>
-              <p>Your balance: {quote.balance} {quote.selectedToken.symbol}</p>
-            </div>
-          </div>
-          <a
-            href="https://minipay.to"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full bg-black text-cyan-300 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-cyan-300 hover:bg-gray-800 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] inline-flex items-center justify-center gap-2"
-          >
-            <Wallet className="w-4 h-4" /> TOP UP WALLET
-          </a>
+          <button onClick={loadQuote} className="bg-black text-white px-3 py-1 text-xs font-black uppercase mt-2">Retry</button>
         </div>
       );
     }
@@ -221,34 +267,24 @@ export function PaymentModal({
       <div className="space-y-3">
         <div className="bg-lime-200 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] text-left text-xs font-bold text-black space-y-2">
           <div className="flex justify-between items-center">
-            <span className="uppercase tracking-wide">Token</span>
-            <span className="font-black">{quote.selectedToken.symbol}</span>
+            <span className="uppercase tracking-wide">Pay with</span>
+            <span className="font-black">{selectedToken.symbol}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="uppercase tracking-wide">Price</span>
-            <span>{quote.itemPrice} {quote.selectedToken.symbol}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="uppercase tracking-wide flex items-center gap-1">
-              <Fuel className="w-3 h-3" /> Network fee
-            </span>
-            <span>{quote.estimatedGasFee} {quote.selectedToken.symbol}</span>
-          </div>
-          <div className="border-t-2 border-black pt-2 flex justify-between items-center font-black">
-            <span>Total</span>
-            <span>{quote.totalRequired} {quote.selectedToken.symbol}</span>
+            <span>{usdAmount} {selectedToken.symbol}</span>
           </div>
           <div className="flex justify-between items-center text-[10px]">
             <span>Balance</span>
-            <span>{quote.balance} {quote.selectedToken.symbol}</span>
+            <span>{formatBalance(balance, selectedToken.decimals)} {selectedToken.symbol}</span>
           </div>
         </div>
 
         <button
-          onClick={handlePayment}
-          className="w-full bg-black text-cyan-300 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-cyan-300 hover:bg-gray-800 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 flex items-center justify-center gap-2"
+          onClick={handlePay}
+          className="w-full bg-black text-cyan-300 py-3 px-4 font-black text-sm uppercase tracking-wider border-2 border-cyan-300 hover:bg-gray-800 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2"
         >
-          <Smartphone className="w-4 h-4" /> PAY {displayAmount} WITH {quote.selectedToken.symbol}
+          <Smartphone className="w-4 h-4" /> PAY {displayAmount} WITH {selectedToken.symbol}
         </button>
       </div>
     );
@@ -256,29 +292,18 @@ export function PaymentModal({
 
   return (
     <div className="fixed inset-0 z-50 p-4 flex items-center justify-center pointer-events-auto">
-      <div
-        className="absolute inset-0 bg-black/80"
-        onClick={handleClose}
-      />
+      <div className="absolute inset-0 bg-black/80" onClick={handleClose} />
 
       <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-md w-full transform rotate-1">
         <div className={`${isStore ? "bg-lime-400" : "bg-orange-400"} border-b-4 border-black p-4`}>
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-black uppercase tracking-wider text-black flex items-center gap-2">
-              {isStore ? (
-                <>
-                  <Store className="w-7 h-7" /> STORE
-                </>
-              ) : (
-                <>
-                  <Castle className="w-7 h-7" /> ACCESS PUZZLES
-                </>
-              )}
+              {isStore ? <><Store className="w-7 h-7" /> STORE</> : <><Castle className="w-7 h-7" /> ACCESS PUZZLES</>}
             </h2>
             <button
               onClick={handleClose}
-              className="w-8 h-8 bg-red-500 border-2 border-black text-black hover:bg-red-400 transition-colors shadow-[2px_2px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              disabled={isPaymentPending || isConfirming || isVerifying}
+              className="w-8 h-8 bg-red-500 border-2 border-black text-black hover:bg-red-400 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              disabled={step === "approving" || step === "purchasing"}
             >
               <X className="w-4 h-4" />
             </button>
@@ -286,7 +311,7 @@ export function PaymentModal({
         </div>
 
         <div className="p-6 bg-white">
-          {error && (
+          {error && step !== "approving" && step !== "purchasing" && (
             <div className="bg-red-400 border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1 text-left">
               <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
                 <OctagonAlert className="w-4 h-4 shrink-0" /> {error}
@@ -295,28 +320,18 @@ export function PaymentModal({
             </div>
           )}
 
-          {!isPaymentPending && !isConfirming && !isSuccess && !isVerifying && (
+          {step === "quote" && (
             <div className="space-y-4">
               <div className={`${isStore ? "bg-lime-200" : "bg-cyan-300"} border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1`}>
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="font-black text-lg uppercase text-black flex items-center gap-2">
-                    {isStore ? <Store className="w-5 h-5" /> : <Target className="w-5 h-5" />}
+                    {isStore ? <Store className="w-5 h-5" /> : <Lightbulb className="w-5 h-5" />}
                     {title}
                   </h3>
-                  <span className="bg-black text-cyan-300 px-3 py-1 font-black text-xl border-2 border-cyan-300">
-                    {displayAmount}
-                  </span>
+                  <span className="bg-black text-cyan-300 px-3 py-1 font-black text-xl border-2 border-cyan-300">{displayAmount}</span>
                 </div>
-                <p className="text-black font-bold text-sm mb-2 uppercase tracking-wide flex items-center gap-1">
-                  {isStore ? (
-                    <>
-                      <Lightbulb className="w-4 h-4" /> {subtitle}
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-4 h-4" /> {subtitle}
-                    </>
-                  )}
+                <p className="text-black font-bold text-sm uppercase tracking-wide flex items-center gap-1">
+                  {isStore ? <><Lightbulb className="w-4 h-4" /> {subtitle}</> : <><Zap className="w-4 h-4" /> {subtitle}</>}
                 </p>
               </div>
 
@@ -330,65 +345,65 @@ export function PaymentModal({
             </div>
           )}
 
-          {(isPaymentPending || isConfirming) && (
+          {step === "approving" && (
             <div className="text-center py-8">
               <div className="bg-purple-400 border-4 border-black p-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-2">
-                <div className="w-16 h-16 mx-auto mb-4 bg-black border-4 border-purple-400 animate-bounce">
-                  <div className="w-full h-full bg-purple-400 border-2 border-black animate-pulse"></div>
+                <div className="w-16 h-16 mx-auto mb-4 bg-black border-4 border-purple-400 flex items-center justify-center">
+                  <Lock className="w-8 h-8 text-purple-400 animate-pulse" />
                 </div>
                 <h3 className="font-black text-xl uppercase mb-2 text-black tracking-wider">
-                  <span className="inline-flex items-center gap-2">
-                    {isPaymentPending ? <Zap className="w-5 h-5" /> : <RefreshCw className="w-5 h-5 animate-spin" />}
-                    {isPaymentPending ? "Processing..." : "Confirming..."}
-                  </span>
+                  Authorize Payment
                 </h3>
-                <p className="font-bold text-black text-sm uppercase tracking-wide flex items-center justify-center gap-1">
-                  <Coins className="w-4 h-4" /> Paying {displayAmount}
+                <p className="font-bold text-black text-sm uppercase tracking-wide mb-2">
+                  {isConfirming ? "Processing authorization..." : userMessage || "Confirm with your wallet"}
                 </p>
-                {transactionHash && (
-                  <div className="bg-black text-purple-400 p-2 mt-4 border-2 border-purple-400 text-xs font-mono break-all">
-                    TX: {transactionHash.slice(0, 20)}...
-                  </div>
-                )}
+                <p className="text-xs font-bold text-black/70">
+                  This one-time authorization allows the store to charge your wallet.
+                </p>
               </div>
             </div>
           )}
 
-          {isVerifying && (
+          {step === "purchasing" && (
             <div className="text-center py-8">
-              <div className="bg-blue-400 border-4 border-black p-6 shadow-[6px_6px_0px_rgba(0,0,0,1)] transform rotate-1">
-                <div className="w-16 h-16 mx-auto mb-4 bg-black border-4 border-blue-400 animate-pulse">
-                  <div className="w-full h-full bg-blue-400 border-2 border-black animate-spin"></div>
+              <div className="bg-blue-400 border-4 border-black p-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1">
+                <div className="w-16 h-16 mx-auto mb-4 bg-black border-4 border-blue-400 animate-bounce flex items-center justify-center">
+                  <Coins className="w-8 h-8 text-blue-400" />
                 </div>
                 <h3 className="font-black text-xl uppercase mb-2 text-black tracking-wider">
-                  <span className="inline-flex items-center gap-2">
-                    <Search className="w-5 h-5" /> Verifying Payment...
-                  </span>
+                  {isConfirming ? "Confirming..." : "Processing Purchase"}
                 </h3>
-                <p className="font-bold text-black text-sm uppercase tracking-wide">
-                  This may take a few moments while we wait for blockchain confirmation
+                <p className="font-bold text-black text-sm uppercase tracking-wide mb-2">
+                  {isConfirming ? "Waiting for confirmation..." : userMessage || "Confirm with your wallet"}
                 </p>
-                {transactionHash && (
+                <p className="text-xs font-bold text-black/70">
+                  {needsApproval ? "Step 2 of 2: completing the purchase" : "Completing your purchase"}
+                </p>
+                {txHash && (
                   <div className="bg-black text-blue-400 p-2 mt-4 border-2 border-blue-400 text-xs font-mono break-all">
-                    TX: {transactionHash.slice(0, 20)}...
+                    TX: {txHash.slice(0, 20)}...
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {isSuccess && !isVerifying && (
+          {step === "done" && (
             <div className="text-center py-8">
               <div className="bg-green-400 border-4 border-black p-6 shadow-[6px_6px_0px_rgba(0,0,0,1)] transform rotate-2">
                 <div className="mb-4 flex justify-center">
-                  <PartyPopper className="w-14 h-14 animate-bounce" />
+                  <PartyPopper className="w-14 h-14 text-black animate-bounce" />
                 </div>
-                <h3 className="font-black text-2xl uppercase mb-2 text-black tracking-wider">
-                  Success!
-                </h3>
+                <h3 className="font-black text-2xl uppercase mb-2 text-black tracking-wider">Success!</h3>
                 <p className="font-bold text-black uppercase tracking-wide flex items-center justify-center gap-2">
                   <BadgeCheck className="w-5 h-5" /> {isStore ? "Purchased!" : "Access Granted!"}
                 </p>
+                <button
+                  onClick={handleSuccess}
+                  className="mt-6 bg-black text-green-400 px-6 py-2 font-black text-sm uppercase border-2 border-green-400 hover:bg-gray-800 transition-all"
+                >
+                  Done
+                </button>
               </div>
             </div>
           )}

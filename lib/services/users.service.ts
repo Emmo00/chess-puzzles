@@ -2,7 +2,7 @@ import { WalletUser, UserStats, UserSettings } from "../types";
 import userModel from "../models/users.model";
 import { getUtcDayNumber } from "@/lib/utils/time";
 import { generateDisplayName } from "../utils/nameGenerator";
-import { getAccessConfig } from "../config/access";
+import HintsService from "./hints.service";
 
 export class HttpException extends Error {
   status: number;
@@ -26,15 +26,12 @@ class UserService {
 
   public async ensureUser(walletAddress: string) {
     const lower = walletAddress.toLowerCase();
-    const { defaultHints, defaultStreakFreezes } = await getAccessConfig();
     await this.users.updateOne(
       { walletAddress: lower },
       {
         $setOnInsert: {
           walletAddress: lower,
           displayName: generateDisplayName(lower),
-          hintBalance: defaultHints,
-          streakFreezes: defaultStreakFreezes,
         },
       },
       { upsert: true }
@@ -111,21 +108,21 @@ class UserService {
       return updated;
     }
 
-    // Gap > 1 day — use optimistic lock on lastPuzzleDate to prevent races
+    // Gap > 1 day — try to consume a streak freeze on-chain
     const oldLastPuzzleDate = user.lastPuzzleDate;
-    const newStreak = (user.currentStreak ?? 0) + 1;
-    const newLongest = Math.max(user.longestStreak ?? 0, newStreak);
+    const newLongest = Math.max(user.longestStreak ?? 0, (user.currentStreak ?? 0) + 1);
 
-    // Try to consume a streak freeze atomically
-    if ((user.streakFreezes ?? 0) > 0) {
+    try {
+      const hintsService = new HintsService();
+      await hintsService.consumeStreakFreeze(identifier);
+      // Freeze consumed — keep streak alive
       const freezeResult = await this.users.findOneAndUpdate(
         {
           ...query,
-          streakFreezes: { $gt: 0 },
           lastPuzzleDate: oldLastPuzzleDate,
         },
         {
-          $inc: { streakFreezes: -1, currentStreak: 1 },
+          $inc: { currentStreak: 1 },
           $set: {
             longestStreak: newLongest,
             lastLogin: playedAt,
@@ -138,34 +135,32 @@ class UserService {
         { new: true }
       );
       if (freezeResult) return freezeResult;
-      // Race lost — another request already processed this day
       return this.users.findOne(query);
-    }
-
-    // No streak freeze available — streak resets
-    const resetResult = await this.users.findOneAndUpdate(
-      {
-        ...query,
-        lastPuzzleDate: oldLastPuzzleDate,
-      },
-      {
-        $set: {
-          currentStreak: 1,
-          longestStreak: newLongest,
-          lastLogin: playedAt,
-          lastPuzzleDate: playedAt.toISOString(),
-          "streakEvent.eventType": "streak_lost",
-          "streakEvent.day": currentUtcDay,
-          "streakEvent.notified": false,
+    } catch {
+      // No streak freeze available on-chain — streak resets
+      const resetResult = await this.users.findOneAndUpdate(
+        {
+          ...query,
+          lastPuzzleDate: oldLastPuzzleDate,
         },
-      },
-      { new: true }
-    );
-    if (!resetResult) {
-      // Race lost — return current state
-      return this.users.findOne(query);
+        {
+          $set: {
+            currentStreak: 1,
+            longestStreak: newLongest,
+            lastLogin: playedAt,
+            lastPuzzleDate: playedAt.toISOString(),
+            "streakEvent.eventType": "streak_lost",
+            "streakEvent.day": currentUtcDay,
+            "streakEvent.notified": false,
+          },
+        },
+        { new: true }
+      );
+      if (!resetResult) {
+        return this.users.findOne(query);
+      }
+      return resetResult;
     }
-    return resetResult;
   }
 
   public async updateUserStats(identifier: string, stats: Partial<UserStats>): Promise<WalletUser | null> {
@@ -187,11 +182,9 @@ class UserService {
     const user = await this.users.findOne({ walletAddress: walletAddress.toLowerCase() });
     
     if (!user) {
-      // Return default settings for non-existent users
       return DEFAULT_SETTINGS;
     }
 
-    // Return user settings or defaults if not set
     return {
       ratingRange: user.settings?.ratingRange || DEFAULT_SETTINGS.ratingRange,
       disabledThemes: user.settings?.disabledThemes || DEFAULT_SETTINGS.disabledThemes,

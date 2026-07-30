@@ -4,7 +4,6 @@ import { celo } from "viem/chains";
 import { Payment } from "../../../../lib/models/payment.model";
 import { PaymentType } from "../../../../lib/types/payment";
 import { PAYMENT_RECIPIENT, SUPPORTED_CURRENCIES } from "../../../../lib/config/wagmi";
-import HintsService from "../../../../lib/services/hints.service";
 import dbConnect from "../../../../lib/db";
 import { getAccessConfig } from "../../../../lib/config/access";
 
@@ -169,26 +168,6 @@ export async function POST(request: NextRequest) {
 
     await paymentRecord.save();
     console.log("Payment saved:", paymentRecord._id);
-
-    if (
-      paymentType === PaymentType.STORE_PURCHASE &&
-      metadata &&
-      metadata.itemCategory
-    ) {
-      try {
-        const hintsService = new HintsService();
-        const itemQuantity = Math.max(1, metadata.itemQuantity || 1);
-        if (metadata.itemCategory === "hints") {
-          await hintsService.grantHints(walletAddress, itemQuantity);
-          console.log(`Granted ${itemQuantity} hints to ${walletAddress}`);
-        } else if (metadata.itemCategory === "streak_freeze") {
-          await hintsService.grantStreakFreezes(walletAddress, itemQuantity);
-          console.log(`Granted ${itemQuantity} streak freezes to ${walletAddress}`);
-        }
-      } catch (grantError) {
-        console.error("Failed to grant store perks:", grantError);
-      }
-    }
 
     return NextResponse.json({
       verified: true,

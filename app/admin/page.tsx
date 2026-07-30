@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 import { WalletConnect } from "@/components/WalletConnect";
-import { StoreItemsAdmin, ScoringConfigAdmin, PerkDistributionAdmin, AccessConfigAdmin } from "@/components/AdminPanels";
+import { ScoringConfigAdmin, PerkDistributionAdmin, AccessConfigAdmin, GameAssetsAdmin } from "@/components/AdminPanels";
 import { FrontendErrorsPanel } from "@/components/FrontendErrorsPanel";
 
 type AuthStep = "connect" | "unauthorized" | "sign" | "verifying" | "authenticated";
@@ -178,7 +178,7 @@ export default function AdminPage() {
 
         {step === "authenticated" && (
           <div className="space-y-5">
-            <StoreItemsAdmin />
+            <GameAssetsAdmin />
             <AccessConfigAdmin />
             <ScoringConfigAdmin />
             <PerkDistributionAdmin />

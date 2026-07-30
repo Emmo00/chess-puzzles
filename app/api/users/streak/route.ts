@@ -1,11 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createPublicClient, http } from "viem";
+import { celo } from "viem/chains";
 import dbConnect from "../../../../lib/db";
 import { authenticateWalletUser } from "../../../../lib/auth";
 import UserService from "../../../../lib/services/users.service";
 import userModel from "../../../../lib/models/users.model";
 import { getUtcDayNumber } from "@/lib/utils/time";
+import { GAME_ASSETS_CONTRACT, GAME_ASSET_TYPES } from "../../../../lib/config/wagmi";
+import { GAME_ASSETS_ABI } from "../../../../lib/abi/gameAssets";
+
+const celoClient = createPublicClient({ chain: celo, transport: http() });
 
 export type StreakStatus = "alive" | "at_risk" | "broken";
+
+async function getContractStreakFreezes(address: string): Promise<number> {
+  if (!GAME_ASSETS_CONTRACT) return 0;
+  try {
+    const balance = await celoClient.readContract({
+      address: GAME_ASSETS_CONTRACT,
+      abi: GAME_ASSETS_ABI,
+      functionName: "getStreakFreezeBalance",
+      args: [address as `0x${string}`],
+    });
+    return Number(balance);
+  } catch {
+    return 0;
+  }
+}
 
 function computeEffectiveStreak(
   currentStreak: number,
@@ -45,7 +66,6 @@ export async function GET(request: NextRequest) {
       totalPoints: number;
       lastPuzzleDate: string | null;
       lastLogin: Date;
-      streakFreezes: number;
     };
     try {
       const u = await userService.getUser(user.walletAddress);
@@ -56,7 +76,6 @@ export async function GET(request: NextRequest) {
         totalPoints: u.totalPoints,
         lastPuzzleDate: u.lastPuzzleDate,
         lastLogin: u.lastLogin,
-        streakFreezes: u.streakFreezes,
       };
     } catch {
       userData = {
@@ -66,14 +85,15 @@ export async function GET(request: NextRequest) {
         totalPoints: 0,
         lastPuzzleDate: null,
         lastLogin: new Date(),
-        streakFreezes: 0,
       };
     }
+
+    const streakFreezes = await getContractStreakFreezes(user.walletAddress);
 
     const { effectiveStreak, streakStatus } = computeEffectiveStreak(
       userData.currentStreak || 0,
       userData.lastPuzzleDate,
-      userData.streakFreezes ?? 0
+      streakFreezes
     );
 
     return NextResponse.json({
@@ -82,7 +102,7 @@ export async function GET(request: NextRequest) {
       totalPuzzlesSolved: userData.totalPuzzlesSolved || 0,
       points: userData.totalPoints || 0,
       streakStatus,
-      streakFreezes: userData.streakFreezes ?? 0,
+      streakFreezes,
       lastLogin: userData.lastLogin,
       lastPuzzleDate: userData.lastPuzzleDate,
     });

@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
+import { GAME_ASSETS_CONTRACT, GAME_ASSET_TYPES } from "@/lib/config/wagmi";
+import { GAME_ASSETS_ABI } from "@/lib/abi/gameAssets";
+import { type Hex } from "viem";
 
 export interface HintBalanceState {
   hintBalance: number;
@@ -14,6 +17,7 @@ export interface HintBalanceState {
 
 export function useHintBalance(): HintBalanceState {
   const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
   const [hintBalance, setHintBalance] = useState<number>(0);
   const [streakFreezes, setStreakFreezes] = useState<number>(0);
   const [loading, setLoading] = useState(false);
@@ -26,20 +30,31 @@ export function useHintBalance(): HintBalanceState {
     }
     setLoading(true);
     try {
-      const res = await fetch(`/api/hints?walletAddress=${address}`, {
-        headers: { "x-wallet-address": address },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setHintBalance(data.hintBalance ?? 0);
-        setStreakFreezes(data.streakFreezes ?? 0);
+      if (publicClient && GAME_ASSETS_CONTRACT) {
+        const [hints, freezes] = await Promise.all([
+          publicClient.readContract({
+            address: GAME_ASSETS_CONTRACT,
+            abi: GAME_ASSETS_ABI,
+            functionName: "getHintBalance",
+            args: [address as Hex],
+          }),
+          publicClient.readContract({
+            address: GAME_ASSETS_CONTRACT,
+            abi: GAME_ASSETS_ABI,
+            functionName: "getStreakFreezeBalance",
+            args: [address as Hex],
+          }),
+        ]);
+        setHintBalance(Number(hints));
+        setStreakFreezes(Number(freezes));
       }
     } catch {
-      // ignore
+      setHintBalance(0);
+      setStreakFreezes(0);
     } finally {
       setLoading(false);
     }
-  }, [address, isConnected]);
+  }, [address, isConnected, publicClient]);
 
   useEffect(() => {
     refresh();
@@ -52,18 +67,16 @@ export function useHintBalance(): HintBalanceState {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-wallet-address": address,
           Authorization: `Bearer ${address}`,
         },
       });
       if (!res.ok) return false;
-      const data = await res.json();
-      setHintBalance(data.hintBalance ?? 0);
+      refresh();
       return true;
     } catch {
       return false;
     }
-  }, [address, isConnected]);
+  }, [address, isConnected, refresh]);
 
   return {
     hintBalance,

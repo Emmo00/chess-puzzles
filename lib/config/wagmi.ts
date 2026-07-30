@@ -71,6 +71,17 @@ export const PAYOUT_CLAIM_CONTRACT = "0x4DF823F6A36b35A3983afc41f7c3584C1DCBFDf1
 // Chess Puzzles Store Contract
 export const STORE_CONTRACT = "0x5f23E64A2228F9a5f54527E62755203bC6D9F305";
 
+// Game Assets Contract (hints/streak freezes)
+// TBD - will be set after deployment
+export const GAME_ASSETS_CONTRACT = "0xD4d151a188e6DfC7e5d6b7BF1811D2230716bd9b" as `0x${string}`;
+
+// Game Assets asset type hashes (keccak256 of the string literal, matching Solidity)
+export const GAME_ASSET_TYPES = {
+  HINT: "0xd4693c831cfc202fc63a20c9fa3291821027841da966d7a234bd10995117dd44" as `0x${string}`,
+  STREAK_FREEZE: "0x8a0a23a6e82096be4a488be5ca58830d9c70dfe27919e0d85bd61508dcf2bfd1" as `0x${string}`,
+  DAILY_PASS: "0xa820493df1aaa1e0a96fd96fe9ffb12f4dd597ce0a289061861c619bfa95db11" as `0x${string}`,
+};
+
 // MiniPay detection helper
 export const isMiniPay = (): boolean => {
   if (typeof window !== "undefined" && window.ethereum) {

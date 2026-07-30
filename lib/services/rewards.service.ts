@@ -1,4 +1,5 @@
 import HintsService from "./hints.service";
+import { GAME_ASSET_TYPES } from "../config/wagmi";
 import { levelForPoints } from "../leveling";
 
 export interface MilestoneReward {
@@ -50,8 +51,8 @@ class RewardsService {
     for (const ms of milestonesHit) {
       const seed = ms * 7 + newPoints;
       const reward = randomItem(seed);
-      await this.hints.grantHints(walletAddress, reward.hints);
-      await this.hints.grantStreakFreezes(walletAddress, reward.streakFreezes);
+      await this.hints.grantAsset(walletAddress, GAME_ASSET_TYPES.HINT, reward.hints);
+      await this.hints.grantAsset(walletAddress, GAME_ASSET_TYPES.STREAK_FREEZE, reward.streakFreezes);
       rewards.push({ hints: reward.hints, streakFreezes: reward.streakFreezes });
     }
 

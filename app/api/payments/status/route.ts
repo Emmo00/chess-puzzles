@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Payment } from '../../../../lib/models/payment.model';
-import { PaymentType } from '../../../../lib/types/payment';
-import dbConnect from '../../../../lib/db';
+import { createPublicClient, http } from 'viem';
+import { celo } from 'viem/chains';
+import { GAME_ASSETS_CONTRACT } from '../../../../lib/config/wagmi';
+import { GAME_ASSETS_ABI } from '../../../../lib/abi/gameAssets';
+
+const celoClient = createPublicClient({ chain: celo, transport: http() });
 
 export async function GET(request: NextRequest) {
   try {
-    await dbConnect();
     const { searchParams } = new URL(request.url);
     const walletAddress = searchParams.get('walletAddress');
 
@@ -16,30 +18,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const now = new Date();
-
-    // Check for daily access (valid for today)
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    
-    const dailyPayment = await Payment.findOne({
-      walletAddress: walletAddress.toLowerCase(),
-      paymentType: PaymentType.DAILY_ACCESS,
-      verified: true,
-      createdAt: { $gte: todayStart },
-      expiresAt: { $gt: now },
-    }).sort({ createdAt: -1 });
-
-    const hasDailyAccess = !!dailyPayment;
-    const hasAccess = hasDailyAccess;
+    const hasDailyAccess = GAME_ASSETS_CONTRACT
+      ? await celoClient.readContract({
+          address: GAME_ASSETS_CONTRACT,
+          abi: GAME_ASSETS_ABI,
+          functionName: 'hasActiveDailyPass',
+          args: [walletAddress as `0x${string}`],
+        })
+      : false;
 
     return NextResponse.json({
-      hasAccess,
+      hasAccess: hasDailyAccess,
       hasDailyAccess,
-      dailyAccessDate: dailyPayment?.createdAt?.toISOString(),
-      message: hasAccess 
+      message: hasDailyAccess
         ? 'Daily access active'
-        : 'No active access found'
+        : 'No active access found',
     });
 
   } catch (error) {

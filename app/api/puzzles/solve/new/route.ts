@@ -1,28 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createPublicClient, http } from "viem";
+import { celo } from "viem/chains";
 import dbConnect from "../../../../../lib/db";
 import { authenticateWalletUser } from "../../../../../lib/auth";
 import PuzzleService from "../../../../../lib/services/puzzles.service";
 import UserService from "../../../../../lib/services/users.service";
 import AdaptiveService from "../../../../../lib/services/adaptive.service";
-import { Payment } from "../../../../../lib/models/payment.model";
-import { PaymentType } from "../../../../../lib/types/payment";
 import { Puzzle } from "@/lib/types";
 import { getAccessConfig } from "../../../../../lib/config/access";
+import { GAME_ASSETS_CONTRACT } from "../../../../../lib/config/wagmi";
+import { GAME_ASSETS_ABI } from "../../../../../lib/abi/gameAssets";
+
+const celoClient = createPublicClient({ chain: celo, transport: http() });
 
 async function hasDailyAccess(walletAddress: string): Promise<boolean> {
-  const now = new Date();
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const payment = await Payment.findOne({
-    walletAddress: walletAddress.toLowerCase(),
-    paymentType: PaymentType.DAILY_ACCESS,
-    verified: true,
-    createdAt: { $gte: todayStart },
-    expiresAt: { $gt: now },
-  })
-    .sort({ createdAt: -1 })
-    .lean();
-  return Boolean(payment);
+  if (!GAME_ASSETS_CONTRACT) return false;
+  try {
+    return await celoClient.readContract({
+      address: GAME_ASSETS_CONTRACT,
+      abi: GAME_ASSETS_ABI,
+      functionName: "hasActiveDailyPass",
+      args: [walletAddress as `0x${string}`],
+    });
+  } catch {
+    return false;
+  }
 }
 
 export async function POST(request: NextRequest) {

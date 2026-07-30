@@ -1,86 +1,166 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/BottomNav";
 import { WalletConnect } from "@/components/WalletConnect";
 import { PaymentModal } from "@/components/PaymentModal";
-import { Castle, Lightbulb, Snowflake, Gift, Palette, Store as StoreIcon, Loader2, Check } from "lucide-react";
+import { Castle, Lightbulb, Snowflake, Store as StoreIcon, Loader2, Check } from "lucide-react";
 import { useHintBalance } from "@/lib/hooks/useHintBalance";
+import { GAME_ASSETS_CONTRACT, GAME_ASSET_TYPES } from "@/lib/config/wagmi";
+import { GAME_ASSETS_ABI } from "@/lib/abi/gameAssets";
 
-interface CatalogItem {
-  _id: string;
+interface StoreItem {
+  id: string;
   name: string;
-  description: string;
   category: string;
   priceUsd: string;
   quantity: number;
+  packId?: number;
+}
+
+interface ContractPack {
+  id: number;
+  name: string;
+  assetType: string;
+  quantity: bigint;
+  price: bigint;
   active: boolean;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
-  hints: "Hint Packs",
+  hints: "Hints",
   streak_freeze: "Streak Freezes",
-  mystery_box: "Mystery Boxes",
-  cosmetic: "Cosmetics",
 };
 
 const CATEGORY_ICONS: Record<string, typeof Lightbulb> = {
   hints: Lightbulb,
   streak_freeze: Snowflake,
-  mystery_box: Gift,
-  cosmetic: Palette,
 };
 
 const CATEGORY_ACCENTS: Record<string, string> = {
   hints: "bg-cyan-400",
   streak_freeze: "bg-blue-400",
-  mystery_box: "bg-purple-400",
-  cosmetic: "bg-pink-400",
 };
 
-const CATEGORY_ORDER = ["hints", "streak_freeze", "mystery_box", "cosmetic"];
-
 export default function StorePage() {
-  const [items, setItems] = useState<CatalogItem[]>([]);
+  const [items, setItems] = useState<StoreItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<StoreItem | null>(null);
   const [showPayment, setShowPayment] = useState(false);
-  const [accessConfig, setAccessConfig] = useState<{ unlockAmountUsd: string } | null>(null);
+  const [dailyPassPrice, setDailyPassPrice] = useState<string | null>(null);
   const [showDailyAccess, setShowDailyAccess] = useState(false);
   const [hasDailyAccess, setHasDailyAccess] = useState(false);
 
   const { hintBalance, streakFreezes } = useHintBalance();
   const { isConnected, address } = useAccount();
+  const publicClient = usePublicClient();
 
   useEffect(() => {
-    window
-      .fetch("/api/admin/store-items")
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => setItems((data || []).filter((it: CatalogItem) => it.active)))
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false));
-    window
-      .fetch("/api/config/public")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => data && setAccessConfig(data))
-      .catch(() => {});
-  }, []);
+    loadCatalog();
+    checkDailyPassStatus();
+  }, [publicClient, address, isConnected]);
 
-  useEffect(() => {
-    if (!isConnected || !address) {
-      setHasDailyAccess(false);
+  const loadCatalog = async () => {
+    if (!GAME_ASSETS_CONTRACT || !publicClient) {
+      setLoading(false);
       return;
     }
-    window
-      .fetch(`/api/payments/status?walletAddress=${address}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => data && setHasDailyAccess(data.hasDailyAccess))
-      .catch(() => setHasDailyAccess(false));
-  }, [isConnected, address]);
+    setLoading(true);
+    try {
+      const [hintUnit, freezeUnit, count] = await Promise.all([
+        publicClient.readContract({
+          address: GAME_ASSETS_CONTRACT,
+          abi: GAME_ASSETS_ABI,
+          functionName: "unitPrices",
+          args: [GAME_ASSET_TYPES.HINT],
+        }),
+        publicClient.readContract({
+          address: GAME_ASSETS_CONTRACT,
+          abi: GAME_ASSETS_ABI,
+          functionName: "unitPrices",
+          args: [GAME_ASSET_TYPES.STREAK_FREEZE],
+        }),
+        publicClient.readContract({
+          address: GAME_ASSETS_CONTRACT,
+          abi: GAME_ASSETS_ABI,
+          functionName: "getAssetPackCount",
+        }),
+      ]);
 
-  const handleBuy = (item: CatalogItem) => {
+      const loaded: StoreItem[] = [];
+
+      // Individual items first (when unit price is set)
+      if (Number(hintUnit) > 0) {
+        loaded.push({
+          id: "hint-unit",
+          name: "1 Hint",
+          category: "hints",
+          priceUsd: (Number(hintUnit) / 1_000_000).toFixed(2),
+          quantity: 1,
+        });
+      }
+      if (Number(freezeUnit) > 0) {
+        loaded.push({
+          id: "freeze-unit",
+          name: "1 Streak Freeze",
+          category: "streak_freeze",
+          priceUsd: (Number(freezeUnit) / 1_000_000).toFixed(2),
+          quantity: 1,
+        });
+      }
+
+      // Packs after
+      for (let i = 0; i < Number(count); i++) {
+        const pack = await publicClient.readContract({
+          address: GAME_ASSETS_CONTRACT,
+          abi: GAME_ASSETS_ABI,
+          functionName: "getAssetPack",
+          args: [BigInt(i)],
+        }) as ContractPack;
+        if (pack.active) {
+          const assetType = pack.assetType.toLowerCase();
+          loaded.push({
+            id: `pack-${i}`,
+            name: pack.name,
+            category: assetType === GAME_ASSET_TYPES.HINT.toLowerCase() ? "hints" : "streak_freeze",
+            priceUsd: (Number(pack.price) / 1_000_000).toFixed(2),
+            quantity: Number(pack.quantity),
+            packId: i,
+          });
+        }
+      }
+
+      setItems(loaded);
+    } catch { /* ignore */ }
+    setLoading(false);
+  };
+
+  const checkDailyPassStatus = async () => {
+    if (!GAME_ASSETS_CONTRACT || !publicClient) return;
+    try {
+      const [price, hasActive] = await Promise.all([
+        publicClient.readContract({
+          address: GAME_ASSETS_CONTRACT,
+          abi: GAME_ASSETS_ABI,
+          functionName: "dailyPassPrice",
+        }),
+        address
+          ? publicClient.readContract({
+              address: GAME_ASSETS_CONTRACT,
+              abi: GAME_ASSETS_ABI,
+              functionName: "hasActiveDailyPass",
+              args: [address as `0x${string}`],
+            })
+          : false,
+      ]);
+      setDailyPassPrice((Number(price) / 1_000_000).toFixed(2));
+      setHasDailyAccess(hasActive as boolean);
+    } catch { /* ignore */ }
+  };
+
+  const handleBuy = (item: StoreItem) => {
     if (!isConnected) {
       toast.error("Connect your wallet to purchase.");
       return;
@@ -92,9 +172,9 @@ export default function StorePage() {
   const handlePaymentSuccess = () => {
     setShowPayment(false);
     setSelectedItem(null);
-    toast.success("Purchase complete!", {
-      description: `${selectedItem?.name} — perks granted to your wallet.`,
-    });
+    loadCatalog();
+    checkDailyPassStatus();
+    toast.success("Purchase complete!");
   };
 
   const handleBuyDailyAccess = () => {
@@ -105,11 +185,9 @@ export default function StorePage() {
     setShowDailyAccess(true);
   };
 
-  const grouped = CATEGORY_ORDER.map((cat) => ({
-    category: cat,
-    label: CATEGORY_LABELS[cat],
-    items: items.filter((it) => it.category === cat),
-  })).filter((g) => g.items.length > 0);
+  const hintItems = items.filter((i) => i.category === "hints");
+  const freezeItems = items.filter((i) => i.category === "streak_freeze");
+  const hasItems = items.length > 0;
 
   return (
     <div className="h-dvh w-full app-paper-bg text-black flex flex-col overflow-hidden">
@@ -126,7 +204,7 @@ export default function StorePage() {
         </div>
 
         {/* Daily Pass — unlimited puzzles for a day */}
-        {accessConfig && (
+        {dailyPassPrice && (
           <div
             className={`${hasDailyAccess ? "bg-lime-300" : "bg-orange-400"} border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3 flex items-center gap-3`}
           >
@@ -146,7 +224,7 @@ export default function StorePage() {
                 </div>
               ) : (
                 <>
-                  <div className="font-black text-sm">${accessConfig.unlockAmountUsd}</div>
+                  <div className="font-black text-sm">${dailyPassPrice}</div>
                   <button
                     type="button"
                     onClick={handleBuyDailyAccess}
@@ -165,38 +243,31 @@ export default function StorePage() {
             <Loader2 className="w-6 h-6 animate-spin" />
             <span className="ml-2 text-sm font-black uppercase">Loading catalog...</span>
           </div>
-        ) : grouped.length === 0 ? (
+        ) : !hasItems && !dailyPassPrice ? (
           <div className="bg-white border-4 border-black p-6 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             <div className="font-black text-lg uppercase">No items available</div>
             <div className="text-xs font-bold text-black/70 mt-1">Check back soon!</div>
           </div>
         ) : (
-          grouped.map((group) => {
-            const Icon = CATEGORY_ICONS[group.category] || Gift;
-            const accent = CATEGORY_ACCENTS[group.category] || "bg-white";
-            return (
-              <section key={group.category} className="space-y-2">
+          <>
+            {hintItems.length > 0 && (
+              <section className="space-y-2">
                 <h2 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
                   <span className="inline-block w-2 h-4 bg-black" />
                   <span className="inline-flex items-center justify-between gap-1 w-full">
-                    <span>{group.label}</span>
-                    <span>[You have {group.category === "hints" ? hintBalance : group.category === "streak_freeze" ? streakFreezes : 0}]</span>
+                    <span>Hints</span>
+                    <span>[You have {hintBalance}]</span>
                   </span>
                 </h2>
                 <div className="space-y-2">
-                  {group.items.map((item) => (
-                    <div
-                      key={item._id}
-                      className={`${accent} border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3 flex items-center gap-3`}
-                    >
+                  {hintItems.map((item) => (
+                    <div key={item.id} className="bg-cyan-400 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3 flex items-center gap-3">
                       <div className="grid place-items-center w-10 h-10 border-2 border-black bg-white shrink-0">
-                        <Icon className="w-5 h-5" strokeWidth={3} />
+                        <Lightbulb className="w-5 h-5" strokeWidth={3} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-black text-sm uppercase truncate">{item.name}</div>
-                        <div className="text-xs font-bold text-black/70 truncate">
-                          {item.description || `×${item.quantity}`}
-                        </div>
+                        <div className="text-xs font-bold text-black/70 truncate">×{item.quantity}</div>
                       </div>
                       <div className="text-right shrink-0">
                         <div className="font-black text-sm">${item.priceUsd}</div>
@@ -212,8 +283,43 @@ export default function StorePage() {
                   ))}
                 </div>
               </section>
-            );
-          })
+            )}
+
+            {freezeItems.length > 0 && (
+              <section className="space-y-2">
+                <h2 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
+                  <span className="inline-block w-2 h-4 bg-black" />
+                  <span className="inline-flex items-center justify-between gap-1 w-full">
+                    <span>Streak Freezes</span>
+                    <span>[You have {streakFreezes}]</span>
+                  </span>
+                </h2>
+                <div className="space-y-2">
+                  {freezeItems.map((item) => (
+                    <div key={item.id} className="bg-blue-400 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3 flex items-center gap-3">
+                      <div className="grid place-items-center w-10 h-10 border-2 border-black bg-white shrink-0">
+                        <Snowflake className="w-5 h-5" strokeWidth={3} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-black text-sm uppercase truncate">{item.name}</div>
+                        <div className="text-xs font-bold text-black/70 truncate">×{item.quantity}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="font-black text-sm">${item.priceUsd}</div>
+                        <button
+                          type="button"
+                          onClick={() => handleBuy(item)}
+                          className="mt-1 bg-black text-white px-2 py-1 text-[10px] font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                        >
+                          Buy
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         )}
       </main>
 
@@ -223,18 +329,25 @@ export default function StorePage() {
         isOpen={showPayment}
         onClose={() => setShowPayment(false)}
         onSuccess={handlePaymentSuccess}
-        storeItem={selectedItem}
+        storeItem={selectedItem ? {
+          name: selectedItem.name,
+          category: selectedItem.category,
+          priceUsd: selectedItem.priceUsd,
+          quantity: selectedItem.quantity,
+          packId: selectedItem.packId,
+        } : null}
       />
 
-      {accessConfig && (
+      {dailyPassPrice && (
         <PaymentModal
           isOpen={showDailyAccess}
           onClose={() => setShowDailyAccess(false)}
           onSuccess={() => {
             setShowDailyAccess(false);
+            checkDailyPassStatus();
             toast.success("Daily pass purchased! Unlimited puzzles for the rest of the day.");
           }}
-          defaultPriceUsd={accessConfig.unlockAmountUsd}
+          defaultPriceUsd={dailyPassPrice}
         />
       )}
     </div>

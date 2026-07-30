@@ -1,80 +1,59 @@
-import userModel from "../models/users.model";
+import { createWalletClient, http } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { celo } from "viem/chains";
+import { GAME_ASSETS_CONTRACT } from "../config/wagmi";
+import { GAME_ASSETS_ABI } from "../abi/gameAssets";
 import { HttpException } from "./users.service";
-import UserService from "./users.service";
 
 class HintsService {
-  public users = userModel;
-  private userService = new UserService();
-
-  async getBalance(walletAddress: string) {
-    const lower = walletAddress.toLowerCase();
-    const user = await this.userService.ensureUser(lower);
-    return {
-      hintBalance: user?.hintBalance ?? 0,
-      streakFreezes: user?.streakFreezes ?? 0,
-    };
+  private getConsumerClient() {
+    const consumerPk = process.env.CONSUMER_PRIVATE_KEY;
+    if (!consumerPk) throw new HttpException(500, "Server consumer key not configured");
+    const account = privateKeyToAccount(consumerPk as `0x${string}`);
+    return createWalletClient({ account, chain: celo, transport: http() });
   }
 
-  async consumeHint(walletAddress: string): Promise<{ hintBalance: number }> {
-    const lower = walletAddress.toLowerCase();
-    await this.userService.ensureUser(lower);
-    const updated = await this.users.findOneAndUpdate(
-      {
-        walletAddress: lower,
-        hintBalance: { $gt: 0 },
-      },
-      { $inc: { hintBalance: -1 } },
-      { new: true }
-    );
-
-    if (!updated) {
-      throw new HttpException(400, "No hints available");
-    }
-    return { hintBalance: updated.hintBalance ?? 0 };
+  private getAdminClient() {
+    const adminPk = process.env.GAME_ASSETS_ADMIN_KEY;
+    if (!adminPk) throw new HttpException(500, "Server admin key not configured");
+    const account = privateKeyToAccount(adminPk as `0x${string}`);
+    return createWalletClient({ account, chain: celo, transport: http() });
   }
 
-  async grantHints(walletAddress: string, amount: number) {
-    const lower = walletAddress.toLowerCase();
-    await this.userService.ensureUser(lower);
-    const updated = await this.users.findOneAndUpdate(
-      { walletAddress: lower },
-      { $inc: { hintBalance: Math.max(0, Math.floor(amount)) } },
-      { new: true }
-    );
-    if (!updated) throw new HttpException(404, "User not found");
-    return { hintBalance: updated.hintBalance ?? 0 };
+  async consumeHint(walletAddress: string) {
+    if (!GAME_ASSETS_CONTRACT) throw new HttpException(500, "GameAssets contract not configured");
+    const walletClient = this.getConsumerClient();
+    const hash = await walletClient.writeContract({
+      address: GAME_ASSETS_CONTRACT,
+      abi: GAME_ASSETS_ABI,
+      functionName: "consumeHint",
+      args: [walletAddress as `0x${string}`],
+    });
+    return { success: true, txHash: hash };
   }
 
-  async grantStreakFreezes(walletAddress: string, amount: number) {
-    const lower = walletAddress.toLowerCase();
-    await this.userService.ensureUser(lower);
-    const updated = await this.users.findOneAndUpdate(
-      { walletAddress: lower },
-      { $inc: { streakFreezes: Math.max(0, Math.floor(amount)) } },
-      { new: true }
-    );
-    if (!updated) throw new HttpException(404, "User not found");
-    return { streakFreezes: updated.streakFreezes ?? 0 };
+  async consumeStreakFreeze(walletAddress: string) {
+    if (!GAME_ASSETS_CONTRACT) throw new HttpException(500, "GameAssets contract not configured");
+    const walletClient = this.getConsumerClient();
+    const hash = await walletClient.writeContract({
+      address: GAME_ASSETS_CONTRACT,
+      abi: GAME_ASSETS_ABI,
+      functionName: "consumeStreakFreeze",
+      args: [walletAddress as `0x${string}`],
+    });
+    return { success: true, txHash: hash };
   }
 
-  async setBalances(
-    walletAddress: string,
-    balances: { hintBalance?: number; streakFreezes?: number }
-  ) {
-    const lower = walletAddress.toLowerCase();
-    const set: Record<string, number> = {};
-    if (balances.hintBalance !== undefined) set.hintBalance = Math.max(0, Math.floor(balances.hintBalance));
-    if (balances.streakFreezes !== undefined) set.streakFreezes = Math.max(0, Math.floor(balances.streakFreezes));
-    const updated = await this.users.findOneAndUpdate(
-      { walletAddress: lower },
-      { $set: set },
-      { new: true, upsert: false }
-    );
-    if (!updated) throw new HttpException(404, "User not found");
-    return {
-      hintBalance: updated.hintBalance ?? 0,
-      streakFreezes: updated.streakFreezes ?? 0,
-    };
+  async grantAsset(walletAddress: string, assetType: `0x${string}`, quantity: number) {
+    if (!GAME_ASSETS_CONTRACT) throw new HttpException(500, "GameAssets contract not configured");
+    const walletClient = this.getAdminClient();
+    const hash = await walletClient.writeContract({
+      address: GAME_ASSETS_CONTRACT,
+      abi: GAME_ASSETS_ABI,
+      functionName: "grantAsset",
+      args: [walletAddress as `0x${string}`, assetType, BigInt(quantity)],
+    });
+    return { success: true, txHash: hash };
   }
 }
 
