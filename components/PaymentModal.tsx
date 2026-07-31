@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useAccount, usePublicClient, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
 import { erc20Abi, type Hex, parseUnits } from "viem";
 import { celo } from "wagmi/chains";
-import { isOnCorrectChain } from "@/lib/config/wagmi";
+import { isOnCorrectChain, isMiniPay } from "@/lib/config/wagmi";
+import { getLegacyGasPrice } from "@/lib/utils/minipayTx";
 import {
   BadgeCheck,
   Castle,
@@ -73,7 +74,7 @@ export function PaymentModal({
   const [isCorrectChain, setIsCorrectChain] = useState(false);
   const [isChainSwitching, setIsChainSwitching] = useState(false);
 
-  const { isLoading: isConfirming, isSuccess: txConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
+  const { isLoading: isConfirming, isSuccess: txConfirmed, isError: txFailed } = useWaitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
 
   // Check if user is on correct chain (Celo Mainnet)
   useEffect(() => {
@@ -81,6 +82,9 @@ export function PaymentModal({
   }, [chainId]);
 
   const ensureCorrectChain = async (): Promise<boolean> => {
+    // MiniPay is always on Celo mainnet; during SSR/hydration chainId is
+    // undefined. Both should short-circuit instead of requesting a switch.
+    if (chainId === undefined || isMiniPay()) return true;
     if (isOnCorrectChain(chainId)) return true;
     
     if (!address) {
@@ -123,6 +127,15 @@ export function PaymentModal({
       doPurchase();
     }
   }, [txConfirmed, step]);
+
+  useEffect(() => {
+    if (txFailed && (step === "approving" || step === "purchasing")) {
+      setError("Transaction timed out or failed on-chain. Please try again.");
+      setStep("quote");
+      setUserMessage("");
+      setTxHash(undefined);
+    }
+  }, [txFailed, step]);
 
   const usdAmount = storeItem ? storeItem.priceUsd : (defaultPriceUsd || "0.01");
   const displayAmount = `$${usdAmount}`;
@@ -225,6 +238,7 @@ export function PaymentModal({
         args: [GAME_ASSETS_CONTRACT, amount],
         feeCurrency: selectedToken.feeCurrencyAddress as Hex,
         gas: approveGas,
+        gasPrice: await getLegacyGasPrice(publicClient, selectedToken.feeCurrencyAddress as Hex),
       });
       setTxHash(hash);
     } catch (err: any) {
@@ -276,6 +290,7 @@ export function PaymentModal({
           args: [selectedToken.tokenAddress as Hex],
           feeCurrency,
           gas: buyGas,
+          gasPrice: await getLegacyGasPrice(publicClient, feeCurrency),
         });
         setTxHash(hash);
       } else if (storeItem?.packId !== undefined) {
@@ -311,6 +326,7 @@ export function PaymentModal({
           args: [BigInt(storeItem.packId), selectedToken.tokenAddress as Hex],
           feeCurrency,
           gas: buyGas,
+          gasPrice: await getLegacyGasPrice(publicClient, feeCurrency),
         });
         setTxHash(hash);
       } else {
@@ -348,6 +364,7 @@ export function PaymentModal({
           args: [assetType, BigInt(quantity), selectedToken.tokenAddress as Hex],
           feeCurrency,
           gas: buyGas,
+          gasPrice: await getLegacyGasPrice(publicClient, feeCurrency),
         });
         setTxHash(hash);
       }

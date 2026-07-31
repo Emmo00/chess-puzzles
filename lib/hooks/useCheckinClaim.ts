@@ -12,7 +12,8 @@ import {
 import { erc20Abi } from "viem";
 import { celo } from "wagmi/chains";
 import { PAYOUT_CLAIMS_ABI } from "@/lib/config/payoutClaims";
-import { PAYOUT_CLAIM_CONTRACT, SUPPORTED_CURRENCIES } from "@/lib/config/wagmi";
+import { PAYOUT_CLAIM_CONTRACT, SUPPORTED_CURRENCIES, isMiniPay } from "@/lib/config/wagmi";
+import { getLegacyGasPrice } from "@/lib/utils/minipayTx";
 import {
   DEVICE_FINGERPRINT_HEADER,
   getDeviceFingerprint,
@@ -40,6 +41,7 @@ export function useCheckinClaim() {
   const [isPending, setIsPending] = useState(false);
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
+    timeout: 60_000,
   });
   const [claimError, setClaimError] = useState<string | null>(null);
   const inFlight = useRef(false);
@@ -52,6 +54,10 @@ export function useCheckinClaim() {
   };
 
   const ensureCorrectChain = async (): Promise<boolean> => {
+    // MiniPay is always on Celo mainnet, and during SSR/hydration chainId is
+    // undefined — both cases should short-circuit instead of requesting a
+    // chain switch MiniPay may not implement.
+    if (chainId === undefined || isMiniPay()) return true;
     if (isCorrectChain) return true;
     
     if (!address) {
@@ -118,7 +124,8 @@ export function useCheckinClaim() {
         })
       );
 
-      const gasWithBuffer = (gasEstimate * BigInt(15)) / BigInt(10);
+      const gasWithBufferNumerator = gasEstimate * BigInt(15);
+      const gasWithBufferDenominator = BigInt(10);
 
       const sorted = balances
         .filter((b) => b.balance > 0)
@@ -135,15 +142,30 @@ export function useCheckinClaim() {
         });
 
       for (const { currency, balance } of sorted) {
-        if (balance >= gasWithBuffer) {
-          logClaimFlow("feeCurrency.selected", {
-            symbol: currency.symbol,
-            balance: balance.toString(),
-            gasEstimate: gasEstimate.toString(),
-          });
-          return {
-            feeCurrency: currency.feeCurrencyAddress as `0x${string}`,
-          };
+        try {
+          // eth_gasPrice([feeCurrency]) returns the price in 1e-18 units
+          // regardless of token decimals, so scale into token base units.
+          const gasPrice = await getLegacyGasPrice(
+            publicClient,
+            currency.feeCurrencyAddress as `0x${string}`,
+          );
+          const feeInBaseUnits =
+            (gasWithBufferNumerator * gasPrice) /
+            (gasWithBufferDenominator *
+              10n ** BigInt(18 - currency.decimals));
+          if (balance >= feeInBaseUnits) {
+            logClaimFlow("feeCurrency.selected", {
+              symbol: currency.symbol,
+              balance: balance.toString(),
+              gasEstimate: gasEstimate.toString(),
+              feeInBaseUnits: feeInBaseUnits.toString(),
+            });
+            return {
+              feeCurrency: currency.feeCurrencyAddress as `0x${string}`,
+            };
+          }
+        } catch {
+          continue;
         }
       }
 
@@ -274,7 +296,11 @@ export function useCheckinClaim() {
           BigInt(claim.deadline),
           claim.signature,
         ],
-        ...({ feeCurrency: feeOption.feeCurrency, gas: claimGas } as any),
+        ...({
+          feeCurrency: feeOption.feeCurrency,
+          gas: claimGas,
+          gasPrice: await getLegacyGasPrice(publicClient!, feeOption.feeCurrency),
+        } as any),
       });
 
       logClaimFlow("sendClaim.wallet.submitted", {

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useSwitchChain, useAccount, useChainId } from 'wagmi'
-import { PREFERRED_CHAIN, isOnCorrectChain } from '../config/wagmi'
+import { PREFERRED_CHAIN, isOnCorrectChain, isMiniPay } from '../config/wagmi'
 
 export function useChainSwitching() {
   const { switchChain } = useSwitchChain()
@@ -11,6 +11,9 @@ export function useChainSwitching() {
 
   useEffect(() => {
     const handleChainSwitch = async () => {
+      // MiniPay is always on Celo mainnet; during SSR/hydration chainId is
+      // undefined. Both should short-circuit instead of requesting a switch.
+      if (chainId === undefined || isMiniPay()) return
       // Only switch if user is connected and not on a Celo chain
       if (isConnected && !isOnCorrectChain(chainId)) {
         try {
@@ -30,7 +33,7 @@ export function useChainSwitching() {
   }, [isConnected, chainId, switchChain])
 
   return {
-    isOnCorrectChain: isOnCorrectChain(chainId),
+    isOnCorrectChain: chainId !== undefined && !isMiniPay() && isOnCorrectChain(chainId),
     currentChainId: chainId,
     preferredChain: PREFERRED_CHAIN,
     switchToPreferredChain: () => switchChain({ chainId: PREFERRED_CHAIN.id })

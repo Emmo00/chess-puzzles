@@ -3,11 +3,21 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAccount, usePublicClient, useWriteContract, useChainId, useSwitchChain } from "wagmi";
 import { celo } from "wagmi/chains";
-import { isOnCorrectChain } from "@/lib/config/wagmi";
+import { isOnCorrectChain, isMiniPay } from "@/lib/config/wagmi";
 import { GAME_ASSETS_CONTRACT, GAME_ASSET_TYPES, ALLOWLISTED_STABLECOINS } from "@/lib/config/wagmi";
 import { GAME_ASSETS_ABI } from "@/lib/abi/gameAssets";
 import { type Hex, parseUnits } from "viem";
 import { erc20Abi } from "viem";
+import { buildLegacyTxParams } from "@/lib/utils/minipayTx";
+
+const DEFAULT_FEE_CURRENCY = "0x765DE816845861e75A25fCA122bb6898B8B1282a" as Hex;
+
+const getFeeCurrencyForToken = (tokenAddress: Hex): Hex => {
+  const currency = ALLOWLISTED_STABLECOINS.find(
+    (c) => c.tokenAddress.toLowerCase() === tokenAddress.toLowerCase()
+  );
+  return (currency?.feeCurrencyAddress as Hex) ?? DEFAULT_FEE_CURRENCY;
+};
 
 export interface AssetBalanceState {
   hintBalance: number;
@@ -73,6 +83,9 @@ export function useGameAssetsPurchase() {
   const isCorrectChain = isOnCorrectChain(chainId);
 
   const ensureCorrectChain = async (): Promise<boolean> => {
+    // MiniPay is always on Celo mainnet; during SSR/hydration chainId is
+    // undefined. Both should short-circuit instead of requesting a switch.
+    if (chainId === undefined || isMiniPay()) return true;
     if (isCorrectChain) return true;
     
     if (!address) {
@@ -97,13 +110,26 @@ export function useGameAssetsPurchase() {
       args: [address as Hex, GAME_ASSETS_CONTRACT],
     });
     if (allowance < amount) {
+      const feeCurrency = getFeeCurrencyForToken(tokenAddress);
+      const { gas, gasPrice } = await buildLegacyTxParams(publicClient, {
+        account: address,
+        address: tokenAddress,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [GAME_ASSETS_CONTRACT, amount],
+        feeCurrency,
+        fallbackGas: 150_000n,
+      });
       const approveHash = await writeContractAsync({
         address: tokenAddress,
         abi: erc20Abi,
         functionName: "approve",
         args: [GAME_ASSETS_CONTRACT, amount],
+        feeCurrency,
+        gas,
+        gasPrice,
       });
-      await publicClient.waitForTransactionReceipt({ hash: approveHash });
+      await publicClient.waitForTransactionReceipt({ hash: approveHash, timeout: 60_000 });
     }
   };
 
@@ -124,14 +150,27 @@ export function useGameAssetsPurchase() {
     try {
       const amount = parseUnits(usdAmount, tokenDecimals);
       await ensureApproval(tokenAddress, amount);
+      const feeCurrency = getFeeCurrencyForToken(tokenAddress);
+      const { gas, gasPrice } = await buildLegacyTxParams(publicClient, {
+        account: address,
+        address: GAME_ASSETS_CONTRACT,
+        abi: GAME_ASSETS_ABI,
+        functionName: "purchaseAsset",
+        args: [assetType, BigInt(quantity), tokenAddress],
+        feeCurrency,
+        fallbackGas: 300_000n,
+      });
       const hash = await writeContractAsync({
         address: GAME_ASSETS_CONTRACT,
         abi: GAME_ASSETS_ABI,
         functionName: "purchaseAsset",
         args: [assetType, BigInt(quantity), tokenAddress],
+        feeCurrency,
+        gas,
+        gasPrice,
       });
       setTxHash(hash);
-      await publicClient.waitForTransactionReceipt({ hash });
+      await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
       return hash;
     } finally {
       setIsPending(false);
@@ -154,14 +193,27 @@ export function useGameAssetsPurchase() {
     try {
       const amount = parseUnits(usdAmount, tokenDecimals);
       await ensureApproval(tokenAddress, amount);
+      const feeCurrency = getFeeCurrencyForToken(tokenAddress);
+      const { gas, gasPrice } = await buildLegacyTxParams(publicClient, {
+        account: address,
+        address: GAME_ASSETS_CONTRACT,
+        abi: GAME_ASSETS_ABI,
+        functionName: "purchaseAssetPack",
+        args: [BigInt(packId), tokenAddress],
+        feeCurrency,
+        fallbackGas: 300_000n,
+      });
       const hash = await writeContractAsync({
         address: GAME_ASSETS_CONTRACT,
         abi: GAME_ASSETS_ABI,
         functionName: "purchaseAssetPack",
         args: [BigInt(packId), tokenAddress],
+        feeCurrency,
+        gas,
+        gasPrice,
       });
       setTxHash(hash);
-      await publicClient.waitForTransactionReceipt({ hash });
+      await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
       return hash;
     } finally {
       setIsPending(false);
@@ -180,14 +232,27 @@ export function useGameAssetsPurchase() {
     
     setIsPending(true);
     try {
+      const feeCurrency = getFeeCurrencyForToken(paymentToken);
+      const { gas, gasPrice } = await buildLegacyTxParams(publicClient, {
+        account: address,
+        address: GAME_ASSETS_CONTRACT,
+        abi: GAME_ASSETS_ABI,
+        functionName: "purchaseDailyPass",
+        args: [paymentToken],
+        feeCurrency,
+        fallbackGas: 300_000n,
+      });
       const hash = await writeContractAsync({
         address: GAME_ASSETS_CONTRACT,
         abi: GAME_ASSETS_ABI,
         functionName: "purchaseDailyPass",
         args: [paymentToken],
+        feeCurrency,
+        gas,
+        gasPrice,
       });
       setTxHash(hash);
-      await publicClient.waitForTransactionReceipt({ hash });
+      await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
       return hash;
     } finally {
       setIsPending(false);
@@ -207,6 +272,9 @@ export function useGameAssetsAdmin() {
   const isCorrectChain = isOnCorrectChain(chainId);
 
   const ensureCorrectChain = async (): Promise<boolean> => {
+    // MiniPay is always on Celo mainnet; during SSR/hydration chainId is
+    // undefined. Both should short-circuit instead of requesting a switch.
+    if (chainId === undefined || isMiniPay()) return true;
     if (isCorrectChain) return true;
     
     if (!address) {
@@ -222,102 +290,153 @@ export function useGameAssetsAdmin() {
     }
   };
 
+  const adminParams = async (functionName: string, args: readonly unknown[], fallbackGas: bigint) => {
+    if (!address || !publicClient || !GAME_ASSETS_CONTRACT) {
+      throw new Error("Wallet not connected");
+    }
+    return buildLegacyTxParams(publicClient, {
+      account: address,
+      address: GAME_ASSETS_CONTRACT,
+      abi: GAME_ASSETS_ABI,
+      functionName,
+      args,
+      feeCurrency: DEFAULT_FEE_CURRENCY,
+      fallbackGas,
+    });
+  };
+
   const grantAsset = async (to: Hex, assetType: Hex, quantity: number) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
+    const { gas, gasPrice, feeCurrency } = await adminParams("grantAsset", [to, assetType, BigInt(quantity)], 250_000n);
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "grantAsset",
       args: [to, assetType, BigInt(quantity)],
+      feeCurrency,
+      gas,
+      gasPrice,
     });
   };
 
   const grantDailyPass = async (to: Hex) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
+    const { gas, gasPrice, feeCurrency } = await adminParams("grantDailyPass", [to], 150_000n);
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "grantDailyPass",
       args: [to],
+      feeCurrency,
+      gas,
+      gasPrice,
     });
   };
 
   const grantAssetPack = async (to: Hex, packId: number) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
+    const { gas, gasPrice, feeCurrency } = await adminParams("grantAssetPack", [to, BigInt(packId)], 250_000n);
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "grantAssetPack",
       args: [to, BigInt(packId)],
+      feeCurrency,
+      gas,
+      gasPrice,
     });
   };
 
   const createAssetPack = async (name: string, assetType: Hex, quantity: number, price: number) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
+    const { gas, gasPrice, feeCurrency } = await adminParams("createAssetPack", [name, assetType, BigInt(quantity), BigInt(price)], 400_000n);
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "createAssetPack",
       args: [name, assetType, BigInt(quantity), BigInt(price)],
+      feeCurrency,
+      gas,
+      gasPrice,
     });
   };
 
   const updateAssetPack = async (packId: number, price: number, active: boolean) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
+    const { gas, gasPrice, feeCurrency } = await adminParams("updateAssetPack", [BigInt(packId), BigInt(price), active], 200_000n);
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "updateAssetPack",
       args: [BigInt(packId), BigInt(price), active],
+      feeCurrency,
+      gas,
+      gasPrice,
     });
   };
 
   const setUnitPrice = async (assetType: Hex, price: number) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
+    const { gas, gasPrice, feeCurrency } = await adminParams("setUnitPrice", [assetType, BigInt(price)], 150_000n);
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "setUnitPrice",
       args: [assetType, BigInt(price)],
+      feeCurrency,
+      gas,
+      gasPrice,
     });
   };
 
   const setDailyPassPrice = async (price: number) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
+    const { gas, gasPrice, feeCurrency } = await adminParams("setDailyPassPrice", [BigInt(price)], 150_000n);
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "setDailyPassPrice",
       args: [BigInt(price)],
+      feeCurrency,
+      gas,
+      gasPrice,
     });
   };
 
   const setDailyPassDuration = async (duration: number) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
+    const { gas, gasPrice, feeCurrency } = await adminParams("setDailyPassDuration", [BigInt(duration)], 150_000n);
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "setDailyPassDuration",
       args: [BigInt(duration)],
+      feeCurrency,
+      gas,
+      gasPrice,
     });
   };
 
   const updateTreasury = async (newTreasury: Hex) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
+    const { gas, gasPrice, feeCurrency } = await adminParams("updateTreasury", [newTreasury], 150_000n);
     return writeContractAsync({
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "updateTreasury",
       args: [newTreasury],
+      feeCurrency,
+      gas,
+      gasPrice,
     });
   };
 

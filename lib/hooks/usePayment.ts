@@ -11,8 +11,9 @@ import {
 } from "wagmi";
 import { encodeFunctionData, parseUnits, formatUnits } from "viem";
 import { celo } from "wagmi/chains";
-import { isOnCorrectChain, ALLOWLISTED_STABLECOINS, SUPPORTED_CURRENCIES } from "../config/wagmi";
+import { isOnCorrectChain, ALLOWLISTED_STABLECOINS, SUPPORTED_CURRENCIES, isMiniPay } from "../config/wagmi";
 import { CUSD_ABI, getCUSDAddress, PAYMENT_RECIPIENT } from "../utils/payment";
+import { buildLegacyTxParams } from "../utils/minipayTx";
 import { PaymentType } from "../types/payment";
 
 export interface PaymentMeta {
@@ -58,9 +59,11 @@ export function usePayment() {
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
+    timeout: 60_000,
   });
 
   const ensureCorrectChain = async (): Promise<boolean> => {
+    if (chainId === undefined || isMiniPay()) return true;
     if (isOnCorrectChain(chainId)) return true;
     
     if (!address) {
@@ -146,9 +149,12 @@ export function usePayment() {
         });
       }
 
+      // eth_gasPrice([feeCurrency]) returns 1e-18 units regardless of token
+      // decimals. Scale into the selected token's base units so the fee can be
+      // compared against balances and formatted with the token's decimals.
       gasFee =
         (effectiveGas * gasPrice * GAS_SAFETY_NUMERATOR) /
-        GAS_SAFETY_DENOMINATOR;
+        (GAS_SAFETY_DENOMINATOR * 10n ** BigInt(18 - selected.decimals));
     } catch {
       // If estimation fails, skip gas fee estimate
     }
@@ -207,11 +213,29 @@ export function usePayment() {
         throw new Error("Blockchain client unavailable. Please retry.");
       }
 
+      // MiniPay is legacy-only: explicit gas + gasPrice (from a public RPC)
+      // are required, otherwise viem fills EIP-1559 fields the wallet ignores
+      // and estimates gas against the MiniPay provider (permission denied).
+      const { gas, gasPrice, feeCurrency } = await buildLegacyTxParams(
+        publicClient,
+        {
+          account: address,
+          address: token.tokenAddress as `0x${string}`,
+          abi: CUSD_ABI,
+          functionName: "transfer",
+          args: [PAYMENT_RECIPIENT, amount],
+          feeCurrency: token.feeCurrencyAddress as `0x${string}`,
+          fallbackGas: 100_000n,
+        },
+      );
+
       await sendTransaction({
         account: address,
         to: token.tokenAddress as `0x${string}`,
         data,
-        feeCurrency: token.feeCurrencyAddress as `0x${string}`,
+        feeCurrency,
+        gas,
+        gasPrice,
       });
     } catch (error) {
       setPaymentType(null);
