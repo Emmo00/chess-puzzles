@@ -4,13 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { sdk } from "@farcaster/miniapp-sdk";
 import confetti from "canvas-confetti";
-import { ArrowUpRight, AtSign, Ban, Check, Circle, Clock, Coins, Lightbulb, Send, Share2, TriangleAlert, Zap } from "lucide-react";
+import { ArrowUpRight, AtSign, Ban, Check, Circle, Clock, Coins, Lightbulb, Send, Share2, Zap } from "lucide-react";
 import { useAccount } from "wagmi";
 import { celo } from "wagmi/chains";
 
 import ChessBoard, { ChessBoardRef } from "@/components/chess-board";
 import { WalletConnect } from "@/components/WalletConnect";
-import { useChainSwitching } from "@/lib/hooks/useChainSwitching";
 import { useCheckinClaim } from "@/lib/hooks/useCheckinClaim";
 import { useDailyCheckin } from "@/lib/hooks/useDailyCheckin";
 import { useUtcMidnightCountdown, formatCountdown } from "@/lib/hooks/useUtcMidnightCountdown";
@@ -44,7 +43,6 @@ export default function DailyChallengePage() {
   const statusMessageRef = useRef<HTMLDivElement>(null);
 
   const { address, isConnected } = useAccount();
-  const { isOnCorrectChain, switchToPreferredChain } = useChainSwitching();
   const {
     status,
     loading,
@@ -347,14 +345,8 @@ export default function DailyChallengePage() {
   const handleClaimReward = async () => {
     logClaimFlow("claim.click", {
       address,
-      isOnCorrectChain,
       reservationStatus: status?.reservation?.status,
     });
-
-    if (!isOnCorrectChain) {
-      setClaimMessage("Switch to Celo network before claiming.");
-      return;
-    }
 
     if (!status?.reservation?.rewardEligible) {
       setClaimMessage("Today's reward slots are already taken. You can still solve for streak and stats.");
@@ -539,14 +531,6 @@ export default function DailyChallengePage() {
           <div className="w-full max-w-md bg-yellow-300 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3 text-center">
             <div className="font-black text-sm uppercase text-black">You solved today&apos;s challenge!</div>
           </div>
-        )}
-        {!isOnCorrectChain && (
-          <button
-            onClick={switchToPreferredChain}
-            className="bg-yellow-400 text-black px-4 py-3 font-black text-xs uppercase border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] inline-flex items-center gap-1"
-          >
-            <TriangleAlert className="w-4 h-4" /> Switch To Celo To Claim
-          </button>
         )}
 
         {!currentPuzzle && (

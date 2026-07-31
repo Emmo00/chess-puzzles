@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useAccount, usePublicClient, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
+import { useAccount, usePublicClient, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
 import { erc20Abi, type Hex, parseUnits } from "viem";
 import { celo } from "wagmi/chains";
 import { isOnCorrectChain, isMiniPay } from "@/lib/config/wagmi";
@@ -61,7 +61,7 @@ export function PaymentModal({
   defaultPriceUsd,
 }: PaymentModalProps) {
   const { address, chainId } = useAccount();
-  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
+  const { switchChain } = useSwitchChain();
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   const [step, setStep] = useState<Step>("quote");
@@ -71,15 +71,8 @@ export function PaymentModal({
   const [balance, setBalance] = useState<bigint>(0n);
   const [needsApproval, setNeedsApproval] = useState(false);
   const [userMessage, setUserMessage] = useState("");
-  const [isCorrectChain, setIsCorrectChain] = useState(false);
-  const [isChainSwitching, setIsChainSwitching] = useState(false);
 
   const { isLoading: isConfirming, isSuccess: txConfirmed, isError: txFailed } = useWaitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
-
-  // Check if user is on correct chain (Celo Mainnet)
-  useEffect(() => {
-    setIsCorrectChain(isOnCorrectChain(chainId));
-  }, [chainId]);
 
   const ensureCorrectChain = async (): Promise<boolean> => {
     // MiniPay is always on Celo mainnet; during SSR/hydration chainId is
@@ -91,7 +84,6 @@ export function PaymentModal({
       throw new Error("Wallet not connected");
     }
     
-    setIsChainSwitching(true);
     try {
       await switchChain({ chainId: celo.id });
       return true;
@@ -99,8 +91,6 @@ export function PaymentModal({
       const message = error instanceof Error ? error.message : "Failed to switch to Celo Mainnet";
       setError(message);
       throw new Error(message);
-    } finally {
-      setIsChainSwitching(false);
     }
   };
 
@@ -505,14 +495,6 @@ export function PaymentModal({
                   {isStore ? <><Lightbulb className="w-4 h-4" /> {subtitle}</> : <><Zap className="w-4 h-4" /> {subtitle}</>}
                 </p>
               </div>
-
-              {!isCorrectChain && (
-                <div className="bg-orange-300 border-4 border-black p-3 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform -rotate-1 text-center">
-                  <p className="text-xs font-bold text-black uppercase tracking-wide flex items-center justify-center gap-1">
-                    <Zap className="w-3.5 h-3.5" /> {isChainSwitching ? "..." : "."}
-                  </p>
-                </div>
-              )}
 
               {renderQuote()}
 

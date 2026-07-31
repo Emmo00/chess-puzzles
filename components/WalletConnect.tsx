@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import { sdk } from "@farcaster/miniapp-sdk";
 import { useAccount, useConnect } from "wagmi";
-import { Smartphone, TriangleAlert, Zap } from "lucide-react";
+import { Smartphone } from "lucide-react";
 import { isMiniPay } from "@/lib/config/wagmi";
-import { useChainSwitching } from "../lib/hooks/useChainSwitching";
 
 export function WalletConnect() {
   const { address, isConnected } = useAccount();
@@ -13,7 +12,6 @@ export function WalletConnect() {
   const [isMiniPayDetected, setIsMiniPayDetected] = useState(false);
   const [isFarcasterMiniApp, setIsFarcasterMiniApp] = useState(false);
   const [autoConnectAttempted, setAutoConnectAttempted] = useState(false);
-  const { isOnCorrectChain, switchToPreferredChain } = useChainSwitching();
 
   const farcasterConnector = connectors.find(
     (connector) =>
@@ -69,28 +67,11 @@ export function WalletConnect() {
 
   if (isConnected) {
     return (
-      <div>
-        {!isOnCorrectChain && (
-          <div className="relative">
-            <button
-              onClick={!isOnCorrectChain ? switchToPreferredChain : undefined}
-              className={`px-4 py-3 border-4 border-black font-black text-xs uppercase tracking-wider transition-all duration-200 flex items-center gap-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 ${
-                isOnCorrectChain ? "" : "bg-yellow-400 text-black hover:bg-yellow-300 cursor-pointer animate-pulse"
-              }`}
-            >
-              {isMiniPayDetected && <Smartphone className="w-5 h-5" />}
-              {!isOnCorrectChain && <TriangleAlert className="w-5 h-5 animate-bounce" />}
-              {/* <span className="font-black">{formatAddress(address)}</span> */}
-            </button>
-            {!isOnCorrectChain && (
-              <div className="absolute top-full mt-2 right-0 bg-red-400 border-4 border-black p-3 text-xs font-black text-black uppercase tracking-wide whitespace-nowrap z-50 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-2">
-                <span className="inline-flex items-center gap-1">
-                  <Zap className="w-4 h-4" /> CLICK TO SWITCH TO CELO!
-                </span>
-              </div>
-            )}
-          </div>
-        )}
+      <div className="px-4 py-3 border-4 border-black bg-lime-400 text-black shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+        <span className="font-black text-xs uppercase tracking-wider flex items-center gap-2">
+          {isMiniPayDetected && <Smartphone className="w-5 h-5" />}
+          <span className="font-mono text-xs">{address}</span>
+        </span>
       </div>
     );
   }
