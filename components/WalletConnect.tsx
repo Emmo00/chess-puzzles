@@ -66,14 +66,7 @@ export function WalletConnect() {
   ]);
 
   if (isConnected) {
-    return (
-      <div className="px-4 py-3 border-4 border-black bg-lime-400 text-black shadow-[4px_4px_0px_rgba(0,0,0,1)]">
-        <span className="font-black text-xs uppercase tracking-wider flex items-center gap-2">
-          {isMiniPayDetected && <Smartphone className="w-5 h-5" />}
-          <span className="font-mono text-xs">{address}</span>
-        </span>
-      </div>
-    );
+    return null;
   }
 
   // For MiniPay, show a simplified connect button (auto-connects)
