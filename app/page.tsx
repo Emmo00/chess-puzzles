@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
-import { List, Puzzle, ShoppingCart, Snowflake, X } from "lucide-react";
+import { List, Puzzle, ShoppingCart, Snowflake, X, Volume2, VolumeX } from "lucide-react";
 import { WalletConnect } from "@/components/WalletConnect";
 import { BottomNav } from "@/components/BottomNav";
 import { ModeSheet } from "@/components/home/ModeSheet";
@@ -15,6 +15,12 @@ import { useUserStats } from "@/lib/hooks/useUserStats";
 import type { StreakStatus } from "@/lib/hooks/useUserStats";
 import { useDailyCheckin } from "@/lib/hooks/useDailyCheckin";
 import { levelForPoints, pointsForLevel, levelProgressPercent, levelStateFor } from "@/lib/leveling";
+import {
+  isMusicEnabled,
+  MUSIC_PREF_EVENT,
+  setMusicEnabled as persistMusicEnabled,
+} from "@/lib/utils/backgroundMusic";
+import { fireLevelUpConfetti, LEVEL_TRACKING_KEY } from "@/lib/utils/levelUpConfetti";
 import styles from "./page.module.css";
 
 export default function Home() {
@@ -34,6 +40,7 @@ export default function Home() {
   const [currentNodeInView, setCurrentNodeInView] = useState(true);
   const [modalLevel, setModalLevel] = useState<number | null>(null);
   const [streakPopupDismissed, setStreakPopupDismissed] = useState(false);
+  const [musicEnabled, setMusicEnabledState] = useState(true);
 
   const showStreakPopup = streakStatus !== "alive" && !streakPopupDismissed && isConnected;
 
@@ -43,6 +50,38 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    setMusicEnabledState(isMusicEnabled());
+
+    const syncPreference = () => {
+      setMusicEnabledState(isMusicEnabled());
+    };
+
+    window.addEventListener(MUSIC_PREF_EVENT, syncPreference);
+    window.addEventListener("storage", syncPreference);
+    return () => {
+      window.removeEventListener(MUSIC_PREF_EVENT, syncPreference);
+      window.removeEventListener("storage", syncPreference);
+    };
+  }, [mounted]);
+
+  useEffect(() => {
+    if (!mounted || !userStats) return;
+
+    const storedRaw = localStorage.getItem(LEVEL_TRACKING_KEY);
+    if (storedRaw === null) {
+      localStorage.setItem(LEVEL_TRACKING_KEY, String(level));
+      return;
+    }
+
+    const stored = Number(storedRaw);
+    if (level > stored) {
+      fireLevelUpConfetti();
+    }
+    localStorage.setItem(LEVEL_TRACKING_KEY, String(level));
+  }, [mounted, userStats, level]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -110,6 +149,14 @@ export default function Home() {
     router.push("/solve-puzzles");
   }, [isConnected, router]);
 
+  const toggleMusic = useCallback(() => {
+    setMusicEnabledState((prev) => {
+      const next = !prev;
+      persistMusicEnabled(next);
+      return next;
+    });
+  }, []);
+
   const handleLevelClick = useCallback((clickedLevel: number) => {
     setModalLevel(clickedLevel);
   }, []);
@@ -158,6 +205,19 @@ export default function Home() {
 
       <div className={styles.bottomSection}>
         <div className={styles.ctaRow}>
+          <button
+            type="button"
+            className={styles.musicToggle}
+            onClick={toggleMusic}
+            aria-label={musicEnabled ? "Mute background music" : "Unmute background music"}
+            aria-pressed={musicEnabled}
+          >
+            {musicEnabled ? (
+              <Volume2 strokeWidth={3.5} aria-hidden="true" />
+            ) : (
+              <VolumeX strokeWidth={3.5} aria-hidden="true" />
+            )}
+          </button>
           <button
             type="button"
             className={styles.menuButton}

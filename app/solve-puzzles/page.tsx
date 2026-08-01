@@ -17,6 +17,7 @@ import { PointsCountUp } from "@/components/PointsCountUp";
 import { toast } from "sonner";
 import { GAME_ASSETS_CONTRACT, GAME_ASSET_TYPES } from "@/lib/config/wagmi";
 import { GAME_ASSETS_ABI } from "@/lib/abi/gameAssets";
+import { fireLevelUpConfetti } from "@/lib/utils/levelUpConfetti";
 
 type HintStage = 'none' | 'piece' | 'move';
 
@@ -63,6 +64,12 @@ export default function SolvePuzzlesPage() {
   
   // Completion modal state
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+
+  useEffect(() => {
+    if (completionStats?.levelUp) {
+      fireLevelUpConfetti();
+    }
+  }, [completionStats]);
   
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [currentTurn, setCurrentTurn] = useState<"w" | "b">("w");
