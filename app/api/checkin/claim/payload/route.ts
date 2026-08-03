@@ -9,6 +9,7 @@ import {
   getDeviceFingerprintFromRequest,
 } from "@/lib/security/requestProtection";
 import CheckInService from "@/lib/services/checkin.service";
+import { devErrorBody } from "@/lib/utils/devResponse";
 
 const maskAddress = (address?: string) => {
   if (!address || address.length < 10) return address;
@@ -74,7 +75,10 @@ export async function POST(request: NextRequest) {
       status: error?.status,
     });
     return NextResponse.json(
-      { message: error.message || "Failed to create check-in claim payload" },
+      {
+        message: error.message || "Failed to create check-in claim payload",
+        ...devErrorBody(error),
+      },
       { status: error.status || 500 }
     );
   }

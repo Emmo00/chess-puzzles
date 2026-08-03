@@ -7,6 +7,7 @@ import {
   PAYOUT_CLAIMS_EIP712_DOMAIN,
 } from "@/lib/config/payoutClaims";
 import { getUnixTimestampSeconds } from "@/lib/utils/time";
+import { attachDevPayload } from "@/lib/utils/devResponse";
 
 interface SignedClaimPayload {
   day: number;
@@ -29,24 +30,35 @@ export class CheckInSigningService {
   ): Promise<SignedClaimPayload> {
     const signer = this.resolveSigner();
 
-    const signature = await signer.signTypedData({
-      domain: PAYOUT_CLAIMS_EIP712_DOMAIN,
-      types: CHECK_IN_CLAIM_TYPES,
-      primaryType: "CheckInClaim",
-      message: {
-        user,
-        day: BigInt(day),
-        nonce: BigInt(nonce),
-        deadline: BigInt(deadline),
-      },
-    });
+    try {
+      const signature = await signer.signTypedData({
+        domain: PAYOUT_CLAIMS_EIP712_DOMAIN,
+        types: CHECK_IN_CLAIM_TYPES,
+        primaryType: "CheckInClaim",
+        message: {
+          user,
+          day: BigInt(day),
+          nonce: BigInt(nonce),
+          deadline: BigInt(deadline),
+        },
+      });
 
-    return {
-      day,
-      nonce,
-      deadline,
-      signature,
-    };
+      return {
+        day,
+        nonce,
+        deadline,
+        signature,
+      };
+    } catch (error) {
+      attachDevPayload(error, {
+        method: "signCheckInClaim",
+        domain: PAYOUT_CLAIMS_EIP712_DOMAIN,
+        types: CHECK_IN_CLAIM_TYPES,
+        primaryType: "CheckInClaim",
+        message: { user, day, nonce, deadline },
+      });
+      throw error;
+    }
   }
 
   public getSignerAccount() {

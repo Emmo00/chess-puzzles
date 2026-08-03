@@ -13,6 +13,7 @@ import {
 import CheckInContractService from "@/lib/services/checkin-contract.service";
 import CheckInService from "@/lib/services/checkin.service";
 import { decodeFunctionData } from "viem";
+import { devErrorBody } from "@/lib/utils/devResponse";
 
 const TX_HASH_REGEX = /^0x[a-fA-F0-9]{64}$/;
 
@@ -267,7 +268,10 @@ export async function POST(request: NextRequest) {
       status: error?.status,
     });
     return NextResponse.json(
-      { message: error.message || "Failed to confirm check-in claim" },
+      {
+        message: error.message || "Failed to confirm check-in claim",
+        ...devErrorBody(error),
+      },
       { status: error.status || 500 }
     );
   }

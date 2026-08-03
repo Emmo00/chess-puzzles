@@ -14,6 +14,7 @@ import { celo } from "wagmi/chains";
 import { isOnCorrectChain, ALLOWLISTED_STABLECOINS, SUPPORTED_CURRENCIES, isMiniPay } from "../config/wagmi";
 import { CUSD_ABI, getCUSDAddress, PAYMENT_RECIPIENT } from "../utils/payment";
 import { buildLegacyTxParams } from "../utils/minipayTx";
+import { runWithDevCapture, captureApiDevError } from "../utils/devStore";
 import { PaymentType } from "../types/payment";
 
 export interface PaymentMeta {
@@ -229,13 +230,17 @@ export function usePayment() {
         },
       );
 
-      await sendTransaction({
+      const txParams: Parameters<typeof sendTransaction>[0] = {
         account: address,
         to: token.tokenAddress as `0x${string}`,
         data,
         feeCurrency,
         gas,
         gasPrice,
+      };
+
+      await runWithDevCapture("payment.sendTransaction", txParams, async () => {
+        await sendTransaction(txParams);
       });
     } catch (error) {
       setPaymentType(null);
@@ -297,6 +302,7 @@ export function usePayment() {
           }
         } else {
           const errorResult = await response.json();
+          captureApiDevError("payments.verify", response, errorResult);
           throw new Error(errorResult.error || "Payment verification failed");
         }
       } catch (error) {

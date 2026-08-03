@@ -6,6 +6,7 @@ import {
   DEVICE_FINGERPRINT_HEADER,
   getDeviceFingerprint,
 } from "@/lib/utils/deviceFingerprint";
+import { captureApiDevError } from "@/lib/utils/devStore";
 
 interface DailyChallengePuzzle {
   puzzleid: string;
@@ -176,6 +177,7 @@ export function useDailyCheckin() {
 
       const data = await response.json();
       if (!response.ok) {
+        captureApiDevError("checkin.solve", response, data);
         throw new Error(data.message || "Failed to submit daily challenge solution");
       }
 
@@ -228,6 +230,7 @@ export function useDailyCheckin() {
 
       if (!response.ok) {
         claimDebugIdRef.current = null;
+        captureApiDevError("checkin.claim.confirm", response, data);
         throw new Error(data.message || "Failed to confirm claim transaction");
       }
 
@@ -275,6 +278,7 @@ export function useDailyCheckin() {
 
     if (!response.ok) {
       claimDebugIdRef.current = null;
+      captureApiDevError("checkin.claim.payload", response, data);
       throw new Error(data.message || "Failed to fetch fresh claim payload");
     }
 

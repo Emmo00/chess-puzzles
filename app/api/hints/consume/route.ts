@@ -3,6 +3,7 @@ import dbConnect from "@/lib/db";
 import { authenticateWalletUser } from "@/lib/auth";
 import userModel from "@/lib/models/users.model";
 import HintsService from "@/lib/services/hints.service";
+import { devErrorBody } from "@/lib/utils/devResponse";
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,7 +28,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ...result, source: "contract" });
   } catch (error: any) {
     return NextResponse.json(
-      { message: error.message || "Failed to consume hint" },
+      {
+        message: error.message || "Failed to consume hint",
+        ...devErrorBody(error),
+      },
       { status: error.status || 500 }
     );
   }

@@ -9,6 +9,7 @@ import { GAME_ASSETS_ABI } from "@/lib/abi/gameAssets";
 import { type Hex, parseUnits } from "viem";
 import { erc20Abi } from "viem";
 import { buildLegacyTxParams } from "@/lib/utils/minipayTx";
+import { runWithDevCapture } from "@/lib/utils/devStore";
 
 const DEFAULT_FEE_CURRENCY = "0x765DE816845861e75A25fCA122bb6898B8B1282a" as Hex;
 
@@ -120,7 +121,7 @@ export function useGameAssetsPurchase() {
         feeCurrency,
         fallbackGas: 150_000n,
       });
-      const approveHash = await writeContractAsync({
+      const approveRequest: Parameters<typeof writeContractAsync>[0] = {
         address: tokenAddress,
         abi: erc20Abi,
         functionName: "approve",
@@ -128,7 +129,12 @@ export function useGameAssetsPurchase() {
         feeCurrency,
         gas,
         gasPrice,
-      });
+      };
+      const approveHash = await runWithDevCapture(
+        "gameAssets.approve",
+        approveRequest,
+        () => writeContractAsync(approveRequest)
+      );
       await publicClient.waitForTransactionReceipt({ hash: approveHash, timeout: 60_000 });
     }
   };
@@ -160,7 +166,7 @@ export function useGameAssetsPurchase() {
         feeCurrency,
         fallbackGas: 300_000n,
       });
-      const hash = await writeContractAsync({
+      const buyRequest: Parameters<typeof writeContractAsync>[0] = {
         address: GAME_ASSETS_CONTRACT,
         abi: GAME_ASSETS_ABI,
         functionName: "purchaseAsset",
@@ -168,7 +174,12 @@ export function useGameAssetsPurchase() {
         feeCurrency,
         gas,
         gasPrice,
-      });
+      };
+      const hash = await runWithDevCapture(
+        "gameAssets.purchaseAsset",
+        buyRequest,
+        () => writeContractAsync(buyRequest)
+      );
       setTxHash(hash);
       await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
       return hash;
@@ -203,7 +214,7 @@ export function useGameAssetsPurchase() {
         feeCurrency,
         fallbackGas: 300_000n,
       });
-      const hash = await writeContractAsync({
+            const packRequest: Parameters<typeof writeContractAsync>[0] = {
         address: GAME_ASSETS_CONTRACT,
         abi: GAME_ASSETS_ABI,
         functionName: "purchaseAssetPack",
@@ -211,7 +222,12 @@ export function useGameAssetsPurchase() {
         feeCurrency,
         gas,
         gasPrice,
-      });
+      };
+      const hash = await runWithDevCapture(
+        "gameAssets.purchaseAssetPack",
+        packRequest,
+        () => writeContractAsync(packRequest)
+      );
       setTxHash(hash);
       await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
       return hash;
@@ -242,7 +258,7 @@ export function useGameAssetsPurchase() {
         feeCurrency,
         fallbackGas: 300_000n,
       });
-      const hash = await writeContractAsync({
+            const passRequest: Parameters<typeof writeContractAsync>[0] = {
         address: GAME_ASSETS_CONTRACT,
         abi: GAME_ASSETS_ABI,
         functionName: "purchaseDailyPass",
@@ -250,7 +266,12 @@ export function useGameAssetsPurchase() {
         feeCurrency,
         gas,
         gasPrice,
-      });
+      };
+      const hash = await runWithDevCapture(
+        "gameAssets.purchaseDailyPass",
+        passRequest,
+        () => writeContractAsync(passRequest)
+      );
       setTxHash(hash);
       await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
       return hash;
@@ -305,11 +326,16 @@ export function useGameAssetsAdmin() {
     });
   };
 
+  const adminWrite = (action: string, request: unknown) =>
+    runWithDevCapture(`gameAssets.admin.${action}`, request, () =>
+      writeContractAsync(request as any)
+    );
+
   const grantAsset = async (to: Hex, assetType: Hex, quantity: number) => {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
     const { gas, gasPrice, feeCurrency } = await adminParams("grantAsset", [to, assetType, BigInt(quantity)], 250_000n);
-    return writeContractAsync({
+    return adminWrite("grantAsset", {
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "grantAsset",
@@ -324,7 +350,7 @@ export function useGameAssetsAdmin() {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
     const { gas, gasPrice, feeCurrency } = await adminParams("grantDailyPass", [to], 150_000n);
-    return writeContractAsync({
+    return adminWrite("grantDailyPass", {
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "grantDailyPass",
@@ -339,7 +365,7 @@ export function useGameAssetsAdmin() {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
     const { gas, gasPrice, feeCurrency } = await adminParams("grantAssetPack", [to, BigInt(packId)], 250_000n);
-    return writeContractAsync({
+    return adminWrite("grantAssetPack", {
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "grantAssetPack",
@@ -354,7 +380,7 @@ export function useGameAssetsAdmin() {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
     const { gas, gasPrice, feeCurrency } = await adminParams("createAssetPack", [name, assetType, BigInt(quantity), BigInt(price)], 400_000n);
-    return writeContractAsync({
+    return adminWrite("createAssetPack", {
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "createAssetPack",
@@ -369,7 +395,7 @@ export function useGameAssetsAdmin() {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
     const { gas, gasPrice, feeCurrency } = await adminParams("updateAssetPack", [BigInt(packId), BigInt(price), active], 200_000n);
-    return writeContractAsync({
+    return adminWrite("updateAssetPack", {
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "updateAssetPack",
@@ -384,7 +410,7 @@ export function useGameAssetsAdmin() {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
     const { gas, gasPrice, feeCurrency } = await adminParams("setUnitPrice", [assetType, BigInt(price)], 150_000n);
-    return writeContractAsync({
+    return adminWrite("setUnitPrice", {
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "setUnitPrice",
@@ -399,7 +425,7 @@ export function useGameAssetsAdmin() {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
     const { gas, gasPrice, feeCurrency } = await adminParams("setDailyPassPrice", [BigInt(price)], 150_000n);
-    return writeContractAsync({
+    return adminWrite("setDailyPassPrice", {
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "setDailyPassPrice",
@@ -414,7 +440,7 @@ export function useGameAssetsAdmin() {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
     const { gas, gasPrice, feeCurrency } = await adminParams("setDailyPassDuration", [BigInt(duration)], 150_000n);
-    return writeContractAsync({
+    return adminWrite("setDailyPassDuration", {
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "setDailyPassDuration",
@@ -429,7 +455,7 @@ export function useGameAssetsAdmin() {
     if (!GAME_ASSETS_CONTRACT) throw new Error("Contract not deployed");
     await ensureCorrectChain();
     const { gas, gasPrice, feeCurrency } = await adminParams("updateTreasury", [newTreasury], 150_000n);
-    return writeContractAsync({
+    return adminWrite("updateTreasury", {
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "updateTreasury",

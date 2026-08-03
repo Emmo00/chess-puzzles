@@ -4,6 +4,7 @@ import { celo } from "viem/chains";
 import { GAME_ASSETS_CONTRACT } from "../config/wagmi";
 import { GAME_ASSETS_ABI } from "../abi/gameAssets";
 import { HttpException } from "./users.service";
+import { attachDevPayload } from "../utils/devResponse";
 
 class HintsService {
   private getConsumerClient() {
@@ -23,37 +24,52 @@ class HintsService {
   async consumeHint(walletAddress: string) {
     if (!GAME_ASSETS_CONTRACT) throw new HttpException(500, "GameAssets contract not configured");
     const walletClient = this.getConsumerClient();
-    const hash = await walletClient.writeContract({
-      address: GAME_ASSETS_CONTRACT,
-      abi: GAME_ASSETS_ABI,
-      functionName: "consumeHint",
-      args: [walletAddress as `0x${string}`],
-    });
-    return { success: true, txHash: hash };
+    try {
+      const hash = await walletClient.writeContract({
+        address: GAME_ASSETS_CONTRACT,
+        abi: GAME_ASSETS_ABI,
+        functionName: "consumeHint",
+        args: [walletAddress as `0x${string}`],
+      });
+      return { success: true, txHash: hash };
+    } catch (error) {
+      attachDevPayload(error, { method: "consumeHint", walletAddress, contract: GAME_ASSETS_CONTRACT });
+      throw error;
+    }
   }
 
   async consumeStreakFreeze(walletAddress: string) {
     if (!GAME_ASSETS_CONTRACT) throw new HttpException(500, "GameAssets contract not configured");
     const walletClient = this.getConsumerClient();
-    const hash = await walletClient.writeContract({
-      address: GAME_ASSETS_CONTRACT,
-      abi: GAME_ASSETS_ABI,
-      functionName: "consumeStreakFreeze",
-      args: [walletAddress as `0x${string}`],
-    });
-    return { success: true, txHash: hash };
+    try {
+      const hash = await walletClient.writeContract({
+        address: GAME_ASSETS_CONTRACT,
+        abi: GAME_ASSETS_ABI,
+        functionName: "consumeStreakFreeze",
+        args: [walletAddress as `0x${string}`],
+      });
+      return { success: true, txHash: hash };
+    } catch (error) {
+      attachDevPayload(error, { method: "consumeStreakFreeze", walletAddress, contract: GAME_ASSETS_CONTRACT });
+      throw error;
+    }
   }
 
   async grantAsset(walletAddress: string, assetType: `0x${string}`, quantity: number) {
     if (!GAME_ASSETS_CONTRACT) throw new HttpException(500, "GameAssets contract not configured");
     const walletClient = this.getAdminClient();
-    const hash = await walletClient.writeContract({
-      address: GAME_ASSETS_CONTRACT,
-      abi: GAME_ASSETS_ABI,
-      functionName: "grantAsset",
-      args: [walletAddress as `0x${string}`, assetType, BigInt(quantity)],
-    });
-    return { success: true, txHash: hash };
+    try {
+      const hash = await walletClient.writeContract({
+        address: GAME_ASSETS_CONTRACT,
+        abi: GAME_ASSETS_ABI,
+        functionName: "grantAsset",
+        args: [walletAddress as `0x${string}`, assetType, BigInt(quantity)],
+      });
+      return { success: true, txHash: hash };
+    } catch (error) {
+      attachDevPayload(error, { method: "grantAsset", walletAddress, assetType, quantity, contract: GAME_ASSETS_CONTRACT });
+      throw error;
+    }
   }
 }
 

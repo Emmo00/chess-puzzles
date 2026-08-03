@@ -5,6 +5,7 @@ import { useAccount, useSignMessage } from "wagmi";
 import { WalletConnect } from "@/components/WalletConnect";
 import { ScoringConfigAdmin, PerkDistributionAdmin, AccessConfigAdmin, GameAssetsAdmin } from "@/components/AdminPanels";
 import { FrontendErrorsPanel } from "@/components/FrontendErrorsPanel";
+import { runWithDevCapture } from "@/lib/utils/devStore";
 
 type AuthStep = "connect" | "unauthorized" | "sign" | "verifying" | "authenticated";
 
@@ -89,7 +90,11 @@ export default function AdminPage() {
         "This request expires in 5 minutes.",
       ].join("\n");
 
-      const signature = await signMessageAsync({ message });
+      const signature = await runWithDevCapture(
+        "admin.signMessage",
+        { message, address, nonce },
+        () => signMessageAsync({ message })
+      );
 
       const res = await fetch("/api/admin/auth/verify", {
         method: "POST",

@@ -7,6 +7,7 @@ import { WalletProvider } from "../lib/providers/WalletProvider";
 import { FarcasterMiniAppReady } from "@/components/FarcasterMiniAppReady";
 import { BackgroundMusic } from "@/components/BackgroundMusic";
 import { GlobalErrorListener } from "@/components/GlobalErrorListener";
+import { DevErrorOverlay } from "@/components/DevErrorOverlay";
 import { StreakNotification } from "@/components/StreakNotification";
 import { UserInit } from "@/components/UserInit";
 import { Toaster } from "sonner";
@@ -116,6 +117,7 @@ export default function RootLayout({
       <body className={`${inter.className} antialiased`}>
         <WalletProvider>
           <GlobalErrorListener />
+          <DevErrorOverlay />
           <FarcasterMiniAppReady />
           <BackgroundMusic />
           <UserInit />

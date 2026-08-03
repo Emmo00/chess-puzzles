@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { ALLOWLISTED_STABLECOINS, GAME_ASSETS_CONTRACT, GAME_ASSET_TYPES } from "@/lib/config/wagmi";
 import { GAME_ASSETS_ABI } from "@/lib/abi/gameAssets";
+import { runWithDevCapture } from "@/lib/utils/devStore";
 import { TelegramSupportLink } from "./TelegramSupportLink";
 
 interface StoreItem {
@@ -221,15 +222,20 @@ export function PaymentModal({
         }
       }
 
-      const hash = await writeContractAsync({
-        address: selectedToken.tokenAddress as Hex,
+      const approveRequest: Parameters<typeof writeContractAsync>[0] = {
+        address: selectedToken.tokenAddress,
         abi: erc20Abi,
         functionName: "approve",
         args: [GAME_ASSETS_CONTRACT, amount],
         feeCurrency: selectedToken.feeCurrencyAddress as Hex,
         gas: approveGas,
         gasPrice: await getLegacyGasPrice(publicClient, selectedToken.feeCurrencyAddress as Hex),
-      });
+      };
+      const hash = await runWithDevCapture(
+        "payment.approve",
+        approveRequest,
+        () => writeContractAsync(approveRequest)
+      );
       setTxHash(hash);
     } catch (err: any) {
       setError(err?.shortMessage || err?.message || "Approval cancelled");
@@ -273,7 +279,7 @@ export function PaymentModal({
             buyGas = 300_000n;
           }
         }
-        const hash = await writeContractAsync({
+        const purchaseRequest: Parameters<typeof writeContractAsync>[0] = {
           address: GAME_ASSETS_CONTRACT,
           abi: GAME_ASSETS_ABI,
           functionName: "purchaseDailyPass",
@@ -281,7 +287,12 @@ export function PaymentModal({
           feeCurrency,
           gas: buyGas,
           gasPrice: await getLegacyGasPrice(publicClient, feeCurrency),
-        });
+        };
+        const hash = await runWithDevCapture(
+          "payment.purchaseDailyPass",
+          purchaseRequest,
+          () => writeContractAsync(purchaseRequest)
+        );
         setTxHash(hash);
       } else if (storeItem?.packId !== undefined) {
         let buyGas: bigint;
@@ -309,7 +320,7 @@ export function PaymentModal({
             buyGas = 300_000n;
           }
         }
-        const hash = await writeContractAsync({
+                const packRequest: Parameters<typeof writeContractAsync>[0] = {
           address: GAME_ASSETS_CONTRACT,
           abi: GAME_ASSETS_ABI,
           functionName: "purchaseAssetPack",
@@ -317,7 +328,12 @@ export function PaymentModal({
           feeCurrency,
           gas: buyGas,
           gasPrice: await getLegacyGasPrice(publicClient, feeCurrency),
-        });
+        };
+        const hash = await runWithDevCapture(
+          "payment.purchaseAssetPack",
+          packRequest,
+          () => writeContractAsync(packRequest)
+        );
         setTxHash(hash);
       } else {
         const assetType = storeItem?.category === "streak_freeze" ? GAME_ASSET_TYPES.STREAK_FREEZE : GAME_ASSET_TYPES.HINT;
@@ -347,7 +363,7 @@ export function PaymentModal({
             buyGas = 300_000n;
           }
         }
-        const hash = await writeContractAsync({
+        const assetRequest: Parameters<typeof writeContractAsync>[0] = {
           address: GAME_ASSETS_CONTRACT,
           abi: GAME_ASSETS_ABI,
           functionName: "purchaseAsset",
@@ -355,7 +371,12 @@ export function PaymentModal({
           feeCurrency,
           gas: buyGas,
           gasPrice: await getLegacyGasPrice(publicClient, feeCurrency),
-        });
+        };
+        const hash = await runWithDevCapture(
+          "payment.purchaseAsset",
+          assetRequest,
+          () => writeContractAsync(assetRequest)
+        );
         setTxHash(hash);
       }
     } catch (err: any) {

@@ -8,6 +8,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { celo } from "viem/chains";
 import { STORE_ABI, ReservationStatus } from "../config/onchainStore";
 import { STORE_CONTRACT } from "../config/wagmi";
+import { attachDevPayload } from "../utils/devResponse";
 
 const RPC_URL = process.env.CELO_RPC_URL || undefined;
 const PRIVATE_KEY = process.env.ONCHAIN_STORE_SIGNER_PRIVATE_KEY as `0x${string}`;
@@ -42,9 +43,10 @@ export class OnchainStoreService {
       throw new Error("OnchainStoreService: No wallet client or account configured. Check ONCHAIN_STORE_SIGNER_PRIVATE_KEY.");
     }
 
+    const request = { utcDay, puzzleId, rewardAmountWei, maxCheckIns, nonce };
     try {
       console.log(`Preparing setDailyPuzzle: day=${utcDay}, puzzle=${puzzleId}, reward=${rewardAmountWei}, max=${maxCheckIns}`);
-      const { request } = await publicClient.simulateContract({
+      const { request: txRequest } = await publicClient.simulateContract({
         account,
         address: STORE_CONTRACT as Address,
         abi: STORE_ABI,
@@ -53,11 +55,12 @@ export class OnchainStoreService {
         nonce,
       });
 
-      const hash = await walletClient.writeContract(request);
+      const hash = await walletClient.writeContract(txRequest);
       console.log(`setDailyPuzzle tx sent successfully. Hash: ${hash}`);
       return hash;
     } catch (error) {
       console.error("Error in setDailyPuzzle:", error);
+      attachDevPayload(error, { method: "setDailyPuzzle", request });
       throw error;
     }
   }
@@ -77,9 +80,10 @@ export class OnchainStoreService {
       throw new Error("OnchainStoreService: No wallet client or account configured. Check ONCHAIN_STORE_SIGNER_PRIVATE_KEY.");
     }
 
+    const request = { utcDay, user, status, rewardAmountWei, solvedAt, nonce };
     try {
       console.log(`Preparing setReservation: day=${utcDay}, user=${user}, status=${status}, solvedAt=${solvedAt}`);
-      const { request } = await publicClient.simulateContract({
+      const { request: txRequest } = await publicClient.simulateContract({
         account,
         address: STORE_CONTRACT as Address,
         abi: STORE_ABI,
@@ -94,11 +98,12 @@ export class OnchainStoreService {
         nonce,
       });
 
-      const hash = await walletClient.writeContract(request);
+      const hash = await walletClient.writeContract(txRequest);
       console.log(`setReservation tx sent successfully. Hash: ${hash}`);
       return hash;
     } catch (error) {
       console.error("Error in setReservation:", error);
+      attachDevPayload(error, { method: "setReservation", request });
       throw error;
     }
   }
@@ -119,9 +124,10 @@ export class OnchainStoreService {
       throw new Error("OnchainStoreService: No wallet client or account configured. Check ONCHAIN_STORE_SIGNER_PRIVATE_KEY.");
     }
 
+    const request = { user, puzzleId, completed, attempts, points, solvedAt, nonce };
     try {
       console.log(`Preparing recordPuzzleAttempt: user=${user}, puzzle=${puzzleId}, completed=${completed}, points=${points}`);
-      const { request } = await publicClient.simulateContract({
+      const { request: txRequest } = await publicClient.simulateContract({
         account,
         address: STORE_CONTRACT as Address,
         abi: STORE_ABI,
@@ -137,11 +143,12 @@ export class OnchainStoreService {
         nonce,
       });
 
-      const hash = await walletClient.writeContract(request);
+      const hash = await walletClient.writeContract(txRequest);
       console.log(`recordPuzzleAttempt tx sent successfully. Hash: ${hash}`);
       return hash;
     } catch (error) {
       console.error("Error in recordPuzzleAttempt:", error);
+      attachDevPayload(error, { method: "recordPuzzleAttempt", request });
       throw error;
     }
   }

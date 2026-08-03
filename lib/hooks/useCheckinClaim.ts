@@ -18,6 +18,7 @@ import {
   DEVICE_FINGERPRINT_HEADER,
   getDeviceFingerprint,
 } from "@/lib/utils/deviceFingerprint";
+import { runWithDevCapture, captureApiDevError } from "@/lib/utils/devStore";
 
 const isOnCorrectChain = (chainId?: number): boolean => {
   if (!chainId) return false;
@@ -92,6 +93,7 @@ export function useCheckinClaim() {
     const data = await response.json();
 
     if (!response.ok || !data?.claim) {
+      captureApiDevError("checkin.claim.payload", response, data);
       throw new Error(data?.message || "Failed to fetch claim payload");
     }
 
@@ -285,8 +287,8 @@ export function useCheckinClaim() {
         }
       }
 
-      await writeContractAsync({
-        address: PAYOUT_CLAIM_CONTRACT as `0x${string}`,
+      const claimTxRequest = {
+        address: PAYOUT_CLAIM_CONTRACT,
         abi: PAYOUT_CLAIMS_ABI,
         functionName: "claimDailyCheckIn",
         args: [
@@ -296,12 +298,19 @@ export function useCheckinClaim() {
           BigInt(claim.deadline),
           claim.signature,
         ],
-        ...({
-          feeCurrency: feeOption.feeCurrency,
-          gas: claimGas,
-          gasPrice: await getLegacyGasPrice(publicClient!, feeOption.feeCurrency),
-        } as any),
-      });
+        feeCurrency: feeOption.feeCurrency,
+        gas: claimGas,
+        gasPrice: await getLegacyGasPrice(publicClient!, feeOption.feeCurrency),
+      };
+
+      await runWithDevCapture(
+        "claimDailyCheckIn.sign",
+        claimTxRequest,
+        async () =>
+          writeContractAsync({
+            ...claimTxRequest,
+          } as any)
+      );
 
       logClaimFlow("sendClaim.wallet.submitted", {
         requestId,
