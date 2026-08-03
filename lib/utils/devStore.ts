@@ -1,4 +1,3 @@
-import { isDevMode } from "@/lib/config/devMode";
 import { reportFrontendError } from "@/lib/utils/errorReporting";
 
 export interface DevCapturedError {
@@ -105,6 +104,10 @@ export function clearDevErrors(): void {
   emit();
 }
 
+export function getLastDevError(): DevCapturedError | undefined {
+  return captured[captured.length - 1];
+}
+
 export interface CaptureDevErrorInput {
   message?: string;
   action: string;
@@ -131,8 +134,9 @@ export function captureDevError(input: CaptureDevErrorInput): void {
     });
   }
 
-  if (!isDevMode) return;
-
+  // Always store the raw error/payload (not just in dev mode) so the
+  // "Report issue on Telegram" link can prefill the message with the
+  // underlying details. The floating overlay remains dev-mode only.
   const entry: DevCapturedError = {
     id:
       typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -179,7 +183,6 @@ export function captureApiDevError(
   response: Response,
   json: unknown
 ): void {
-  if (!isDevMode) return;
   const data = (json ?? {}) as { dev?: { error?: unknown; payload?: unknown } };
   if (!data.dev) return;
   captureDevError({
