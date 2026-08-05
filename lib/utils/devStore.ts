@@ -18,6 +18,62 @@ const MAX_CAPTURED = 50;
 let captured: DevCapturedError[] = [];
 const subscribers = new Set<Subscriber>();
 
+/**
+ * Converts an arbitrary value into a JSON-serializable object (handles
+ * bigints, Errors, circular references, typed arrays). Returns a deep plain
+ * object/array suitable for `JSON.stringify` and storage.
+ */
+export function toJsonSafe(value: unknown, seen = new WeakSet()): unknown {
+  if (value === null || value === undefined) return value;
+  if (typeof value === "bigint") return `${value}n`;
+  if (typeof value === "function") return "[Function]";
+  if (typeof value === "symbol") return String(value);
+  if (value instanceof Error) {
+    const err = value as Error & Record<string, unknown> & { cause?: unknown };
+    return {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+      cause: err.cause,
+      ...Object.fromEntries(
+        Object.entries(err).filter(
+          ([key]) => !["name", "message", "stack", "cause"].includes(key)
+        )
+      ),
+    };
+  }
+  if (typeof value !== "object") return value;
+
+  if (seen.has(value)) return "[Circular]";
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    return value.map((item) => toJsonSafe(item, seen));
+  }
+  if (value instanceof Uint8Array) {
+    return {
+      bytes: Array.from(value),
+      hex: Array.from(value)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join(""),
+    };
+  }
+  if (value instanceof Map) {
+    return Object.fromEntries(
+      Array.from(value.entries()).map(([k, v]) => [String(k), toJsonSafe(v, seen)])
+    );
+  }
+  if (value instanceof Set) {
+    return Array.from(value).map((item) => toJsonSafe(item, seen));
+  }
+
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(value)) {
+    out[key] = toJsonSafe((value as Record<string, unknown>)[key], seen);
+  }
+  return out;
+}
+
 export function safeStringify(value: unknown): string {
   if (value === null || value === undefined) return String(value);
   if (typeof value === "bigint") return `${value}n`;
