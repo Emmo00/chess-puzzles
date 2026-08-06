@@ -36,23 +36,24 @@ export function useHintBalance(): HintBalanceState {
     }
     setLoading(true);
     try {
+      const readContractBalance = async (functionName: string) => {
+        if (!publicClient || !GAME_ASSETS_CONTRACT) return 0n;
+        try {
+          const value = await publicClient.readContract({
+            address: GAME_ASSETS_CONTRACT,
+            abi: GAME_ASSETS_ABI,
+            functionName: functionName as "getHintBalance",
+            args: [address as Hex],
+          });
+          return BigInt(value);
+        } catch {
+          return 0n;
+        }
+      };
+
       const [contractHints, contractFreezes, freebiesRes] = await Promise.all([
-        publicClient && GAME_ASSETS_CONTRACT
-          ? publicClient.readContract({
-              address: GAME_ASSETS_CONTRACT,
-              abi: GAME_ASSETS_ABI,
-              functionName: "getHintBalance",
-              args: [address as Hex],
-            })
-          : 0,
-        publicClient && GAME_ASSETS_CONTRACT
-          ? publicClient.readContract({
-              address: GAME_ASSETS_CONTRACT,
-              abi: GAME_ASSETS_ABI,
-              functionName: "getStreakFreezeBalance",
-              args: [address as Hex],
-            })
-          : 0,
+        readContractBalance("getHintBalance"),
+        readContractBalance("getStreakFreezeBalance"),
         fetch(`/api/users/freebies`, {
           headers: { Authorization: `Bearer ${address}` },
         }).then((r) => (r.ok ? r.json() : { freeHints: 0, freeStreakFreezes: 0 })),

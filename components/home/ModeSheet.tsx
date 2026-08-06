@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { CalendarDays, Gauge, Swords, SlidersHorizontal, X } from "lucide-react";
+import { SiteFooter } from "@/components/SiteFooter";
 import styles from "@/app/page.module.css";
 import {
   useUtcMidnightCountdown,
@@ -114,6 +115,8 @@ export function ModeSheet({ isOpen, onClose, dailySolved }: ModeSheetProps) {
             <X strokeWidth={3.5} aria-hidden="true" />
           </button>
         </div>
+
+        <SiteFooter />
       </div>
     </div>
   );

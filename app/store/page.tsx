@@ -5,6 +5,7 @@ import { useAccount, usePublicClient } from "wagmi";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/BottomNav";
 import { WalletConnect } from "@/components/WalletConnect";
+import { SiteFooter } from "@/components/SiteFooter";
 import { PaymentModal } from "@/components/PaymentModal";
 import { Castle, Lightbulb, Snowflake, Store as StoreIcon, Loader2, Check } from "lucide-react";
 import { useHintBalance } from "@/lib/hooks/useHintBalance";
@@ -321,6 +322,8 @@ export default function StorePage() {
             )}
           </>
         )}
+
+        <SiteFooter />
       </main>
 
       <BottomNav />

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { CircleHelp, Puzzle, Settings, Smartphone, Trophy } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { SiteFooter } from "@/components/SiteFooter";
 
 interface FAQItem {
   question: string;
@@ -147,6 +148,8 @@ export default function FAQPage() {
             <Settings className="w-4 h-4" /> SETTINGS
           </Link>
         </div>
+
+        <SiteFooter />
       </main>
 
       <BottomNav />

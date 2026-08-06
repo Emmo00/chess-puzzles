@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { BottomNav } from "@/components/BottomNav";
 import { WalletConnect } from "@/components/WalletConnect";
+import { SiteFooter } from "@/components/SiteFooter";
 import { Identicon } from "@/components/Identicon";
 import { LeagueBadge } from "@/components/LeagueBadge";
 import { useUserStats } from "@/lib/hooks/useUserStats";
@@ -156,6 +157,8 @@ export default function ProfilePage() {
             </div>
           </>
         )}
+
+        <SiteFooter />
       </main>
 
       <BottomNav />
