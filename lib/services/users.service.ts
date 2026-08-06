@@ -84,7 +84,7 @@ class UserService {
             "streakEvent.notified": false,
           },
         },
-        { new: true }
+        { returnDocument: "after" }
       );
       if (!updated) throw new HttpException(404, "User not found");
       return updated;
@@ -104,7 +104,7 @@ class UserService {
             lastPuzzleDate: playedAt.toISOString(),
           },
         },
-        { new: true }
+        { returnDocument: "after" }
       );
       if (!updated) throw new HttpException(404, "User not found");
       return updated;
@@ -118,7 +118,7 @@ class UserService {
     const dbFreeze = await this.users.findOneAndUpdate(
       { ...query, streakFreezes: { $gt: 0 } },
       { $inc: { streakFreezes: -1 } },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (dbFreeze) {
@@ -135,7 +135,7 @@ class UserService {
             "streakEvent.notified": false,
           },
         },
-        { new: true }
+        { returnDocument: "after" }
       );
       if (freezeResult) return freezeResult;
       return this.users.findOne(query);
@@ -158,7 +158,7 @@ class UserService {
             "streakEvent.notified": false,
           },
         },
-        { new: true }
+        { returnDocument: "after" }
       );
       if (freezeResult) return freezeResult;
       return this.users.findOne(query);
@@ -176,7 +176,7 @@ class UserService {
             "streakEvent.notified": false,
           },
         },
-        { new: true }
+        { returnDocument: "after" }
       );
       if (!resetResult) {
         return this.users.findOne(query);
@@ -188,7 +188,7 @@ class UserService {
   public async updateUserStats(identifier: string, stats: Partial<UserStats>): Promise<WalletUser | null> {
     let query = { walletAddress: identifier.toLowerCase() };
 
-    const updatedUser = await this.users.findOneAndUpdate(query, stats, { new: true });
+    const updatedUser = await this.users.findOneAndUpdate(query, stats, { returnDocument: "after" });
     if (!updatedUser) {
       throw new HttpException(404, "User not found");
     }
@@ -230,7 +230,7 @@ class UserService {
     const updatedUser = await this.users.findOneAndUpdate(
       { walletAddress: walletAddress.toLowerCase() },
       { $set: updateData },
-      { new: true, upsert: false }
+      { returnDocument: "after", upsert: false }
     );
 
     if (!updatedUser) {
@@ -247,7 +247,7 @@ class UserService {
     const updatedUser = await this.users.findOneAndUpdate(
       { walletAddress: walletAddress.toLowerCase() },
       { $set: { fid } },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!updatedUser) {

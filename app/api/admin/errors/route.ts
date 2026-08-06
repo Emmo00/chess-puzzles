@@ -58,7 +58,7 @@ export const PATCH = withAdminAuth(async (request: NextRequest) => {
   const updatedError = await FrontendError.findByIdAndUpdate(
     id,
     { status },
-    { new: true }
+    { returnDocument: "after" }
   );
 
   if (!updatedError) {

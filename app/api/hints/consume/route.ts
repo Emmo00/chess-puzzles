@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const dbUser = await userModel.findOneAndUpdate(
       { walletAddress: lower, hintBalance: { $gt: 0 } },
       { $inc: { hintBalance: -1 } },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (dbUser) {

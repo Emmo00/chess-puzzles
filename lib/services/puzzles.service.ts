@@ -123,7 +123,7 @@ class PuzzleService {
     const updatedUserPuzzle = await this.userPuzzles.findOneAndUpdate(
       { userWalletAddress, puzzleId },
       { completed, attempts, type, points, solvedAt: completed ? new Date() : undefined },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     // Fire and forget on-chain record
