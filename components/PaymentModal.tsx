@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAccount, usePublicClient, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
 import { erc20Abi, type Hex, parseUnits } from "viem";
 import { celo } from "wagmi/chains";
@@ -28,6 +28,7 @@ import {
 import { ALLOWLISTED_STABLECOINS, GAME_ASSETS_CONTRACT, GAME_ASSET_TYPES } from "@/lib/config/wagmi";
 import { GAME_ASSETS_ABI } from "@/lib/abi/gameAssets";
 import { runWithDevCapture } from "@/lib/utils/devStore";
+import { useAssetBalances, type AssetType } from "@/lib/hooks/assetBalances";
 import { TelegramSupportLink } from "./TelegramSupportLink";
 
 interface StoreItem {
@@ -65,6 +66,8 @@ export function PaymentModal({
   const { switchChain } = useSwitchChain();
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
+  const { optimisticAdd, confirmPurchase, rollbackPurchase } = useAssetBalances();
+  const optimisticRef = useRef<{ id: string; type: AssetType; qty: number } | null>(null);
   const [step, setStep] = useState<Step>("quote");
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<Hex | undefined>();
@@ -102,6 +105,7 @@ export function PaymentModal({
       setTxHash(undefined);
       setNeedsApproval(false);
       setUserMessage("");
+      optimisticRef.current = null;
       if (address) loadQuote();
     }
   }, [isOpen, address]);
@@ -110,8 +114,13 @@ export function PaymentModal({
     if (txConfirmed && step === "purchasing") {
       setStep("done");
       setUserMessage("");
+      const optimistic = optimisticRef.current;
+      if (optimistic) {
+        optimisticRef.current = null;
+        void confirmPurchase(optimistic.id);
+      }
     }
-  }, [txConfirmed, step]);
+  }, [txConfirmed, step, confirmPurchase]);
 
   useEffect(() => {
     if (txConfirmed && step === "approving") {
@@ -121,12 +130,17 @@ export function PaymentModal({
 
   useEffect(() => {
     if (txFailed && (step === "approving" || step === "purchasing")) {
+      const optimistic = optimisticRef.current;
+      if (optimistic) {
+        optimisticRef.current = null;
+        void rollbackPurchase(optimistic.id);
+      }
       setError("Transaction timed out or failed on-chain. Please try again.");
       setStep("quote");
       setUserMessage("");
       setTxHash(undefined);
     }
-  }, [txFailed, step]);
+  }, [txFailed, step, rollbackPurchase]);
 
   const usdAmount = storeItem ? storeItem.priceUsd : (defaultPriceUsd || "0.01");
   const displayAmount = `$${usdAmount}`;
@@ -335,6 +349,12 @@ export function PaymentModal({
           () => writeContractAsync(packRequest)
         );
         setTxHash(hash);
+        const packType: AssetType = storeItem?.category === "streak_freeze" ? "streakFreezes" : "hints";
+        const packQty = Number(storeItem?.quantity || 0);
+        if (packQty > 0) {
+          optimisticRef.current = { id: hash, type: packType, qty: packQty };
+          optimisticAdd(hash, packType, packQty);
+        }
       } else {
         const assetType = storeItem?.category === "streak_freeze" ? GAME_ASSET_TYPES.STREAK_FREEZE : GAME_ASSET_TYPES.HINT;
         const quantity = storeItem?.quantity || 1;
@@ -378,8 +398,18 @@ export function PaymentModal({
           () => writeContractAsync(assetRequest)
         );
         setTxHash(hash);
+        const unitType: AssetType = storeItem?.category === "streak_freeze" ? "streakFreezes" : "hints";
+        if (quantity > 0) {
+          optimisticRef.current = { id: hash, type: unitType, qty: quantity };
+          optimisticAdd(hash, unitType, quantity);
+        }
       }
     } catch (err: any) {
+      const optimistic = optimisticRef.current;
+      if (optimistic) {
+        optimisticRef.current = null;
+        void rollbackPurchase(optimistic.id);
+      }
       setError(err?.shortMessage || err?.message || "Purchase failed");
       setStep("quote");
       setUserMessage("");

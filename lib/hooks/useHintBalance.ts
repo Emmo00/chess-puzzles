@@ -1,10 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useAccount, usePublicClient } from "wagmi";
-import { GAME_ASSETS_CONTRACT, GAME_ASSET_TYPES } from "@/lib/config/wagmi";
-import { GAME_ASSETS_ABI } from "@/lib/abi/gameAssets";
-import { type Hex } from "viem";
+import { useCallback } from "react";
+import { useAccount } from "wagmi";
+import { useAssetBalances } from "@/lib/hooks/assetBalances";
 
 export interface HintBalanceState {
   hintBalance: number;
@@ -19,64 +17,14 @@ export interface HintBalanceState {
 
 export function useHintBalance(): HintBalanceState {
   const { address, isConnected } = useAccount();
-  const publicClient = usePublicClient();
-  const [hintBalance, setHintBalance] = useState<number>(0);
-  const [streakFreezes, setStreakFreezes] = useState<number>(0);
-  const [freeHints, setFreeHints] = useState<number>(0);
-  const [freeStreakFreezes, setFreeStreakFreezes] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
-
-  const refresh = useCallback(async () => {
-    if (!address || !isConnected) {
-      setHintBalance(0);
-      setStreakFreezes(0);
-      setFreeHints(0);
-      setFreeStreakFreezes(0);
-      return;
-    }
-    setLoading(true);
-    try {
-      const readContractBalance = async (functionName: string) => {
-        if (!publicClient || !GAME_ASSETS_CONTRACT) return 0n;
-        try {
-          const value = await publicClient.readContract({
-            address: GAME_ASSETS_CONTRACT,
-            abi: GAME_ASSETS_ABI,
-            functionName: functionName as "getHintBalance",
-            args: [address as Hex],
-          });
-          return BigInt(value);
-        } catch {
-          return 0n;
-        }
-      };
-
-      const [contractHints, contractFreezes, freebiesRes] = await Promise.all([
-        readContractBalance("getHintBalance"),
-        readContractBalance("getStreakFreezeBalance"),
-        fetch(`/api/users/freebies`, {
-          headers: { Authorization: `Bearer ${address}` },
-        }).then((r) => (r.ok ? r.json() : { freeHints: 0, freeStreakFreezes: 0 })),
-      ]);
-
-      const db = freebiesRes as { freeHints: number; freeStreakFreezes: number };
-      setFreeHints(db.freeHints ?? 0);
-      setFreeStreakFreezes(db.freeStreakFreezes ?? 0);
-      setHintBalance(Number(contractHints) + (db.freeHints ?? 0));
-      setStreakFreezes(Number(contractFreezes) + (db.freeStreakFreezes ?? 0));
-    } catch {
-      setHintBalance(0);
-      setStreakFreezes(0);
-      setFreeHints(0);
-      setFreeStreakFreezes(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [address, isConnected, publicClient]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const {
+    hintBalance,
+    streakFreezes,
+    freeHints,
+    freeStreakFreezes,
+    loading,
+    refresh,
+  } = useAssetBalances();
 
   const consume = useCallback(async (): Promise<boolean> => {
     if (!address || !isConnected) return false;
@@ -89,7 +37,7 @@ export function useHintBalance(): HintBalanceState {
         },
       });
       if (!res.ok) return false;
-      refresh();
+      void refresh();
       return true;
     } catch {
       return false;
