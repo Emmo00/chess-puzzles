@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { sdk } from "@farcaster/miniapp-sdk";
-import { useAccount, useConnect } from "wagmi";
+import { useAccount, useConnect, useSwitchChain } from "wagmi";
+import { celo } from "wagmi/chains";
 import { Smartphone } from "lucide-react";
 import { isMiniPay } from "@/lib/config/wagmi";
 
 export function WalletConnect() {
   const { address, isConnected } = useAccount();
   const { connect, connectors, isPending } = useConnect();
+  const { switchChain } = useSwitchChain();
   const [isMiniPayDetected, setIsMiniPayDetected] = useState(false);
   const [isFarcasterMiniApp, setIsFarcasterMiniApp] = useState(false);
   const [autoConnectAttempted, setAutoConnectAttempted] = useState(false);
@@ -37,6 +39,21 @@ export function WalletConnect() {
 
     void detectMiniApp();
   }, []);
+
+  useEffect(() => {
+    if (isConnected) {
+      // Auto-switch to Celo on connect; ignore failures silently
+      // (covers wallets that reject wallet_switchEthereumChain)
+      const autoSwitch = async () => {
+        try {
+          await switchChain({ chainId: celo.id });
+        } catch {
+          // fail silently
+        }
+      };
+      void autoSwitch();
+    }
+  }, [isConnected, switchChain]);
 
   useEffect(() => {
     if (isConnected || isPending || autoConnectAttempted) {
