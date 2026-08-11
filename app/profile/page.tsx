@@ -7,7 +7,7 @@ import { WalletConnect } from "@/components/WalletConnect";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Identicon } from "@/components/Identicon";
 import { LeagueBadge } from "@/components/LeagueBadge";
-import { useUserStats } from "@/lib/hooks/useUserStats";
+import { useAppBootstrap } from "@/lib/hooks/appBootstrap";
 import { useHintBalance } from "@/lib/hooks/useHintBalance";
 import { generateDisplayName } from "@/lib/utils/nameGenerator";
 import { levelForPoints } from "@/lib/leveling";
@@ -18,7 +18,7 @@ import Link from "next/link";
 
 export default function ProfilePage() {
   const { address, isConnected } = useAccount();
-  const { userStats } = useUserStats();
+  const { userStats } = useAppBootstrap();
   const { hintBalance, streakFreezes } = useHintBalance();
   const [league, setLeague] = useState<League>("pawn");
   const [seasonPoints, setSeasonPoints] = useState(0);

@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
   return runRequest(request, "/api/users/freebies", async (req, log) => {
     try {
       const user = await authenticateWalletUser(req);
+      await dbConnect();
       const lower = user.walletAddress.toLowerCase();
       const userData = await userModel.findOne(
         { walletAddress: lower },

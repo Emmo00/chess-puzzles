@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Ban, Castle, Check, Circle, Gift, Lightbulb, Loader2, X, Zap, Snowflake } from "lucide-react";
 import ChessBoard, { ChessBoardRef } from "../../components/chess-board";
-import { useUserStats } from "../../lib/hooks/useUserStats";
+import { useAppBootstrap } from "@/lib/hooks/appBootstrap";
 import { useHintBalance } from "../../lib/hooks/useHintBalance";
 import { PaymentModal } from "@/components/PaymentModal";
 import { Puzzle } from "../../lib/types";
@@ -77,7 +77,7 @@ export default function SolvePuzzlesPage() {
   const chessBoardRef = useRef<ChessBoardRef>(null);
   const { address, isConnected } = useAccount();
   const router = useRouter();
-  const { userStats } = useUserStats();
+  const { userStats } = useAppBootstrap();
   const { hintBalance, outOfHints, consume: consumeHint, refresh: refreshHintBalance } = useHintBalance();
 
   // Payment / hint shop modal state

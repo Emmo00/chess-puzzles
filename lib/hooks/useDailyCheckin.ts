@@ -83,6 +83,8 @@ interface SolveResponse {
   slotsRemaining?: number;
 }
 
+const checkinStatusInFlight: Record<string, Promise<DailyCheckinStatus | null>> = {};
+
 export function useDailyCheckin() {
   const { address } = useAccount();
   const claimDebugIdRef = useRef<string | null>(null);
@@ -114,24 +116,42 @@ export function useDailyCheckin() {
     setLoading(true);
     setError(null);
 
-    try {
-      const response = await fetch(`/api/checkin/status?walletAddress=${address}`, {
+    const key = address.toLowerCase();
+
+    let shared: Promise<DailyCheckinStatus | null> | undefined =
+      checkinStatusInFlight[key];
+
+    if (!shared) {
+      shared = fetch(`/api/checkin/status?walletAddress=${address}`, {
         headers: {
           Authorization: `Bearer ${address}`,
           [DEVICE_FINGERPRINT_HEADER]: getDeviceFingerprint(),
         },
-      });
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.message || "Failed to load check-in status");
+          }
+          return (await response.json()) as DailyCheckinStatus;
+        })
+        .catch((err: Error) => {
+          throw err;
+        })
+        .finally(() => {
+          delete checkinStatusInFlight[key];
+        });
+      checkinStatusInFlight[key] = shared;
+    }
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.message || "Failed to load check-in status");
-      }
-
-      const data = (await response.json()) as DailyCheckinStatus;
+    try {
+      const data = await shared;
       setStatus(data);
     } catch (err) {
       console.error("Check-in status error:", err);
-      setError(err instanceof Error ? err.message : "Unknown check-in status error");
+      setError(
+        err instanceof Error ? err.message : "Unknown check-in status error"
+      );
     } finally {
       setLoading(false);
     }
@@ -285,9 +305,19 @@ export function useDailyCheckin() {
     return data.claim as ClaimPayload;
   }, [address, getOrCreateClaimDebugId]);
 
+  const fetchedAddressRef = useRef<string | null>(null);
+
   useEffect(() => {
+    if (!address) {
+      fetchedAddressRef.current = null;
+      setStatus(null);
+      return;
+    }
+    const key = address.toLowerCase();
+    if (fetchedAddressRef.current === key) return;
+    fetchedAddressRef.current = key;
     refreshStatus();
-  }, [refreshStatus]);
+  }, [address, refreshStatus]);
 
   return {
     status,
