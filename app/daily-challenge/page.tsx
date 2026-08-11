@@ -4,12 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { sdk } from "@farcaster/miniapp-sdk";
 import confetti from "canvas-confetti";
-import { ArrowUpRight, AtSign, Ban, Check, Circle, Clock, Coins, Lightbulb, Send, Share2, Zap } from "lucide-react";
-import { useAccount } from "wagmi";
+import { ArrowUpRight, AtSign, Ban, Check, Circle, Clock, Coins, Gift, Lightbulb, Loader2, Send, Share2, X, Zap } from "lucide-react";
+import { useAccount, usePublicClient } from "wagmi";
 import { celo } from "wagmi/chains";
 
 import ChessBoard, { ChessBoardRef } from "@/components/chess-board";
 import { WalletConnect } from "@/components/WalletConnect";
+import { PaymentModal } from "@/components/PaymentModal";
 import { useCheckinClaim } from "@/lib/hooks/useCheckinClaim";
 import { useDailyCheckin } from "@/lib/hooks/useDailyCheckin";
 import { useUtcMidnightCountdown, formatCountdown } from "@/lib/hooks/useUtcMidnightCountdown";
@@ -18,6 +19,8 @@ import { Puzzle } from "@/lib/types";
 import { TelegramSupportLink } from "@/components/TelegramSupportLink";
 import { BottomNav } from "@/components/BottomNav";
 import { toast } from "sonner";
+import { GAME_ASSETS_CONTRACT, GAME_ASSET_TYPES } from "@/lib/config/wagmi";
+import { GAME_ASSETS_ABI } from "@/lib/abi/gameAssets";
 
 type HintStage = "none" | "piece" | "move";
 
@@ -37,12 +40,21 @@ export default function DailyChallengePage() {
   const [isFarcasterMiniApp, setIsFarcasterMiniApp] = useState(false);
   const [isSolving, setIsSolving] = useState(false);
   const [resolvingMessage, setResolvingMessage] = useState<string | null>(null);
+  const [showHintShop, setShowHintShop] = useState(false);
+  const [hintShopItems, setHintShopItems] = useState<any[]>([]);
+  const [hintShopLoading, setHintShopLoading] = useState(false);
+  const [selectedHintItem, setSelectedHintItem] = useState<any>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentStoreItem, setPaymentStoreItem] = useState<any>(null);
+  const [paymentDefaultPrice, setPaymentDefaultPrice] = useState<string>("0.01");
+  const [paymentModalKey, setPaymentModalKey] = useState(0);
 
   const chessBoardRef = useRef<ChessBoardRef>(null);
   const claimCardRef = useRef<HTMLDivElement>(null);
   const statusMessageRef = useRef<HTMLDivElement>(null);
 
   const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
   const {
     status,
     loading,
@@ -62,7 +74,7 @@ export default function DailyChallengePage() {
   } = useCheckinClaim();
 
   const countdown = useUtcMidnightCountdown();
-  const { hintBalance, outOfHints, consume: consumeHint } = useHintBalance();
+  const { hintBalance, consume: consumeHint, refresh: refreshHintBalance } = useHintBalance();
 
   const logClaimFlow = (step: string, details?: Record<string, unknown>) => {
     console.info("[ClaimFlow][DailyChallengePage]", step, details || {});
@@ -401,6 +413,63 @@ export default function DailyChallengePage() {
   };
 
   const handleShowHint = async () => {
+    if (hintBalance <= 0) {
+      setHintShopLoading(true);
+      setShowHintShop(true);
+      try {
+        if (!GAME_ASSETS_CONTRACT || !publicClient) {
+          setHintShopItems([]);
+          return;
+        }
+        const [hintUnit, count] = await Promise.all([
+          publicClient.readContract({
+            address: GAME_ASSETS_CONTRACT,
+            abi: GAME_ASSETS_ABI,
+            functionName: "unitPrices",
+            args: [GAME_ASSET_TYPES.HINT],
+          }),
+          publicClient.readContract({
+            address: GAME_ASSETS_CONTRACT,
+            abi: GAME_ASSETS_ABI,
+            functionName: "getAssetPackCount",
+          }),
+        ]);
+        const items: any[] = [];
+        if (Number(hintUnit) > 0) {
+          items.push({
+            id: "hint-unit",
+            name: "1 Hint",
+            category: "hints",
+            priceUsd: (Number(hintUnit) / 1_000_000).toFixed(2),
+            quantity: 1,
+          });
+        }
+        for (let i = 0; i < Number(count); i++) {
+          const pack = await publicClient.readContract({
+            address: GAME_ASSETS_CONTRACT,
+            abi: GAME_ASSETS_ABI,
+            functionName: "getAssetPack",
+            args: [BigInt(i)],
+          }) as any;
+          if (pack.active && String(pack.assetType).toLowerCase() === String(GAME_ASSET_TYPES.HINT).toLowerCase()) {
+            items.push({
+              id: `pack-${i}`,
+              name: pack.name,
+              category: "hints",
+              priceUsd: (Number(pack.price) / 1_000_000).toFixed(2),
+              quantity: Number(pack.quantity),
+              packId: i,
+            });
+          }
+        }
+        setHintShopItems(items);
+      } catch {
+        setHintShopItems([]);
+      } finally {
+        setHintShopLoading(false);
+      }
+      return;
+    }
     if (hintStage === "none") {
       const ok = await consumeHint();
       if (!ok) {
@@ -429,6 +498,24 @@ export default function DailyChallengePage() {
         setHighlightedSquares({ from: nextMove.from, to: nextMove.to });
       }
     }
+  };
+
+  const handleBuyHintItem = (item: any) => {
+    setSelectedHintItem(item);
+    setPaymentStoreItem(item);
+    setPaymentModalKey((k) => k + 1);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentModal(false);
+    setPaymentStoreItem(null);
+    setSelectedHintItem(null);
+    refreshHintBalance();
+    if (showHintShop) {
+      setShowHintShop(false);
+    }
+    toast.success("Purchase complete!");
   };
 
   const fireConfetti = () => {
@@ -688,7 +775,6 @@ export default function DailyChallengePage() {
                   {hintStage !== 'move' ? (
                     <button
                       onClick={handleShowHint}
-                      disabled={outOfHints && hintBalance <= 0}
                       className="w-full text-black py-3 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all bg-yellow-400 inline-flex items-center justify-center gap-2"
                     >
                       <Lightbulb className="w-4 h-4" />
@@ -810,6 +896,72 @@ export default function DailyChallengePage() {
       </main>
 
       <BottomNav />
+
+      {/* Hint Shop Modal */}
+      {showHintShop && (
+        <div className="fixed inset-0 z-50 p-4 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/80" onClick={() => setShowHintShop(false)} />
+          <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-sm w-full">
+            <div className="bg-yellow-400 border-b-4 border-black p-4">
+              <div className="flex justify-between items-center">
+                <h2 className="font-black text-lg uppercase text-black flex items-center gap-2">
+                  <Lightbulb className="w-5 h-5" /> BUY HINTS
+                </h2>
+                <button
+                  onClick={() => setShowHintShop(false)}
+                  className="w-7 h-7 bg-red-500 border-2 border-black text-black flex items-center justify-center"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-4 space-y-2">
+              {hintShopLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                </div>
+              ) : hintShopItems.length === 0 ? (
+                <p className="text-xs font-bold text-center uppercase text-gray-500 py-4">No hint packs available</p>
+              ) : (
+                hintShopItems.map((item: any) => (
+                  <div
+                    key={item.id}
+                    className="bg-cyan-200 border-2 border-black p-3 flex items-center gap-3"
+                  >
+                    <Gift className="w-5 h-5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-black text-sm uppercase truncate">{item.name}</div>
+                      <div className="text-[10px] font-bold text-black/70 truncate">
+                        ×{item.quantity}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleBuyHintItem(item)}
+                      className="bg-black text-white px-3 py-1.5 text-xs font-black uppercase border-2 border-black shrink-0"
+                    >
+                      ${item.priceUsd}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      <PaymentModal
+        key={paymentModalKey}
+        isOpen={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setPaymentStoreItem(null);
+          setSelectedHintItem(null);
+        }}
+        onSuccess={handlePaymentSuccess}
+        storeItem={paymentStoreItem}
+        defaultPriceUsd={paymentDefaultPrice}
+      />
     </div>
   );
 }
