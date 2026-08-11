@@ -1,6 +1,6 @@
 import * as mongoose from "mongoose";
 
-export type AppConfigKey = "scoring" | "access";
+export type AppConfigKey = "scoring" | "access" | "puzzleRush";
 
 export interface AppConfig {
   key: AppConfigKey;
@@ -9,7 +9,12 @@ export interface AppConfig {
 
 const appConfigSchema = new mongoose.Schema(
   {
-    key: { type: String, enum: ["scoring", "access"], required: true, unique: true },
+    key: {
+      type: String,
+      enum: ["scoring", "access", "puzzleRush"],
+      required: true,
+      unique: true,
+    },
     value: { type: mongoose.Schema.Types.Mixed, required: true },
   },
   { timestamps: true }

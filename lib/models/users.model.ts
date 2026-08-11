@@ -23,6 +23,10 @@ const userSchema = new mongoose.Schema({
     notified: { type: Boolean, default: false },
   },
   effectiveRating: { type: Number, default: 1000 },
+  // Puzzle Rush leaderboard fields (separate from the standard season leaderboard)
+  puzzleRushBestScore: { type: Number, default: 0 },
+  puzzleRushBestAt: { type: Date },
+  puzzleRushLastRank: { type: Number, default: null },
   // User settings
   settings: {
     ratingRange: {

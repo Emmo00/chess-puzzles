@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { CalendarDays, Gauge, Swords, SlidersHorizontal, X } from "lucide-react";
+import { CalendarDays, Gauge, Puzzle, X } from "lucide-react";
 import { SiteFooter } from "@/components/SiteFooter";
 import styles from "@/app/page.module.css";
 import {
@@ -48,11 +48,19 @@ export function ModeSheet({ isOpen, onClose, dailySolved }: ModeSheetProps) {
     },
     {
       label: "Puzzle Rush",
-      sub: "Coming soon",
+      sub: "Score fast across modes",
       icon: Gauge,
       background: "var(--cyan)",
-      onSelect: () => go("/coming-soon"),
+      onSelect: () => go("/puzzle-rush"),
     },
+    {
+      label: "Solve Puzzles",
+      sub: "Endless tactical practice",
+      icon: Puzzle,
+      background: "var(--lime)",
+      onSelect: () => go("/solve-puzzles"),
+    },
+    /*
     {
       label: "Puzzle Battle",
       sub: "Coming soon",
@@ -67,6 +75,7 @@ export function ModeSheet({ isOpen, onClose, dailySolved }: ModeSheetProps) {
       background: "var(--lime)",
       onSelect: () => go("/settings"),
     },
+    */
   ];
 
   return (

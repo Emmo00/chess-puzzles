@@ -52,16 +52,16 @@ interface PaymentModalProps {
 type Step = "quote" | "approving" | "purchasing" | "done" | "error";
 
 const ERC20_BALANCE_ABI = [
-  { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
+  {
+    type: "function",
+    name: "balanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
 ] as const;
 
-export function PaymentModal({
-  isOpen,
-  onClose,
-  onSuccess,
-  storeItem,
-  defaultPriceUsd,
-}: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, onSuccess, storeItem, defaultPriceUsd }: PaymentModalProps) {
   const { address, chainId } = useAccount();
   const { switchChain } = useSwitchChain();
   const publicClient = usePublicClient();
@@ -76,18 +76,22 @@ export function PaymentModal({
   const [needsApproval, setNeedsApproval] = useState(false);
   const [userMessage, setUserMessage] = useState("");
 
-  const { isLoading: isConfirming, isSuccess: txConfirmed, isError: txFailed } = useWaitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
+  const {
+    isLoading: isConfirming,
+    isSuccess: txConfirmed,
+    isError: txFailed,
+  } = useWaitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
 
   const ensureCorrectChain = async (): Promise<boolean> => {
     // MiniPay is always on Celo mainnet; during SSR/hydration chainId is
     // undefined. Both should short-circuit instead of requesting a switch.
     if (chainId === undefined || isMiniPay()) return true;
     if (isOnCorrectChain(chainId)) return true;
-    
+
     if (!address) {
       throw new Error("Wallet not connected");
     }
-    
+
     try {
       await switchChain({ chainId: celo.id });
       return true;
@@ -142,7 +146,7 @@ export function PaymentModal({
     }
   }, [txFailed, step, rollbackPurchase]);
 
-  const usdAmount = storeItem ? storeItem.priceUsd : (defaultPriceUsd || "0.01");
+  const usdAmount = storeItem ? storeItem.priceUsd : defaultPriceUsd || "0.01";
   const displayAmount = `$${usdAmount}`;
   const title = storeItem ? storeItem.name : "Daily Pass";
   const subtitle = storeItem
@@ -162,8 +166,8 @@ export function PaymentModal({
             abi: ERC20_BALANCE_ABI,
             functionName: "balanceOf",
             args: [address as Hex],
-          })
-        )
+          }),
+        ),
       );
       let best = sorted[0];
       let bestRawBal = 0n;
@@ -171,11 +175,12 @@ export function PaymentModal({
       for (let i = 0; i < sorted.length; i++) {
         if (results[i].status === "fulfilled") {
           const bal = (results[i] as PromiseFulfilledResult<bigint>).value;
-          const normed =
-            sorted[i].decimals === 18
-              ? bal
-              : bal * 10n ** BigInt(18 - sorted[i].decimals);
-          if (normed > bestNormed) { bestNormed = normed; bestRawBal = bal; best = sorted[i]; }
+          const normed = sorted[i].decimals === 18 ? bal : bal * 10n ** BigInt(18 - sorted[i].decimals);
+          if (normed > bestNormed) {
+            bestNormed = normed;
+            bestRawBal = bal;
+            best = sorted[i];
+          }
         }
       }
       setBalance(bestRawBal);
@@ -184,7 +189,9 @@ export function PaymentModal({
       if (GAME_ASSETS_CONTRACT) {
         const amount = parseUnits(usdAmount, best.decimals);
         if (bestRawBal < amount) {
-          setError(`Insufficient ${best.symbol} balance. Price: ${usdAmount} ${best.symbol}, balance: ${formatBalance(bestRawBal, best.decimals)}`);
+          setError(
+            `Insufficient ${best.symbol} balance. Price: ${usdAmount} ${best.symbol}, balance: ${formatBalance(bestRawBal, best.decimals)}`,
+          );
           setUserMessage("");
           return;
         }
@@ -245,11 +252,7 @@ export function PaymentModal({
         gas: approveGas,
         gasPrice: await getLegacyGasPrice(publicClient, selectedToken.feeCurrencyAddress as Hex),
       };
-      const hash = await runWithDevCapture(
-        "payment.approve",
-        approveRequest,
-        () => writeContractAsync(approveRequest)
-      );
+      const hash = await runWithDevCapture("payment.approve", approveRequest, () => writeContractAsync(approveRequest));
       setTxHash(hash);
     } catch (err: any) {
       setError(err?.shortMessage || err?.message || "Approval cancelled");
@@ -302,10 +305,8 @@ export function PaymentModal({
           gas: buyGas,
           gasPrice: await getLegacyGasPrice(publicClient, feeCurrency),
         };
-        const hash = await runWithDevCapture(
-          "payment.purchaseDailyPass",
-          purchaseRequest,
-          () => writeContractAsync(purchaseRequest)
+        const hash = await runWithDevCapture("payment.purchaseDailyPass", purchaseRequest, () =>
+          writeContractAsync(purchaseRequest),
         );
         setTxHash(hash);
       } else if (storeItem?.packId !== undefined) {
@@ -334,7 +335,7 @@ export function PaymentModal({
             buyGas = 300_000n;
           }
         }
-                const packRequest: Parameters<typeof writeContractAsync>[0] = {
+        const packRequest: Parameters<typeof writeContractAsync>[0] = {
           address: GAME_ASSETS_CONTRACT,
           abi: GAME_ASSETS_ABI,
           functionName: "purchaseAssetPack",
@@ -343,10 +344,8 @@ export function PaymentModal({
           gas: buyGas,
           gasPrice: await getLegacyGasPrice(publicClient, feeCurrency),
         };
-        const hash = await runWithDevCapture(
-          "payment.purchaseAssetPack",
-          packRequest,
-          () => writeContractAsync(packRequest)
+        const hash = await runWithDevCapture("payment.purchaseAssetPack", packRequest, () =>
+          writeContractAsync(packRequest),
         );
         setTxHash(hash);
         const packType: AssetType = storeItem?.category === "streak_freeze" ? "streakFreezes" : "hints";
@@ -356,7 +355,8 @@ export function PaymentModal({
           optimisticAdd(hash, packType, packQty);
         }
       } else {
-        const assetType = storeItem?.category === "streak_freeze" ? GAME_ASSET_TYPES.STREAK_FREEZE : GAME_ASSET_TYPES.HINT;
+        const assetType =
+          storeItem?.category === "streak_freeze" ? GAME_ASSET_TYPES.STREAK_FREEZE : GAME_ASSET_TYPES.HINT;
         const quantity = storeItem?.quantity || 1;
         let buyGas: bigint;
         try {
@@ -392,10 +392,8 @@ export function PaymentModal({
           gas: buyGas,
           gasPrice: await getLegacyGasPrice(publicClient, feeCurrency),
         };
-        const hash = await runWithDevCapture(
-          "payment.purchaseAsset",
-          assetRequest,
-          () => writeContractAsync(assetRequest)
+        const hash = await runWithDevCapture("payment.purchaseAsset", assetRequest, () =>
+          writeContractAsync(assetRequest),
         );
         setTxHash(hash);
         const unitType: AssetType = storeItem?.category === "streak_freeze" ? "streakFreezes" : "hints";
@@ -428,7 +426,7 @@ export function PaymentModal({
     } catch {
       return;
     }
-    
+
     if (needsApproval) {
       await doApproval();
     } else {
@@ -470,7 +468,9 @@ export function PaymentModal({
           <div className="font-black text-black text-sm uppercase tracking-wide flex items-center gap-2 mb-2">
             <OctagonAlert className="w-4 h-4 shrink-0" /> Unable to load payment info
           </div>
-          <button onClick={loadQuote} className="bg-black text-white px-3 py-1 text-xs font-black uppercase mt-2">Retry</button>
+          <button onClick={loadQuote} className="bg-black text-white px-3 py-1 text-xs font-black uppercase mt-2">
+            Retry
+          </button>
         </div>
       );
     }
@@ -484,11 +484,15 @@ export function PaymentModal({
           </div>
           <div className="flex justify-between items-center">
             <span className="uppercase tracking-wide">Price</span>
-            <span>{usdAmount} {selectedToken.symbol}</span>
+            <span>
+              {usdAmount} {selectedToken.symbol}
+            </span>
           </div>
           <div className="flex justify-between items-center text-[10px]">
             <span>Balance</span>
-            <span>{formatBalance(balance, selectedToken.decimals)} {selectedToken.symbol}</span>
+            <span>
+              {formatBalance(balance, selectedToken.decimals)} {selectedToken.symbol}
+            </span>
           </div>
         </div>
 
@@ -510,7 +514,15 @@ export function PaymentModal({
         <div className={`${isStore ? "bg-lime-400" : "bg-orange-400"} border-b-4 border-black p-4`}>
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-black uppercase tracking-wider text-black flex items-center gap-2">
-              {isStore ? <><Store className="w-7 h-7" /> STORE</> : <><Castle className="w-7 h-7" /> ACCESS PUZZLES</>}
+              {isStore ? (
+                <>
+                  <Store className="w-7 h-7" /> STORE
+                </>
+              ) : (
+                <>
+                  <Castle className="w-7 h-7" /> ACCESS PUZZLES
+                </>
+              )}
             </h2>
             <button
               onClick={handleClose}
@@ -534,26 +546,32 @@ export function PaymentModal({
 
           {step === "quote" && (
             <div className="space-y-4">
-              <div className={`${isStore ? "bg-lime-200" : "bg-cyan-300"} border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1`}>
+              <div
+                className={`${isStore ? "bg-lime-200" : "bg-cyan-300"} border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] transform rotate-1`}
+              >
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="font-black text-lg uppercase text-black flex items-center gap-2">
                     {isStore ? <Store className="w-5 h-5" /> : <Lightbulb className="w-5 h-5" />}
                     {title}
                   </h3>
-                  <span className="bg-black text-cyan-300 px-3 py-1 font-black text-xl border-2 border-cyan-300">{displayAmount}</span>
+                  <span className="bg-black text-cyan-300 px-3 py-1 font-black text-xl border-2 border-cyan-300">
+                    {displayAmount}
+                  </span>
                 </div>
                 <p className="text-black font-bold text-sm uppercase tracking-wide flex items-center gap-1">
-                  {isStore ? <><Lightbulb className="w-4 h-4" /> {subtitle}</> : <><Zap className="w-4 h-4" /> {subtitle}</>}
+                  {isStore ? (
+                    <>
+                      <Lightbulb className="w-4 h-4" /> {subtitle}
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4" /> {subtitle}
+                    </>
+                  )}
                 </p>
               </div>
 
               {renderQuote()}
-
-              <div className="bg-yellow-200 border-2 border-black p-3 transform rotate-1 mt-4">
-                <p className="text-xs font-bold text-black uppercase tracking-wide text-center flex items-center justify-center gap-1">
-                  <CreditCard className="w-3.5 h-3.5" /> Powered by MiniPay on Celo Network
-                </p>
-              </div>
             </div>
           )}
 
@@ -563,9 +581,7 @@ export function PaymentModal({
                 <div className="w-16 h-16 mx-auto mb-4 bg-black border-4 border-purple-400 flex items-center justify-center">
                   <Lock className="w-8 h-8 text-purple-400 animate-pulse" />
                 </div>
-                <h3 className="font-black text-xl uppercase mb-2 text-black tracking-wider">
-                  Authorize Payment
-                </h3>
+                <h3 className="font-black text-xl uppercase mb-2 text-black tracking-wider">Authorize Payment</h3>
                 <p className="font-bold text-black text-sm uppercase tracking-wide mb-2">
                   {isConfirming ? "Processing authorization..." : userMessage || "Confirm with your wallet"}
                 </p>

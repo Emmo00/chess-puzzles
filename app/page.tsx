@@ -25,7 +25,7 @@ import styles from "./page.module.css";
 export default function Home() {
   const router = useRouter();
   const { isConnected } = useAccount();
-  const { userStats, dailyStatus, ready, refetch } = useAppBootstrap();
+  const { userStats, dailyStatus, ready, refetch, markMapReady } = useAppBootstrap();
   const dailySolved = dailyStatus?.reservation?.status === "claimed";
 
   const points = Math.max(0, Math.floor(userStats?.points ?? 0));
@@ -49,6 +49,22 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Signal the startup loader once the user's position node on the progress map
+  // has actually been rendered, so the overlay never clears before it appears.
+  useEffect(() => {
+    if (!mounted) return;
+    let raf = 0;
+    const attempt = () => {
+      if (currentNodeRef.current) {
+        raf = window.requestAnimationFrame(() => markMapReady());
+      } else {
+        raf = window.requestAnimationFrame(attempt);
+      }
+    };
+    raf = window.requestAnimationFrame(attempt);
+    return () => window.cancelAnimationFrame(raf);
+  }, [mounted, markMapReady]);
 
   // Refresh Home's data when returning to this screen after the first boot.
   // The very first boot reuses the data the startup gate already loaded.

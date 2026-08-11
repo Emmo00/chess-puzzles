@@ -6,13 +6,14 @@ import { Loader2 } from "lucide-react";
 import { useAppBootstrap } from "@/lib/hooks/appBootstrap";
 import type { BootstrapStep } from "@/lib/hooks/appBootstrap";
 
-const STEP_ORDER: BootstrapStep[] = ["wallet", "profile", "daily", "assets"];
+const STEP_ORDER: BootstrapStep[] = ["wallet", "profile", "daily", "assets", "map"];
 
 const STEP_LABELS: Record<BootstrapStep, string> = {
   wallet: "Connecting your wallet",
   profile: "Loading your progress",
   daily: "Checking today's challenge",
   assets: "Preparing your items",
+  map: "Locating you on the map",
 };
 
 export function AppStartupOverlay() {
@@ -41,15 +42,6 @@ export function AppStartupOverlay() {
     >
       <div className="w-full max-w-xs bg-yellow-400 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 transform -rotate-1 animate-in fade-in duration-300">
         <div className="flex flex-col items-center text-center gap-4">
-          <Image
-            src="/chess-puzzles-icon.png"
-            alt="Chess Puzzles"
-            width={56}
-            height={56}
-            priority
-            className="animate-in zoom-in-95 duration-300"
-          />
-
           <div className="leading-none tracking-tight">
             <div className="text-3xl font-black uppercase text-black">Chess</div>
             <div className="text-3xl font-black uppercase text-black">Puzzles</div>
