@@ -4,6 +4,9 @@ import Script from "next/script";
 
 import "./globals.css";
 import { WalletProvider } from "../lib/providers/WalletProvider";
+import { AppBootstrap } from "@/lib/hooks/appBootstrap";
+import { AppStartupOverlay } from "@/components/AppStartupOverlay";
+import { StartupSplashSsr } from "@/components/StartupSplashSsr";
 import { FarcasterMiniAppReady } from "@/components/FarcasterMiniAppReady";
 import { BackgroundMusic } from "@/components/BackgroundMusic";
 import { GlobalErrorListener } from "@/components/GlobalErrorListener";
@@ -116,14 +119,18 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} antialiased`}>
         <WalletProvider>
-          <GlobalErrorListener />
-          <DevErrorOverlay />
-          <FarcasterMiniAppReady />
-          <BackgroundMusic />
-          <UserInit />
-          <StreakNotification />
-          {children}
-          <Toaster position="top-center" toastOptions={{ style: { border: "3px solid #000", boxShadow: "4px 4px 0 #000", fontWeight: 800 } }} />
+          <AppBootstrap>
+            <GlobalErrorListener />
+            <DevErrorOverlay />
+            <FarcasterMiniAppReady />
+            <BackgroundMusic />
+            <UserInit />
+            <StreakNotification />
+            {children}
+            <Toaster position="top-center" toastOptions={{ style: { border: "3px solid #000", boxShadow: "4px 4px 0 #000", fontWeight: 800 } }} />
+            <AppStartupOverlay />
+          </AppBootstrap>
+          <StartupSplashSsr />
         </WalletProvider>
       </body>
     </html>

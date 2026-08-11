@@ -11,9 +11,8 @@ import { AvatarBubble } from "@/components/home/AvatarBubble";
 import { PointsStreakPill } from "@/components/home/PointsStreakPill";
 import { ProgressMap } from "@/components/home/ProgressMap";
 import { LevelDetailsModal, type LevelModalData } from "@/components/home/LevelDetailsModal";
-import { useUserStats } from "@/lib/hooks/useUserStats";
 import type { StreakStatus } from "@/lib/hooks/useUserStats";
-import { useDailyCheckin } from "@/lib/hooks/useDailyCheckin";
+import { useAppBootstrap } from "@/lib/hooks/appBootstrap";
 import { levelForPoints, pointsForLevel, levelProgressPercent, levelStateFor } from "@/lib/leveling";
 import {
   isMusicEnabled,
@@ -26,9 +25,8 @@ import styles from "./page.module.css";
 export default function Home() {
   const router = useRouter();
   const { isConnected } = useAccount();
-  const { userStats } = useUserStats();
-  const { status: checkInStatus } = useDailyCheckin();
-  const dailySolved = checkInStatus?.reservation?.status === "claimed";
+  const { userStats, dailyStatus, ready, refetch } = useAppBootstrap();
+  const dailySolved = dailyStatus?.reservation?.status === "claimed";
 
   const points = Math.max(0, Math.floor(userStats?.points ?? 0));
   const streak = Math.max(0, Math.floor(userStats?.currentStreak ?? 0));
@@ -46,10 +44,22 @@ export default function Home() {
 
   const currentNodeRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const bootedRef = useRef(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Refresh Home's data when returning to this screen after the first boot.
+  // The very first boot reuses the data the startup gate already loaded.
+  useEffect(() => {
+    if (!ready) return;
+    if (bootedRef.current) {
+      refetch();
+    } else {
+      bootedRef.current = true;
+    }
+  }, [ready, refetch]);
 
   useEffect(() => {
     if (!mounted) return;

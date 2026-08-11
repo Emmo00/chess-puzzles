@@ -207,3 +207,23 @@
     box-shadow: 0 0 0 4px rgba(255, 214, 0, 0.7);
   }
 }
+
+/* Startup mascot bounce */
+@keyframes bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* Startup step segment pulse */
+@keyframes stepPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 190, 0, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(255, 190, 0, 0.55);
+  }
+}
