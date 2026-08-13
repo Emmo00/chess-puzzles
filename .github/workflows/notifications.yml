@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Send Daily Notifications
-        if: github.event.schedule == '0 0 * * *' || github.event_name == 'workflow_dispatch'
+        if: false && github.event.schedule == '0 0 * * *' || github.event_name == 'workflow_dispatch'
         run: |
           echo "Triggering Daily Notifications..."
           curl -f -X POST "${{ secrets.APP_URL }}/api/admin/notifications/daily" \
@@ -20,7 +20,7 @@ jobs:
                -vvv
 
       - name: Send Reminder Notifications
-        if: github.event.schedule == '0 13 * * *' || github.event_name == 'workflow_dispatch'
+        if: false && github.event.schedule == '0 13 * * *' || github.event_name == 'workflow_dispatch'
         run: |
           echo "Triggering Reminders..."
           curl -f -X POST "${{ secrets.APP_URL }}/api/admin/notifications/reminders?days=2" \
