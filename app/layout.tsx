@@ -103,6 +103,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <meta name="talentapp:project_verification" content="44156f46d8761b652f56dfd70ed3225d67f0125aca67276ace896a974edcfe491f5da33ad557bec3583760ec78463fa110f8d4f08c7fee73d932fe741b556953" />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-TPBVDV2BQ9"

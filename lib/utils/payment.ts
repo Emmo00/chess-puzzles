@@ -22,23 +22,4 @@ export function formatCUSD(amount: bigint): string {
   return (Number(amount) / 1e18).toFixed(2);
 }
 
-// MiniPay auto-connect helper
-export async function autoConnectMiniPay(): Promise<string | null> {
-  if (typeof window === 'undefined' || !window.ethereum) {
-    return null;
-  }
-
-  try {
-    const accounts = await window.ethereum.request({
-      method: "eth_requestAccounts",
-      params: [],
-    });
-    
-    return accounts[0] || null;
-  } catch (error) {
-    console.error('Failed to auto-connect MiniPay:', error);
-    return null;
-  }
-}
-
 export { PAYMENT_RECIPIENT };

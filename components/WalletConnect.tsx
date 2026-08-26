@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { sdk } from "@farcaster/miniapp-sdk";
 import { useAccount, useConnect, useSwitchChain } from "wagmi";
 import { celo } from "wagmi/chains";
-import { Smartphone } from "lucide-react";
 import { isMiniPay } from "@/lib/config/wagmi";
 
 export function WalletConnect() {
@@ -86,22 +85,9 @@ export function WalletConnect() {
     return null;
   }
 
-  // For MiniPay, show a simplified connect button (auto-connects)
+  // MiniPay uses auto-connect only — no button shown
   if (isMiniPayDetected) {
-    return (
-      <button
-        onClick={() => {
-          if (injectedConnector) {
-            connect({ connector: injectedConnector });
-          }
-        }}
-        disabled={isPending}
-        className="bg-cyan-400 border-4 border-black px-4 py-3 font-black text-xs uppercase tracking-wider text-black transition-all duration-200 flex items-center gap-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:transform hover:-translate-x-1 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-[4px_4px_0px_rgba(0,0,0,1)]"
-      >
-        <Smartphone className="w-5 h-5" />
-        {isPending ? "CONNECTING..." : "CONNECT MINIPAY"}
-      </button>
-    );
+    return null;
   }
 
   return (

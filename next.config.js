@@ -4,7 +4,7 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
-  productionBrowserSourceMaps: true,
+  productionBrowserSourceMaps: false,
 }
 
 module.exports = nextConfig
