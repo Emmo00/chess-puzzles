@@ -16,7 +16,7 @@ function validateEnv() {
     ADMIN_API_KEY: str({ default: "" }),
     LOG_LEVEL: str({ default: "info" }),
     REDIS_URL: str({ default: "redis://127.0.0.1:6379" }),
-    CORS_ORIGIN: str({ default: "https://chesspuzzles.xyz" }),
+    CORS_ORIGIN: str({ default: "https://chesspuzzles.xyz,https://miniapp.chesspuzzles.xyz" }),
   });
 }
 
