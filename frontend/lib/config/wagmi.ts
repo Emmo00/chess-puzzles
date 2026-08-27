@@ -65,9 +65,6 @@ export const PAYMENT_RECIPIENT = "0xEA22ca862C3AFDA79Ef7Fb5Ae8f13D245354f05b";
 // Payout Claim Contract
 export const PAYOUT_CLAIM_CONTRACT = "0x4DF823F6A36b35A3983afc41f7c3584C1DCBFDf1";
 
-// Chess Puzzles Store Contract
-export const STORE_CONTRACT = "0x5f23E64A2228F9a5f54527E62755203bC6D9F305";
-
 // Game Assets Contract (hints/streak freezes)
 // TBD - will be set after deployment
 export const GAME_ASSETS_CONTRACT = "0xD4d151a188e6DfC7e5d6b7BF1811D2230716bd9b" as `0x${string}`;

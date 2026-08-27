@@ -6,7 +6,6 @@ export const CELO_CHAIN_ID = 42220;
 // Contract addresses (Celo mainnet)
 export const GAME_ASSETS_CONTRACT = "0xD4d151a188e6DfC7e5d6b7BF1811D2230716bd9b" as `0x${string}`;
 export const PAYOUT_CLAIM_CONTRACT = "0x4DF823F6A36b35A3983afc41f7c3584C1DCBFDf1";
-export const STORE_CONTRACT = "0x5f23E64A2228F9a5f54527E62755203bC6D9F305";
 export const PAYMENT_RECIPIENT = "0xEA22ca862C3AFDA79Ef7Fb5Ae8f13D245354f05b";
 
 // Game Assets asset type hashes (keccak256 of the string literal, matching Solidity)

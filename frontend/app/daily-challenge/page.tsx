@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { sdk } from "@farcaster/miniapp-sdk";
 import confetti from "canvas-confetti";
 import { ArrowUpRight, AtSign, Ban, Check, Circle, Clock, Coins, Gift, Lightbulb, Loader2, Send, Share2, X, Zap } from "lucide-react";
 import { useAccount, usePublicClient } from "wagmi";
@@ -37,7 +36,6 @@ export default function DailyChallengePage() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [isWrongMoveActive, setIsWrongMoveActive] = useState(false);
-  const [isFarcasterMiniApp, setIsFarcasterMiniApp] = useState(false);
   const [isSolving, setIsSolving] = useState(false);
   const [resolvingMessage, setResolvingMessage] = useState<string | null>(null);
   const [showHintShop, setShowHintShop] = useState(false);
@@ -93,29 +91,6 @@ export default function DailyChallengePage() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const detectMiniApp = async () => {
-      try {
-        const inMiniApp = await sdk.isInMiniApp();
-        if (!cancelled) {
-          setIsFarcasterMiniApp(inMiniApp);
-        }
-      } catch {
-        if (!cancelled) {
-          setIsFarcasterMiniApp(false);
-        }
-      }
-    };
-
-    void detectMiniApp();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   useEffect(() => {
@@ -278,23 +253,8 @@ export default function DailyChallengePage() {
 
   const displayTxHash = status?.reservation?.claimTxHash || txHash;
 
-  const buildFarcasterComposeUrl = (text: string, embedUrl: string) => {
-    const url = new URL("https://farcaster.xyz/~/compose");
-    url.searchParams.set("text", text);
-    url.searchParams.append("embeds[]", embedUrl);
-    return url.toString();
-  };
 
   const openExternalUrl = async (url: string) => {
-    if (isFarcasterMiniApp) {
-      try {
-        await sdk.actions.openUrl(url);
-        return;
-      } catch {
-        // Fallback to browser navigation.
-      }
-    }
-
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -389,20 +349,11 @@ export default function DailyChallengePage() {
       ? `I solved today's ${challengeRating}-rated Daily Challenge on Chess Puzzles. Can you beat it?`
       : "I solved today's Daily Challenge on Chess Puzzles. Can you beat it?";
 
-    if (isFarcasterMiniApp) {
-      try {
-        const embeds: [string] = [challengeShareUrl];
-        await sdk.actions.composeCast({
-          text: castText,
-          embeds,
-        });
-        return;
-      } catch (error) {
-        console.error("Failed to open Farcaster cast composer:", error);
-      }
-    }
+    const url = new URL("https://farcaster.xyz/~/compose");
+    url.searchParams.set("text", castText);
+    url.searchParams.append("embeds[]", challengeShareUrl);
 
-    await openExternalUrl(buildFarcasterComposeUrl(castText, challengeShareUrl));
+    window.open(url.toString(), "_blank", "noopener,noreferrer");
   };
 
   const handleShareTweet = async () => {

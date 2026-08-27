@@ -7,7 +7,6 @@ import { WalletProvider } from "../lib/providers/WalletProvider";
 import { AppBootstrap } from "@/lib/hooks/appBootstrap";
 import { AppStartupOverlay } from "@/components/AppStartupOverlay";
 import { StartupSplashSsr } from "@/components/StartupSplashSsr";
-import { FarcasterMiniAppReady } from "@/components/FarcasterMiniAppReady";
 import { BackgroundMusic } from "@/components/BackgroundMusic";
 import { GlobalErrorListener } from "@/components/GlobalErrorListener";
 import { DevErrorOverlay } from "@/components/DevErrorOverlay";
@@ -36,22 +35,6 @@ const appBaseUrl = (() => {
 
 const buildAppUrl = (path: string) => new URL(path, appBaseUrl).toString();
 
-const miniAppEmbed = {
-  version: "1",
-  imageUrl: buildAppUrl("/api/og"),
-  button: {
-    title: "Play Chess Puzzles",
-    action: {
-      type: "launch_miniapp",
-      name: "Chess Puzzles",
-      url: buildAppUrl("/"),
-      splashImageUrl: buildAppUrl("/chess-puzzles-icon.png"),
-      splashBackgroundColor: "#fff9ec",
-    },
-  },
-} as const;
-
-
 
 export const metadata: Metadata = {
   title: "Chess Puzzles - Master Your Tactics",
@@ -71,10 +54,6 @@ export const metadata: Metadata = {
     ],
     type: "website",
   },
-  other: {
-    "fc:miniapp": JSON.stringify(miniAppEmbed),
-  },
-
   icons: {
     icon: [
       {
@@ -123,7 +102,6 @@ export default function RootLayout({
           <AppBootstrap>
             <GlobalErrorListener />
             <DevErrorOverlay />
-            <FarcasterMiniAppReady />
             <BackgroundMusic />
             <UserInit />
             <StreakNotification />

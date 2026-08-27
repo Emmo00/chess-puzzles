@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { sdk } from "@farcaster/miniapp-sdk";
 import { useAccount, useConnect, useSwitchChain } from "wagmi";
 import { celo } from "wagmi/chains";
 import { isMiniPay } from "@/lib/config/wagmi";
@@ -11,13 +10,7 @@ export function WalletConnect() {
   const { connect, connectors, isPending } = useConnect();
   const { switchChain } = useSwitchChain();
   const [isMiniPayDetected, setIsMiniPayDetected] = useState(false);
-  const [isFarcasterMiniApp, setIsFarcasterMiniApp] = useState(false);
   const [autoConnectAttempted, setAutoConnectAttempted] = useState(false);
-
-  const farcasterConnector = connectors.find(
-    (connector) =>
-      connector.id.toLowerCase().includes("farcaster") || connector.name.toLowerCase().includes("farcaster"),
-  );
 
   const injectedConnector = connectors.find((connector) => connector.type === "injected");
 
@@ -27,22 +20,7 @@ export function WalletConnect() {
   }, []);
 
   useEffect(() => {
-    const detectMiniApp = async () => {
-      try {
-        const inMiniApp = await sdk.isInMiniApp();
-        setIsFarcasterMiniApp(inMiniApp);
-      } catch {
-        setIsFarcasterMiniApp(false);
-      }
-    };
-
-    void detectMiniApp();
-  }, []);
-
-  useEffect(() => {
     if (isConnected) {
-      // Auto-switch to Celo on connect; ignore failures silently
-      // (covers wallets that reject wallet_switchEthereumChain)
       const autoSwitch = async () => {
         try {
           await switchChain({ chainId: celo.id });
@@ -59,12 +37,6 @@ export function WalletConnect() {
       return;
     }
 
-    if (isFarcasterMiniApp && farcasterConnector) {
-      setAutoConnectAttempted(true);
-      connect({ connector: farcasterConnector });
-      return;
-    }
-
     // Auto-connect for MiniPay users
     if (isMiniPayDetected && injectedConnector) {
       setAutoConnectAttempted(true);
@@ -74,8 +46,6 @@ export function WalletConnect() {
     isConnected,
     isPending,
     autoConnectAttempted,
-    isFarcasterMiniApp,
-    farcasterConnector,
     isMiniPayDetected,
     injectedConnector,
     connect,
@@ -93,18 +63,9 @@ export function WalletConnect() {
   return (
     <div className="relative">
       <button
-        onClick={async () => {
-          let inMiniApp = false;
-
-          try {
-            inMiniApp = await sdk.isInMiniApp();
-          } catch {
-            inMiniApp = false;
-          }
-
-          const connector = inMiniApp ? farcasterConnector : injectedConnector;
-          if (connector) {
-            connect({ connector });
+        onClick={() => {
+          if (injectedConnector) {
+            connect({ connector: injectedConnector });
           }
         }}
         disabled={isPending}

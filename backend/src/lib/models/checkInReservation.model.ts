@@ -30,7 +30,6 @@ export interface ICheckInReservation extends Document {
   claimTxHash?: string;
   claimedAt?: Date;
   errorMessage?: string;
-  onChainSynced: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -117,10 +116,6 @@ const CheckInReservationSchema = new Schema<ICheckInReservation>(
     errorMessage: {
       type: String,
       required: false,
-    },
-    onChainSynced: {
-      type: Boolean,
-      default: false,
     },
   },
   {

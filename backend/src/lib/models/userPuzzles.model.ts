@@ -9,7 +9,6 @@ const UserPuzzleSchema = new mongoose.Schema({
   type: { type: String, enum: ["solve", "daily"], required: true },
   points: { type: Number, default: 0 },
   solvedAt: { type: Date },
-  onChainSynced: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
 

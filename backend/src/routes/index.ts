@@ -4,7 +4,6 @@ import usersSettings from "./users/settings";
 import usersFreebies from "./users/freebies";
 import usersStreak from "./users/streak";
 import usersStreakEvent from "./users/streak-event";
-import usersLinkFarcaster from "./users/link-farcaster";
 import puzzlesToday from "./puzzles/today";
 import puzzlesTodayMe from "./puzzles/today-me";
 import puzzlesSolveStatus from "./puzzles/solve-status";
@@ -36,11 +35,6 @@ import adminScoringConfig from "./admin/scoring-config";
 import adminAccessConfig from "./admin/access-config";
 import adminPuzzleRushConfig from "./admin/puzzle-rush-config";
 import adminErrors from "./admin/errors";
-import adminOnchainSync from "./admin/onchain-sync";
-import adminNotificationsDaily from "./admin/notifications-daily";
-import adminNotificationsReminders from "./admin/notifications-reminders";
-import adminNotificationsCustom from "./admin/notifications-custom";
-import webhooksFarcaster from "./webhooks/farcaster";
 import errors from "./errors";
 
 export const routes = Router();
@@ -51,7 +45,6 @@ routes.use("/users/settings", usersSettings);
 routes.use("/users/freebies", usersFreebies);
 routes.use("/users/streak/event", usersStreakEvent);
 routes.use("/users/streak", usersStreak);
-routes.use("/users/link-farcaster", usersLinkFarcaster);
 
 // Puzzles
 routes.use("/puzzles/today/me", puzzlesTodayMe);
@@ -101,13 +94,6 @@ routes.use("/admin/puzzle-rush-config", adminPuzzleRushConfig);
 
 // Admin management
 routes.use("/admin/errors", adminErrors);
-routes.use("/admin/onchain-sync", adminOnchainSync);
-routes.use("/admin/notifications/daily", adminNotificationsDaily);
-routes.use("/admin/notifications/reminders", adminNotificationsReminders);
-routes.use("/admin/notifications/custom", adminNotificationsCustom);
-
-// Webhooks
-routes.use("/webhooks/farcaster", webhooksFarcaster);
 
 // Error reporting
 routes.use("/errors", errors);

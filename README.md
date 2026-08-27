@@ -6,7 +6,7 @@ Chess Puzzles is a Next.js Mini App for solving chess puzzles with on-chain paym
 
 - Daily challenge and puzzle-solving flows
 - Streak, user stats, and leaderboard endpoints
-- Celo wallet integration (MiniPay/Farcaster + injected wallets)
+- Celo wallet integration (MiniPay + injected wallets)
 - Multi-currency Celo payment support (USDT, USDC, cUSD, cEUR, cREAL)
 - Check-in reservation, solve, and signed claim endpoints
 - Hidden admin operations page for payout/revenue contract operations
@@ -57,11 +57,8 @@ PUZZLE_API_URL=https://your-api-domain.com
 # Optional (required only for server-signed check-in claim flows)
 CHECKIN_SIGNER_PRIVATE_KEY=0xyourprivatekey
 
-# Optional app metadata / Mini App integration
+# Optional app metadata
 NEXT_PUBLIC_APP_URL=https://your-app-domain.com
-FARCASTER_HEADER=
-FARCASTER_PAYLOAD=
-FARCASTER_SIGNATURE=
 
 # Optional hidden admin page settings
 NEXT_PUBLIC_ADMIN_PAGE_KEY=
@@ -77,7 +74,7 @@ pnpm dev
 4. Open the app
 
 - Local: http://localhost:3000
-- MiniPay/Farcaster testing: deploy to HTTPS and open the deployed URL in the in-app browser
+- MiniPay testing: deploy to HTTPS and open the deployed URL in the in-app browser
 
 ## Scripts
 

@@ -16,7 +16,6 @@ export interface IDailyChallenge extends Document {
   maxDailyCheckInsSnapshot: number;
   checkInAmountWeiSnapshot: string;
   createdByWallet: string;
-  onChainSynced: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,10 +53,6 @@ const DailyChallengeSchema = new Schema<IDailyChallenge>(
       required: true,
       lowercase: true,
       match: /^0x[a-fA-F0-9]{40}$/,
-    },
-    onChainSynced: {
-      type: Boolean,
-      default: false,
     },
   },
   {

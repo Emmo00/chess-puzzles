@@ -11,7 +11,6 @@ function validateEnv() {
     CELO_RPC_URL: str({ default: "" }),
     CONSUMER_PRIVATE_KEY: str({ default: "" }),
     GAME_ASSETS_ADMIN_KEY: str({ default: "" }),
-    ONCHAIN_STORE_SIGNER_PRIVATE_KEY: str({ default: "" }),
     JWT_SECRET: str({ default: "" }),
     ADMIN_WALLET_ADDRESS: str({ default: "" }),
     ADMIN_API_KEY: str({ default: "" }),

@@ -37,7 +37,6 @@ export interface UserPuzzle {
   type: "solve" | "daily";
   points: number;
   solvedAt?: Date;
-  onChainSynced: boolean;
   createdAt: Date;
 }
 

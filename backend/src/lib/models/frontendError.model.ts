@@ -6,7 +6,7 @@ export interface IFrontendError extends Document {
   userAddress?: string;
   path?: string;
   action?: string;
-  platform: "farcaster" | "minipay" | "others";
+  platform: "minipay" | "others";
   status: "new" | "resolved";
   additionalData?: any;
   createdAt: Date;
@@ -20,7 +20,7 @@ const FrontendErrorSchema = new Schema<IFrontendError>({
   action: { type: String },
   platform: { 
     type: String, 
-    enum: ["farcaster", "minipay", "others"], 
+    enum: ["minipay", "others"],
     required: true,
     default: "others"
   },
