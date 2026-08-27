@@ -10,7 +10,7 @@ import { PAYOUT_CLAIMS_ABI } from "../../lib/config/payoutClaims";
 import { PAYOUT_CLAIM_CONTRACT } from "../../lib/config/wagmi";
 import { devErrorBody } from "../../lib/utils/devResponse";
 
-const router = Router();
+const router: Router = Router();
 
 const TX_HASH_REGEX = /^0x[a-fA-F0-9]{64}$/;
 

@@ -4,7 +4,7 @@ import dbConnect from "../../lib/db";
 import PuzzleRushService from "../../lib/services/puzzleRush.service";
 import { getPuzzleRushConfig, mergePuzzleRushConfig } from "../../lib/config/puzzleRush";
 
-const router = Router();
+const router: Router = Router();
 
 router.get("/", async (_req: Request, res: Response) => {
   try {

@@ -4,7 +4,7 @@ import { GAME_ASSETS_ABI } from "../../lib/abi/gameAssets";
 import { maskAddress } from "../../middleware/logging";
 import { publicClient } from "../../config/publicClient";
 
-const router = Router();
+const router: Router = Router();
 
 router.get("/", async (req: Request, res: Response) => {
   const log = (req as any).log;

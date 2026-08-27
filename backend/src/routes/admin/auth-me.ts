@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { requireAdmin } from "../../middleware/adminAuth";
 
-const router = Router();
+const router: Router = Router();
 
 router.get("/", requireAdmin, async (req: Request, res: Response) => {
   try {

@@ -8,7 +8,7 @@ import RewardsService from "../../lib/services/rewards.service";
 import { authenticateWallet } from "../../middleware/auth";
 import { UserPuzzle } from "../../lib/types";
 
-const router = Router();
+const router: Router = Router();
 
 router.post("/", authenticateWallet, async (req: Request, res: Response) => {
   const log = (req as any).log;

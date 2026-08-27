@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import dbConnect from "../../lib/db";
 import PuzzleRushService from "../../lib/services/puzzleRush.service";
 
-const router = Router();
+const router: Router = Router();
 
 router.get("/", async (req: Request, res: Response) => {
   try {

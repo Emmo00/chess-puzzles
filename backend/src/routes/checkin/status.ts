@@ -4,7 +4,7 @@ import dbConnect from "../../lib/db";
 import CheckInService from "../../lib/services/checkin.service";
 import { authenticateWallet } from "../../middleware/auth";
 
-const router = Router();
+const router: Router = Router();
 
 const ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 

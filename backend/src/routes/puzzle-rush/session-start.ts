@@ -5,7 +5,7 @@ import PuzzleRushService, {
 } from "../../lib/services/puzzleRush.service";
 import { authenticateWallet } from "../../middleware/auth";
 
-const router = Router();
+const router: Router = Router();
 
 router.post("/", authenticateWallet, async (req: Request, res: Response) => {
   const log = (req as any).log;

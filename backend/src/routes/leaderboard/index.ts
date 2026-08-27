@@ -3,7 +3,7 @@ import dbConnect from "../../lib/db";
 import LeaderboardService from "../../lib/services/leaderboard.service";
 import type { League } from "../../lib/leagues";
 
-const router = Router();
+const router: Router = Router();
 
 const VALID_LEAGUES = new Set(["king", "knight", "pawn"]);
 

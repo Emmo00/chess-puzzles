@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { requireAdmin } from "../../middleware/adminAuth";
 import { type ScoringConfig, getScoringConfig, saveScoringConfig } from "../../lib/config/scoring";
 
-const router = Router();
+const router: Router = Router();
 
 router.get("/", requireAdmin, async (_req: Request, res: Response) => {
   try {

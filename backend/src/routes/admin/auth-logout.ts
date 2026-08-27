@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 
-const router = Router();
+const router: Router = Router();
 
 router.post("/", async (_req: Request, res: Response) => {
   res.cookie("admin_session", "", {

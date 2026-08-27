@@ -6,7 +6,7 @@ import { calculateEarnedPoints } from "../../lib/scoring";
 import { authenticateWallet } from "../../middleware/auth";
 import { UserPuzzle } from "../../lib/types";
 
-const router = Router();
+const router: Router = Router();
 
 router.post("/", authenticateWallet, async (req: Request, res: Response) => {
   try {

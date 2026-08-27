@@ -10,7 +10,7 @@ import { GAME_ASSETS_ABI } from "../../lib/abi/gameAssets";
 import { publicClient } from "../../config/publicClient";
 import { Puzzle } from "../../lib/types";
 
-const router = Router();
+const router: Router = Router();
 
 async function hasDailyAccess(walletAddress: string): Promise<boolean> {
   if (!GAME_ASSETS_CONTRACT) return false;

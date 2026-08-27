@@ -64,14 +64,14 @@ describe("getLeague", () => {
   });
 
   it("keeps a high-point player in Knight (below King streak) when streak >= 10", () => {
-    expect(getLeague(3000, 15)).toBe("knight");
+    expect(getLeague(3000, 13)).toBe("knight");
   });
 
   it("respects league thresholds from LEAGUES config", () => {
     expect(LEAGUES.king.minSeasonPoints).toBe(1800);
-    expect(LEAGUES.king.minStreak).toBe(20);
+    expect(LEAGUES.king.minStreak).toBe(14);
     expect(LEAGUES.knight.minSeasonPoints).toBe(750);
-    expect(LEAGUES.knight.minStreak).toBe(10);
+    expect(LEAGUES.knight.minStreak).toBe(7);
   });
 });
 

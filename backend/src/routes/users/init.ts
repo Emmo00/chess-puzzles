@@ -6,7 +6,7 @@ import { GAME_ASSETS_CONTRACT } from "../../lib/config/wagmi";
 import { GAME_ASSETS_ABI } from "../../lib/abi/gameAssets";
 import { publicClient } from "../../config/publicClient";
 
-const router = Router();
+const router: Router = Router();
 
 router.post("/", authenticateWallet, async (req: Request, res: Response) => {
   try {

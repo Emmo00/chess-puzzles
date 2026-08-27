@@ -3,7 +3,7 @@ import crypto from "crypto";
 import dbConnect from "../../lib/db";
 import nonceModel from "../../lib/models/nonce.model";
 
-const router = Router();
+const router: Router = Router();
 
 router.post("/", async (req: Request, res: Response) => {
   try {

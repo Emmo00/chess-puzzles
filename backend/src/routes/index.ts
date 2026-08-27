@@ -37,7 +37,7 @@ import adminPuzzleRushConfig from "./admin/puzzle-rush-config";
 import adminErrors from "./admin/errors";
 import errors from "./errors";
 
-export const routes = Router();
+export const routes: Router = Router();
 
 // Users
 routes.use("/users/init", usersInit);

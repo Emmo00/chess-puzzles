@@ -3,7 +3,7 @@ import dbConnect from "../../lib/db";
 import puzzleIssueService from "../../lib/services/puzzleIssue.service";
 import { authenticateWallet } from "../../middleware/auth";
 
-const router = Router();
+const router: Router = Router();
 
 router.post("/", authenticateWallet, async (req: Request, res: Response) => {
   const log = (req as any).log;

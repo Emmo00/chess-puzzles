@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import dbConnect from "../lib/db";
 import { FrontendError } from "../lib/models/frontendError.model";
 
-const router = Router();
+const router: Router = Router();
 
 router.post("/", async (req: Request, res: Response) => {
   try {

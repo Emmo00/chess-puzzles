@@ -3,7 +3,7 @@ import dbConnect from "../../lib/db";
 import PuzzleService from "../../lib/services/puzzles.service";
 import { authenticateWallet } from "../../middleware/auth";
 
-const router = Router();
+const router: Router = Router();
 
 router.get("/", authenticateWallet, async (req: Request, res: Response) => {
   try {

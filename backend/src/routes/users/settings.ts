@@ -4,7 +4,7 @@ import { authenticateWallet } from "../../middleware/auth";
 import UserService from "../../lib/services/users.service";
 import { UserSettings } from "../../lib/types";
 
-const router = Router();
+const router: Router = Router();
 
 router.get("/", authenticateWallet, async (req: Request, res: Response) => {
   try {

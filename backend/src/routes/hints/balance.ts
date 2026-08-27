@@ -7,7 +7,7 @@ import { GAME_ASSETS_ABI } from "../../lib/abi/gameAssets";
 import { publicClient } from "../../config/publicClient";
 import { maskAddress } from "../../middleware/logging";
 
-const router = Router();
+const router: Router = Router();
 
 router.get("/", authenticateWallet, async (req: Request, res: Response) => {
   const log = (req as any).log;

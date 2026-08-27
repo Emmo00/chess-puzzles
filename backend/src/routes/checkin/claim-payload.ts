@@ -6,7 +6,7 @@ import CheckInService from "../../lib/services/checkin.service";
 import { authenticateWallet } from "../../middleware/auth";
 import { devErrorBody } from "../../lib/utils/devResponse";
 
-const router = Router();
+const router: Router = Router();
 
 const maskAddress = (address?: string) => {
   if (!address || address.length < 10) return address;

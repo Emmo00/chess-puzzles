@@ -10,7 +10,7 @@ import { authenticateWallet } from "../../middleware/auth";
 import { maskAddress } from "../../middleware/logging";
 import { publicClient } from "../../config/publicClient";
 
-const router = Router();
+const router: Router = Router();
 
 router.post("/", authenticateWallet, async (req: Request, res: Response) => {
   const log = (req as any).log;

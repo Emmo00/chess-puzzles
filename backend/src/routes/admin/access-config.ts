@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { requireAdmin } from "../../middleware/adminAuth";
 import { type AccessConfig, getAccessConfig, saveAccessConfig } from "../../lib/config/access";
 
-const router = Router();
+const router: Router = Router();
 
 router.get("/", requireAdmin, async (_req: Request, res: Response) => {
   try {

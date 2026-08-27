@@ -5,7 +5,7 @@ import CheckInService from "../../lib/services/checkin.service";
 import UserService from "../../lib/services/users.service";
 import { authenticateWallet } from "../../middleware/auth";
 
-const router = Router();
+const router: Router = Router();
 
 router.post("/", authenticateWallet, async (req: Request, res: Response) => {
   try {
