@@ -11,6 +11,7 @@ import { isMusicEnabled, setMusicEnabled as persistMusicEnabled } from "../../li
 import { TelegramSupportLink } from "@/components/TelegramSupportLink";
 import { BottomNav } from "@/components/BottomNav";
 import { TriangleAlert } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 export default function SettingsPage() {
   const [mounted, setMounted] = useState(false);
@@ -46,15 +47,12 @@ export default function SettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch("/api/users/settings", {
+      const data = await apiFetch<UserSettings>("/api/users/settings", {
         headers: {
           Authorization: `Bearer ${address}`,
         },
       });
-      if (response.ok) {
-        const data = await response.json();
-        setSettings(data);
-      }
+      setSettings(data);
     } catch (error) {
       console.error("Failed to fetch settings:", error);
     } finally {
@@ -65,21 +63,15 @@ export default function SettingsPage() {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      const response = await fetch("/api/users/settings", {
+      await apiFetch("/api/users/settings", {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${address}`,
         },
         body: JSON.stringify(settings),
       });
 
-      if (response.ok) {
-        setHasChanges(false);
-      } else {
-        const error = await response.json();
-        setErrorMsg(error.message || "Failed to save settings");
-      }
+      setHasChanges(false);
     } catch (error) {
       console.error("Failed to save settings:", error);
       setErrorMsg("Failed to save settings");

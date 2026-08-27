@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { TelegramSupportLink } from "./TelegramSupportLink";
+import { apiFetch } from "@/lib/api";
 
 interface ErrorLog {
   _id: string;
@@ -33,23 +34,21 @@ export function FrontendErrorsPanel() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const query = new URLSearchParams({ page: page.toString(), limit: "10" });
+      const params: Record<string, string> = { page: page.toString(), limit: "10" };
       if (status !== "all") {
-        query.append("status", status);
+        params.status = status;
       }
 
-      const res = await fetch(`/api/admin/errors?${query.toString()}`);
+      const json = await apiFetch<{ success: boolean; data: { errors: ErrorLog[]; pagination: PaginationData } }>(
+        "/api/admin/errors",
+        { params }
+      );
 
-      if (!res.ok) {
-        throw new Error("Failed to fetch errors");
-      }
-
-      const json = await res.json();
       if (json.success) {
         setErrors(json.data.errors);
         setPagination(json.data.pagination);
       } else {
-        throw new Error(json.error || "Failed to fetch errors");
+        throw new Error("Failed to fetch errors");
       }
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -64,19 +63,12 @@ export function FrontendErrorsPanel() {
 
   const handleResolve = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/errors`, {
+      await apiFetch("/api/admin/errors", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status: "resolved" }),
       });
 
-      if (!res.ok) throw new Error("Failed to update status");
-
-      const json = await res.json();
-      if (json.success) {
-        // Refresh current page
-        fetchErrors(pagination.page, statusFilter);
-      }
+      fetchErrors(pagination.page, statusFilter);
     } catch (err: any) {
       setErrorMsg("Error resolving: " + err.message);
     }

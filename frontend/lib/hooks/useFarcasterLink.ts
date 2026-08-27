@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { sdk } from "@farcaster/miniapp-sdk";
 import { useAccount } from "wagmi";
+import { apiFetch } from "@/lib/api";
 
 export function useFarcasterLink() {
   const { address, isConnected } = useAccount();
@@ -22,10 +23,9 @@ export function useFarcasterLink() {
         
         if (fid) {
           console.log(`Linking Farcaster FID ${fid} to wallet ${address}`);
-          const response = await fetch("/api/users/link-farcaster", {
+          const response = await apiFetch("/api/users/link-farcaster", {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
               "Authorization": `Bearer ${address}`,
             },
             body: JSON.stringify({ fid }),

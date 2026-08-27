@@ -6,6 +6,7 @@ import { WalletConnect } from "@/components/WalletConnect";
 import { ScoringConfigAdmin, PerkDistributionAdmin, AccessConfigAdmin, GameAssetsAdmin } from "@/components/AdminPanels";
 import { FrontendErrorsPanel } from "@/components/FrontendErrorsPanel";
 import { runWithDevCapture } from "@/lib/utils/devStore";
+import { apiFetch } from "@/lib/api";
 
 type AuthStep = "connect" | "unauthorized" | "sign" | "verifying" | "authenticated";
 
@@ -33,11 +34,9 @@ export default function AdminPage() {
 
   const checkSession = async () => {
     try {
-      const res = await fetch("/api/admin/auth/me");
-      if (res.ok) {
-        setStep("authenticated");
-        return;
-      }
+      await apiFetch("/api/admin/auth/me");
+      setStep("authenticated");
+      return;
     } catch {}
     setStep("sign");
   };
@@ -46,24 +45,18 @@ export default function AdminPage() {
     if (!address) return;
     setError(null);
     try {
-      const res = await fetch("/api/admin/auth/nonce", {
+      const data = await apiFetch<{ nonce: string }>("/api/admin/auth/nonce", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address }),
       });
-      if (res.status === 403) {
+      setNonce(data.nonce);
+      setStep("sign");
+    } catch (e: any) {
+      if (e?.message?.includes("403") || e?.message?.includes("Forbidden")) {
         setStep("unauthorized");
         return;
       }
-      if (!res.ok) {
-        setError("Failed to get nonce");
-        return;
-      }
-      const data = await res.json();
-      setNonce(data.nonce);
-      setStep("sign");
-    } catch {
-      setError("Network error");
+      setError(e.message || "Failed to get nonce");
     }
   }, [address]);
 
@@ -96,27 +89,20 @@ export default function AdminPage() {
         () => signMessageAsync({ message })
       );
 
-      const res = await fetch("/api/admin/auth/verify", {
+      await apiFetch("/api/admin/auth/verify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address, signature, nonce }),
       });
 
-      if (res.ok) {
-        setStep("authenticated");
-      } else {
-        const data = await res.json();
-        setError(data.error || "Verification failed");
-        setStep("sign");
-      }
+      setStep("authenticated");
     } catch (e: any) {
-      setError(e.message || "Signing cancelled");
+      setError(e.message || "Verification failed");
       setStep("sign");
     }
   }, [address, nonce, signMessageAsync]);
 
   const handleLogout = async () => {
-    await fetch("/api/admin/auth/logout", { method: "POST" });
+    await apiFetch("/api/admin/auth/logout", { method: "POST" });
     setStep("connect");
     setNonce(null);
     setError(null);

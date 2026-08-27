@@ -2,6 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { useAccount } from "wagmi";
+import { apiFetch, initApi } from "@/lib/api";
+
+// Patch global fetch to prefix API routes with backend URL
+initApi();
 
 export function UserInit() {
   const { address, isConnected } = useAccount();
@@ -15,10 +19,9 @@ export function UserInit() {
     if (initialised.current) return;
     initialised.current = true;
 
-    fetch("/api/users/init", {
+    apiFetch("/api/users/init", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         Authorization: `Bearer ${address}`,
       },
     }).catch(() => {});

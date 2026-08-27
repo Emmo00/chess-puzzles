@@ -5,6 +5,7 @@ import { useAccount, usePublicClient } from "wagmi";
 import { GAME_ASSETS_CONTRACT, GAME_ASSET_TYPES } from "@/lib/config/wagmi";
 import { GAME_ASSETS_ABI } from "@/lib/abi/gameAssets";
 import { useGameAssetsAdmin } from "@/lib/hooks/useGameAssets";
+import { apiFetch } from "@/lib/api";
 
 /* ---- Scoring Config Admin ---- */
 
@@ -13,8 +14,7 @@ export function ScoringConfigAdmin() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    window.fetch("/api/admin/scoring-config")
-      .then((r) => r.json())
+    apiFetch("/api/admin/scoring-config")
       .then(setConfig)
       .catch(() => {});
   }, []);
@@ -27,17 +27,11 @@ export function ScoringConfigAdmin() {
   const save = async () => {
     setMessage(null);
     try {
-      const res = await window.fetch("/api/admin/scoring-config", {
+      await apiFetch("/api/admin/scoring-config", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),
       });
-      if (res.ok) {
-        setMessage("Scoring config saved to database.");
-      } else {
-        const err = await res.json();
-        setMessage(err.message);
-      }
+      setMessage("Scoring config saved to database.");
     } catch (e: any) {
       setMessage(e.message);
     }
@@ -416,8 +410,7 @@ export function AccessConfigAdmin() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    window.fetch("/api/admin/access-config")
-      .then((r) => r.json())
+    apiFetch("/api/admin/access-config")
       .then(setConfig)
       .catch(() => {});
   }, []);
@@ -434,17 +427,11 @@ export function AccessConfigAdmin() {
   const save = async () => {
     setMessage(null);
     try {
-      const res = await window.fetch("/api/admin/access-config", {
+      await apiFetch("/api/admin/access-config", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),
       });
-      if (res.ok) {
-        setMessage("Access config saved to database.");
-      } else {
-        const err = await res.json();
-        setMessage(err.message);
-      }
+      setMessage("Access config saved to database.");
     } catch (e: any) {
       setMessage(e.message);
     }

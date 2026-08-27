@@ -1,0 +1,11 @@
+{
+  "name": "chess-puzzles",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "pnpm --filter chess-puzzles-frontend dev",
+    "dev:backend": "pnpm --filter chess-puzzles-backend dev",
+    "dev": "pnpm run --parallel dev:frontend dev:backend",
+    "build": "pnpm --filter shared build && pnpm --filter chess-puzzles-frontend build && pnpm --filter chess-puzzles-backend build",
+    "test": "pnpm --filter chess-puzzles-frontend test"
+  }
+}

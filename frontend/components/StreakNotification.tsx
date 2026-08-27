@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAccount } from "wagmi";
 import { Snowflake, Flame, X, ShoppingCart } from "lucide-react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api";
 
 interface StreakEventData {
   type: "freeze_used" | "streak_lost";
@@ -19,7 +20,7 @@ export function StreakNotification() {
   const acknowledge = useCallback(async () => {
     if (!address) return;
     try {
-      await fetch("/api/users/streak/event", {
+      await apiFetch("/api/users/streak/event", {
         method: "POST",
         headers: {
           "x-wallet-address": address,
@@ -34,13 +35,12 @@ export function StreakNotification() {
   useEffect(() => {
     if (!isConnected || !address || dismissed) return;
     let cancelled = false;
-    fetch("/api/users/streak/event", {
+    apiFetch<{ event: StreakEventData }>("/api/users/streak/event", {
       headers: {
         "x-wallet-address": address,
         Authorization: `Bearer ${address}`,
       },
     })
-      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (cancelled || !data?.event) return;
         setEvent(data.event);

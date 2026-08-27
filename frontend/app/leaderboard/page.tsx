@@ -9,6 +9,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { LeagueBadge } from "@/components/LeagueBadge";
 import { LEAGUES, type League } from "@/lib/leagues";
 import { TriangleAlert, Medal, Trophy, Flame, Star } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 const LEAGUE_TABS: League[] = ["king", "knight", "pawn"];
 
@@ -50,13 +51,12 @@ export default function LeaderboardPage() {
   const fetchUserLeague = async () => {
     if (!address) return;
     try {
-      const res = await fetch(`/api/leaderboard?walletAddress=${address}&limit=1`);
-      if (res.ok) {
-        const data: LeaderboardResponse = await res.json();
-        const league = defaultLeague(data.userLeague);
-        setUserLeague(league);
-        setActiveLeague(league);
-      }
+      const data = await apiFetch<LeaderboardResponse>("/api/leaderboard", {
+        params: { walletAddress: address, limit: "1" },
+      });
+      const league = defaultLeague(data.userLeague);
+      setUserLeague(league);
+      setActiveLeague(league);
     } catch {
       // ignore
     }
@@ -65,27 +65,22 @@ export default function LeaderboardPage() {
   const fetchLeaderboard = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const params: Record<string, string> = {
         page: page.toString(),
         limit: limit.toString(),
         league: activeLeague,
-      });
+      };
 
       if (address) {
-        params.append("walletAddress", address);
+        params.walletAddress = address;
       }
 
-      const response = await fetch(`/api/leaderboard?${params}`);
-      if (response.ok) {
-        const data: LeaderboardResponse = await response.json();
-        setLeaderboard(data.leaderboard);
-        setTotal(data.total);
-        setUserRank(data.userRank || null);
-        setSeasonEnd(data.seasonEnd || null);
-        setErrorMsg(null);
-      } else {
-        setErrorMsg("Failed to fetch leaderboard");
-      }
+      const data = await apiFetch<LeaderboardResponse>("/api/leaderboard", { params });
+      setLeaderboard(data.leaderboard);
+      setTotal(data.total);
+      setUserRank(data.userRank || null);
+      setSeasonEnd(data.seasonEnd || null);
+      setErrorMsg(null);
     } catch (error) {
       console.error("Failed to fetch leaderboard:", error);
       setErrorMsg("Failed to fetch leaderboard");

@@ -15,6 +15,7 @@ import { getLeague, type League } from "@/lib/leagues";
 import type { LeaderboardResponse } from "@/lib/services/leaderboard.service";
 import { Coins, Flame, Puzzle, Crown, User, Lightbulb, Snowflake, Check, Castle } from "lucide-react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api";
 
 export default function ProfilePage() {
   const { address, isConnected } = useAccount();
@@ -27,9 +28,10 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!address) return;
     let cancelled = false;
-    fetch(`/api/leaderboard?walletAddress=${address}&limit=1`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: LeaderboardResponse | null) => {
+    apiFetch<LeaderboardResponse>("/api/leaderboard", {
+      params: { walletAddress: address, limit: "1" },
+    })
+      .then((data) => {
         if (cancelled || !data) return;
         const rank = data.userRank;
         if (rank) {
@@ -38,8 +40,9 @@ export default function ProfilePage() {
         }
       })
       .catch(() => {});
-    fetch(`/api/payments/status?walletAddress=${address}`)
-      .then((res) => (res.ok ? res.json() : null))
+    apiFetch<{ hasDailyAccess: boolean }>("/api/payments/status", {
+      params: { walletAddress: address },
+    })
       .then((data) => { if (!cancelled && data) setHasDailyAccess(data.hasDailyAccess); })
       .catch(() => {});
     return () => {

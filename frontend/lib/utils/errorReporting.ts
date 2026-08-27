@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/api";
+
 interface ErrorPayload {
   message: string;
   stack?: string;
@@ -41,11 +43,8 @@ export const reportFrontendError = async (payload: ErrorPayload) => {
   try {
     const platform = detectPlatform();
 
-    await fetch("/api/errors", {
+    await apiFetch("/api/errors", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({
         ...payload,
         platform,

@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { useAccount } from "wagmi";
 import { useAssetBalances } from "@/lib/hooks/assetBalances";
+import { apiFetch } from "@/lib/api";
 
 export interface HintBalanceState {
   hintBalance: number;
@@ -29,10 +30,9 @@ export function useHintBalance(): HintBalanceState {
   const consume = useCallback(async (): Promise<boolean> => {
     if (!address || !isConnected) return false;
     try {
-      const res = await fetch("/api/hints/consume", {
+      const res = await apiFetch("/api/hints/consume", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${address}`,
         },
       });
