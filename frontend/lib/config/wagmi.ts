@@ -67,7 +67,7 @@ export const PAYOUT_CLAIM_CONTRACT = "0x4DF823F6A36b35A3983afc41f7c3584C1DCBFDf1
 
 // Game Assets Contract (hints/streak freezes)
 // TBD - will be set after deployment
-export const GAME_ASSETS_CONTRACT = "0xD4d151a188e6DfC7e5d6b7BF1811D2230716bd9b" as `0x${string}`;
+export const GAME_ASSETS_CONTRACT = "0x9b572f721D7B11142bF4dbefa9B9d31ECc8F54e3" as `0x${string}`;
 
 // Game Assets asset type hashes (keccak256 of the string literal, matching Solidity)
 export const GAME_ASSET_TYPES = {
