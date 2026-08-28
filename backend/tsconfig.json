@@ -13,10 +13,8 @@
     "sourceMap": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "chess-puzzles-shared": ["../shared/src"]
-    }
-  },
+      "@/*": ["./src/*"]
+    },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

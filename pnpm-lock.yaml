@@ -16,9 +16,6 @@ importers:
       axios:
         specifier: ^1.15.2
         version: 1.18.1
-      chess-puzzles-shared:
-        specifier: workspace:*
-        version: link:../shared
       compression:
         specifier: ^1.7.5
         version: 1.8.1
@@ -297,12 +294,6 @@ importers:
       vitest:
         specifier: ^2.1.9
         version: 2.1.9(@types/node@22.20.1)(lightningcss@1.32.0)
-
-  shared:
-    devDependencies:
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
 
 packages:
 
