@@ -5,7 +5,7 @@ function validateEnv() {
     NODE_ENV: str({ default: "development" }),
     PORT: str({ default: "3001" }),
     MONGO_CONNECTION_URL: str(),
-    PUZZLE_API_URL: str({ default: "" }),
+    PUZZLE_API_URL: str({ default: "https://api.chesspuzzles.xyz" }),
     PUZZLE_API_KEY: str({ default: "" }),
     CHECKIN_SIGNER_PRIVATE_KEY: str({ default: "" }),
     CELO_RPC_URL: str({ default: "" }),
