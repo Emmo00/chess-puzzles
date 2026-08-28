@@ -8,8 +8,6 @@ import { apiFetch } from "@/lib/api";
 export interface HintBalanceState {
   hintBalance: number;
   streakFreezes: number;
-  freeHints: number;
-  freeStreakFreezes: number;
   loading: boolean;
   outOfHints: boolean;
   consume: () => Promise<boolean>;
@@ -21,8 +19,6 @@ export function useHintBalance(): HintBalanceState {
   const {
     hintBalance,
     streakFreezes,
-    freeHints,
-    freeStreakFreezes,
     loading,
     refresh,
   } = useAssetBalances();
@@ -47,8 +43,6 @@ export function useHintBalance(): HintBalanceState {
   return {
     hintBalance,
     streakFreezes,
-    freeHints,
-    freeStreakFreezes,
     loading,
     outOfHints: hintBalance <= 0,
     consume,

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import { type Hex } from "viem";
 import dbConnect from "../../lib/db";
 import { authenticateWallet } from "../../middleware/auth";
 import UserService from "../../lib/services/users.service";
@@ -15,11 +16,9 @@ router.post("/", authenticateWallet, async (req: Request, res: Response) => {
     const userService = new UserService();
     const userData = await userService.ensureUser(walletAddress);
 
-    const freeHints = userData?.hintBalance ?? 0;
-    const freeStreakFreezes = userData?.streakFreezes ?? 0;
+    let hintBalance = 0;
+    let streakFreezes = 0;
 
-    let contractHints = 0;
-    let contractFreezes = 0;
     if (GAME_ASSETS_CONTRACT) {
       try {
         const [hints, freezes] = await Promise.all([
@@ -27,29 +26,27 @@ router.post("/", authenticateWallet, async (req: Request, res: Response) => {
             address: GAME_ASSETS_CONTRACT,
             abi: GAME_ASSETS_ABI,
             functionName: "getHintBalance",
-            args: [walletAddress as `0x${string}`],
+            args: [walletAddress as Hex],
           }),
           publicClient.readContract({
             address: GAME_ASSETS_CONTRACT,
             abi: GAME_ASSETS_ABI,
             functionName: "getStreakFreezeBalance",
-            args: [walletAddress as `0x${string}`],
+            args: [walletAddress as Hex],
           }),
         ]);
-        contractHints = Number(hints);
-        contractFreezes = Number(freezes);
+        hintBalance = Number(hints);
+        streakFreezes = Number(freezes);
       } catch {
-        // Contract read failure shouldn't hide DB freebies
+        // Contract read failure — return zeros
       }
     }
 
     res.json({
       walletAddress: userData?.walletAddress || walletAddress,
       displayName: userData?.displayName,
-      hintBalance: contractHints + freeHints,
-      streakFreezes: contractFreezes + freeStreakFreezes,
-      contractHints,
-      freeHints,
+      hintBalance,
+      streakFreezes,
     });
   } catch (error: any) {
     res.status(error.status || 500).json({

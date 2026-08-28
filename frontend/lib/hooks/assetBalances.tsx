@@ -18,8 +18,6 @@ interface PendingPurchase {
 export interface AssetBalancesState {
   hintBalance: number;
   streakFreezes: number;
-  freeHints: number;
-  freeStreakFreezes: number;
   loading: boolean;
   refresh: () => Promise<void>;
   optimisticAdd: (id: string, type: AssetType, qty: number) => void;
@@ -34,8 +32,6 @@ export function AssetBalancesProvider({ children }: { children: ReactNode }) {
   const publicClient = usePublicClient();
   const [serverHints, setServerHints] = useState(0);
   const [serverFreezes, setServerFreezes] = useState(0);
-  const [freeHints, setFreeHints] = useState(0);
-  const [freeStreakFreezes, setFreeStreakFreezes] = useState(0);
   const [pending, setPending] = useState<PendingPurchase[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -43,8 +39,6 @@ export function AssetBalancesProvider({ children }: { children: ReactNode }) {
     if (!address || !isConnected) {
       setServerHints(0);
       setServerFreezes(0);
-      setFreeHints(0);
-      setFreeStreakFreezes(0);
       return;
     }
     setLoading(true);
@@ -64,24 +58,16 @@ export function AssetBalancesProvider({ children }: { children: ReactNode }) {
         }
       };
 
-      const [contractHints, contractFreezes, freebiesRes] = await Promise.all([
+      const [contractHints, contractFreezes] = await Promise.all([
         readContractBalance("getHintBalance"),
         readContractBalance("getStreakFreezeBalance"),
-        fetch(`/api/users/freebies`, {
-          headers: { Authorization: `Bearer ${address}` },
-        }).then((r) => (r.ok ? r.json() : { freeHints: 0, freeStreakFreezes: 0 })),
       ]);
 
-      const db = freebiesRes as { freeHints: number; freeStreakFreezes: number };
-      setFreeHints(db.freeHints ?? 0);
-      setFreeStreakFreezes(db.freeStreakFreezes ?? 0);
-      setServerHints(Number(contractHints) + (db.freeHints ?? 0));
-      setServerFreezes(Number(contractFreezes) + (db.freeStreakFreezes ?? 0));
+      setServerHints(Number(contractHints));
+      setServerFreezes(Number(contractFreezes));
     } catch {
       setServerHints(0);
       setServerFreezes(0);
-      setFreeHints(0);
-      setFreeStreakFreezes(0);
     } finally {
       setLoading(false);
     }
@@ -131,15 +117,13 @@ export function AssetBalancesProvider({ children }: { children: ReactNode }) {
     () => ({
       hintBalance,
       streakFreezes,
-      freeHints,
-      freeStreakFreezes,
       loading,
       refresh,
       optimisticAdd,
       confirmPurchase,
       rollbackPurchase,
     }),
-    [hintBalance, streakFreezes, freeHints, freeStreakFreezes, loading, refresh, optimisticAdd, confirmPurchase, rollbackPurchase],
+    [hintBalance, streakFreezes, loading, refresh, optimisticAdd, confirmPurchase, rollbackPurchase],
   );
 
   return <AssetBalancesContext.Provider value={value}>{children}</AssetBalancesContext.Provider>;

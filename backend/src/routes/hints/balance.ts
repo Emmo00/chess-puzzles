@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
-import dbConnect from "../../lib/db";
+import { type Hex } from "viem";
 import { authenticateWallet } from "../../middleware/auth";
-import userModel from "../../lib/models/users.model";
 import { GAME_ASSETS_CONTRACT } from "../../lib/config/wagmi";
 import { GAME_ASSETS_ABI } from "../../lib/abi/gameAssets";
 import { publicClient } from "../../config/publicClient";
@@ -12,19 +11,12 @@ const router: Router = Router();
 router.get("/", authenticateWallet, async (req: Request, res: Response) => {
   const log = (req as any).log;
   try {
-    await dbConnect();
     const walletAddress = (req as any).walletAddress as string;
     const lower = walletAddress.toLowerCase();
 
-    const userData = await userModel.findOne(
-      { walletAddress: lower },
-      { hintBalance: 1, streakFreezes: 1 }
-    ).lean();
-    const freeHints = (userData?.hintBalance ?? 0);
-    const freeStreakFreezes = (userData?.streakFreezes ?? 0);
+    let hintBalance = 0;
+    let streakFreezes = 0;
 
-    let contractHints = 0;
-    let contractFreezes = 0;
     if (GAME_ASSETS_CONTRACT) {
       try {
         const [hints, freezes] = await Promise.all([
@@ -32,34 +24,31 @@ router.get("/", authenticateWallet, async (req: Request, res: Response) => {
             address: GAME_ASSETS_CONTRACT,
             abi: GAME_ASSETS_ABI,
             functionName: "getHintBalance",
-            args: [walletAddress as `0x${string}`],
+            args: [lower as Hex],
           }),
           publicClient.readContract({
             address: GAME_ASSETS_CONTRACT,
             abi: GAME_ASSETS_ABI,
             functionName: "getStreakFreezeBalance",
-            args: [walletAddress as `0x${string}`],
+            args: [lower as Hex],
           }),
         ]);
-        contractHints = Number(hints);
-        contractFreezes = Number(freezes);
+        hintBalance = Number(hints);
+        streakFreezes = Number(freezes);
       } catch {
-        // Contract read failure shouldn't hide DB freebies
+        // Contract read failure — return zeros
       }
     }
 
     log?.info("hints.balance", {
       wallet: maskAddress(lower),
-      freeHints,
-      contractHints,
-      total: contractHints + freeHints,
+      hintBalance,
+      streakFreezes,
     });
 
     res.json({
-      hintBalance: contractHints + freeHints,
-      streakFreezes: contractFreezes + freeStreakFreezes,
-      contractHints,
-      freeHints,
+      hintBalance,
+      streakFreezes,
     });
   } catch (error: any) {
     const err = error instanceof Error ? error : new Error(String(error));

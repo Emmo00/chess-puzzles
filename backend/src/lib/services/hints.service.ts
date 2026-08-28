@@ -9,7 +9,7 @@ import { logger, maskAddress } from "../logger";
 
 class HintsService {
   private getConsumerClient() {
-    const consumerPk = process.env.CONSUMER_PRIVATE_KEY;
+    const consumerPk = process.env.ASSET_CONSUMPTION_KEY;
     if (!consumerPk) {
       logger.error("hints.consumerKeyMissing");
       throw new HttpException(500, "Server consumer key not configured");
@@ -19,7 +19,7 @@ class HintsService {
   }
 
   private getAdminClient() {
-    const adminPk = process.env.GAME_ASSETS_ADMIN_KEY;
+    const adminPk = process.env.ASSET_GRANTING_KEY;
     if (!adminPk) {
       logger.error("hints.adminKeyMissing");
       throw new HttpException(500, "Server admin key not configured");

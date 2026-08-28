@@ -44,7 +44,6 @@ export interface StreakData {
   currentStreak: number;
   longestStreak: number;
   lastCheckIn?: Date;
-  streakFreezes: number;
 }
 
 export interface PaymentStatus {

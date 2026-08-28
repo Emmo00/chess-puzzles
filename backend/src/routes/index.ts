@@ -1,7 +1,6 @@
 import { Router } from "express";
 import usersInit from "./users/init";
 import usersSettings from "./users/settings";
-import usersFreebies from "./users/freebies";
 import usersStreak from "./users/streak";
 import usersStreakEvent from "./users/streak-event";
 import puzzlesToday from "./puzzles/today";
@@ -42,7 +41,6 @@ export const routes: Router = Router();
 // Users
 routes.use("/users/init", usersInit);
 routes.use("/users/settings", usersSettings);
-routes.use("/users/freebies", usersFreebies);
 routes.use("/users/streak/event", usersStreakEvent);
 routes.use("/users/streak", usersStreak);
 

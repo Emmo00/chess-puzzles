@@ -1,12 +1,12 @@
 import { Router, Request, Response } from "express";
+import { type Hex } from "viem";
 import dbConnect from "../../lib/db";
 import { authenticateWallet } from "../../middleware/auth";
 import UserService from "../../lib/services/users.service";
-import userModel from "../../lib/models/users.model";
-import { getUtcDayNumber } from "../../lib/utils/time";
 import { GAME_ASSETS_CONTRACT } from "../../lib/config/wagmi";
 import { GAME_ASSETS_ABI } from "../../lib/abi/gameAssets";
 import { publicClient } from "../../config/publicClient";
+import { getUtcDayNumber } from "../../lib/utils/time";
 
 const router: Router = Router();
 
@@ -19,7 +19,7 @@ async function getContractStreakFreezes(address: string): Promise<number> {
       address: GAME_ASSETS_CONTRACT,
       abi: GAME_ASSETS_ABI,
       functionName: "getStreakFreezeBalance",
-      args: [address as `0x${string}`],
+      args: [address as Hex],
     });
     return Number(balance);
   } catch {
@@ -88,27 +88,19 @@ router.get("/", authenticateWallet, async (req: Request, res: Response) => {
       };
     }
 
-    const [contractFreezes, dbUser] = await Promise.all([
-      getContractStreakFreezes(walletAddress),
-      userModel.findOne(
-        { walletAddress: walletAddress.toLowerCase() },
-        { streakFreezes: 1 }
-      ).lean(),
-    ]);
-    const dbFreezes = (dbUser?.streakFreezes ?? 0);
-    const totalStreakFreezes = contractFreezes + dbFreezes;
+    const streakFreezes = await getContractStreakFreezes(walletAddress);
 
     const { effectiveStreak, streakStatus } = computeEffectiveStreak(
       userData.currentStreak || 0,
       userData.lastPuzzleDate,
-      totalStreakFreezes
+      streakFreezes
     );
 
     log?.info("users.streak", {
       wallet: walletAddress.slice(0, 6) + "...",
       effectiveStreak,
       streakStatus,
-      totalStreakFreezes,
+      streakFreezes,
     });
 
     res.json({
@@ -117,7 +109,7 @@ router.get("/", authenticateWallet, async (req: Request, res: Response) => {
       totalPuzzlesSolved: userData.totalPuzzlesSolved || 0,
       points: userData.totalPoints || 0,
       streakStatus,
-      streakFreezes: totalStreakFreezes,
+      streakFreezes,
       lastLogin: userData.lastLogin,
       lastPuzzleDate: userData.lastPuzzleDate,
     });

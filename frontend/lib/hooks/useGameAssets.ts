@@ -20,68 +20,6 @@ const getFeeCurrencyForToken = (tokenAddress: Hex): Hex => {
   return (currency?.feeCurrencyAddress as Hex) ?? DEFAULT_FEE_CURRENCY;
 };
 
-export interface AssetBalanceState {
-  hintBalance: number;
-  streakFreezes: number;
-  loading: boolean;
-}
-
-export function useGameAssetsBalances(): AssetBalanceState {
-  const { address, isConnected } = useAccount();
-  const publicClient = usePublicClient();
-  const [hintBalance, setHintBalance] = useState<number>(0);
-  const [streakFreezes, setStreakFreezes] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
-
-  const refresh = useCallback(async () => {
-    if (!address || !isConnected) {
-      setHintBalance(0);
-      setStreakFreezes(0);
-      return;
-    }
-    setLoading(true);
-    try {
-      const readContractBalance = async (functionName: string) => {
-        if (!publicClient || !GAME_ASSETS_CONTRACT) return 0n;
-        try {
-          const value = await publicClient.readContract({
-            address: GAME_ASSETS_CONTRACT,
-            abi: GAME_ASSETS_ABI,
-            functionName: functionName as "getHintBalance",
-            args: [address as Hex],
-          });
-          return BigInt(value);
-        } catch {
-          return 0n;
-        }
-      };
-
-      const [contractHints, contractFreezes, freebiesRes] = await Promise.all([
-        readContractBalance("getHintBalance"),
-        readContractBalance("getStreakFreezeBalance"),
-        fetch(`/api/users/freebies`, {
-          headers: { Authorization: `Bearer ${address}` },
-        }).then((r) => (r.ok ? r.json() : { freeHints: 0, freeStreakFreezes: 0 })),
-      ]);
-
-      const db = freebiesRes as { freeHints: number; freeStreakFreezes: number };
-      setHintBalance(Number(contractHints) + (db.freeHints ?? 0));
-      setStreakFreezes(Number(contractFreezes) + (db.freeStreakFreezes ?? 0));
-    } catch {
-      setHintBalance(0);
-      setStreakFreezes(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [address, isConnected, publicClient]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { hintBalance, streakFreezes, loading };
-}
-
 export function useGameAssetsPurchase() {
   const { address } = useAccount();
   const chainId = useChainId();

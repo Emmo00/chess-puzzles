@@ -57,6 +57,10 @@ PUZZLE_API_URL=https://your-api-domain.com
 # Optional (required only for server-signed check-in claim flows)
 CHECKIN_SIGNER_PRIVATE_KEY=0xyourprivatekey
 
+# Required for game asset operations on the smart contract
+# ASSET_CONSUMPTION_KEY=0x...  # Server wallet with CONSUMER_ROLE (spends user assets)
+# ASSET_GRANTING_KEY=0x...     # Server wallet with ADMIN_ROLE (grants assets to users)
+
 # Optional app metadata
 NEXT_PUBLIC_APP_URL=https://your-app-domain.com
 
