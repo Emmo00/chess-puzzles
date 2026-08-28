@@ -1,25 +1,25 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 
-import { getDailyChallengeShareData, parseUtcDayInput } from "@/lib/services/daily-challenge-share.service";
-
 export const runtime = "nodejs";
+
+const FALLBACK_APP_URL = "https://chesspuzzles.xyz";
 
 const BOARD_SIZE = 8;
 
 const PIECE_SYMBOLS: Record<string, string> = {
-  K: "♔",
-  Q: "♕",
-  R: "♖",
-  B: "♗",
-  N: "♘",
-  P: "♙",
-  k: "♚",
-  q: "♛",
-  r: "♜",
-  b: "♝",
-  n: "♞",
-  p: "♟",
+  K: "\u2654",
+  Q: "\u2655",
+  R: "\u2656",
+  B: "\u2657",
+  N: "\u2658",
+  P: "\u2659",
+  k: "\u265A",
+  q: "\u265B",
+  r: "\u265C",
+  b: "\u265D",
+  n: "\u265E",
+  p: "\u265F",
 };
 
 const createEmptyBoard = () =>
@@ -65,11 +65,32 @@ const pieceLabel = (piece: string) => {
   return PIECE_SYMBOLS[piece] || "";
 };
 
+type ShareData = {
+  utcDay: number;
+  dayLabel: string;
+  rating: number;
+  rewardLabel: string;
+  fen: string;
+  puzzleId: string;
+  themes: string[];
+};
+
+const fetchShareData = async (d: string): Promise<ShareData | null> => {
+  try {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || FALLBACK_APP_URL;
+    const res = await fetch(`${apiBase}/checkin/share?d=${encodeURIComponent(d)}`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+};
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const utcDay = parseUtcDayInput(searchParams.get("d") || searchParams.get("day"));
-    const shareData = await getDailyChallengeShareData(utcDay);
+    const d = searchParams.get("d") || searchParams.get("day") || "";
+    const shareData = d ? await fetchShareData(d) : null;
 
     if (!shareData) {
       return new Response("Daily challenge not found", { status: 404 });

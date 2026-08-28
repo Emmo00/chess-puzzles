@@ -12,7 +12,7 @@ import { useHintBalance } from "@/lib/hooks/useHintBalance";
 import { generateDisplayName } from "@/lib/utils/nameGenerator";
 import { levelForPoints } from "@/lib/leveling";
 import { getLeague, type League } from "@/lib/leagues";
-import type { LeaderboardResponse } from "@/lib/services/leaderboard.service";
+import type { LeaderboardResponse } from "@/lib/types/leaderboard";
 import { Coins, Flame, Puzzle, Crown, User, Lightbulb, Snowflake, Check, Castle } from "lucide-react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";

@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { getDailyChallengeShareData, parseUtcDayInput } from "@/lib/services/daily-challenge-share.service";
-
 type SearchParams = Record<string, string | string[] | undefined>;
 
 type PageProps = {
@@ -30,10 +28,35 @@ const pickFirst = (value: string | string[] | undefined, fallback: string) => {
   return value || fallback;
 };
 
+type ShareData = {
+  utcDay: number;
+  dayLabel: string;
+  rating: number;
+  rewardLabel: string;
+  fen: string;
+  puzzleId: string;
+  themes: string[];
+};
+
+const fetchShareData = async (d: string): Promise<ShareData | null> => {
+  try {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || FALLBACK_APP_URL;
+    const res = await fetch(`${apiBase}/checkin/share?d=${encodeURIComponent(d)}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+};
+
 const getSharePayload = async (input: Promise<SearchParams> | SearchParams) => {
   const params = await Promise.resolve(input);
-  const utcDay = parseUtcDayInput(pickFirst(params.d, pickFirst(params.day, "")));
-  const shareData = await getDailyChallengeShareData(utcDay);
+  const d = pickFirst(params.d, pickFirst(params.day, ""));
+  const shareData = d ? await fetchShareData(d) : null;
+
+  const utcDay = shareData?.utcDay || Math.floor(Date.now() / 86400000);
 
   return {
     utcDay,

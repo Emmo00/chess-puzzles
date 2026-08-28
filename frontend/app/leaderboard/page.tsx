@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useAccount } from "wagmi";
-import { LeaderboardEntry, LeaderboardResponse } from "../../lib/services/leaderboard.service";
+import type { LeaderboardEntry, LeaderboardResponse } from "@/lib/types/leaderboard";
 import { TelegramSupportLink } from "@/components/TelegramSupportLink";
 import { BottomNav } from "@/components/BottomNav";
 import { LeagueBadge } from "@/components/LeagueBadge";

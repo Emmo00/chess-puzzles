@@ -21,6 +21,7 @@ import puzzleRushSessionEnd from "./puzzle-rush/session-end";
 import puzzleRushPuzzles from "./puzzle-rush/puzzles";
 import puzzleRushLeaderboard from "./puzzle-rush/leaderboard";
 import checkinStatus from "./checkin/status";
+import checkinShare from "./checkin/share";
 import checkinFetch from "./checkin/fetch";
 import checkinSolve from "./checkin/solve";
 import checkinClaimPayload from "./checkin/claim-payload";
@@ -71,6 +72,7 @@ routes.use("/puzzle-rush/leaderboard", puzzleRushLeaderboard);
 
 // Check-in
 routes.use("/checkin/status", checkinStatus);
+routes.use("/checkin/share", checkinShare);
 routes.use("/checkin/fetch", checkinFetch);
 routes.use("/checkin/solve", checkinSolve);
 routes.use("/checkin/claim/payload", checkinClaimPayload);
