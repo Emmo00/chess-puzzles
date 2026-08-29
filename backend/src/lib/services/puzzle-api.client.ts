@@ -25,7 +25,7 @@ class PuzzleAPIClient {
       throw new HttpException(500, "Puzzle API key not configured");
     }
 
-    this.baseUrl = PUZZLE_API_URL || "https://your-api-domain.com";
+    this.baseUrl = PUZZLE_API_URL || "https://api.chesspuzzles.xyz";
     this.apiKey = PUZZLE_API_KEY;
   }
 
