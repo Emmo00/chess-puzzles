@@ -1,0 +1,306 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { Navigation } from "@/components/Navigation";
+import {
+  GAME_ASSETS_CONTRACT,
+  GAME_ASSETS_ABI,
+  GAME_ASSET_TYPES,
+} from "@/lib/contracts";
+import { Package, DollarSign, Gift } from "lucide-react";
+
+interface AssetPack {
+  name: string;
+  assetType: string;
+  quantity: number;
+  price: number;
+  active: boolean;
+}
+
+interface GameAssetsData {
+  assetPacks: AssetPack[];
+  unitPrices: { hint: number; streakFreeze: number };
+  dailyPassPrice: number;
+  dailyPassDuration: number;
+  treasury: string;
+  paymentTokens: string[];
+}
+
+const GRANTER_ROLE_HASH =
+  "0x61630608d0e4afdd9f601bd4ed4bcfbf7e5b0c4e8a98a130e7c95daf2f1e0882";
+
+export default function GameAssetsPage() {
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const [data, setData] = useState<GameAssetsData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkSession();
+  }, []);
+
+  const checkSession = async () => {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        setAuthenticated(true);
+        fetchData();
+      } else {
+        window.location.href = "/login";
+      }
+    } catch {
+      window.location.href = "/login";
+    }
+  };
+
+  const fetchData = async () => {
+    try {
+      const res = await fetch("/api/admin/game-assets");
+      if (res.ok) {
+        const data = await res.json();
+        setData(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch game assets:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (authenticated === null || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <Navigation>
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-gray-900">Game Assets Configuration</h1>
+
+        {/* Asset Packs Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Asset Packs
+            </h2>
+          </div>
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Quantity
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Price (USDC)
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {data?.assetPacks?.map((pack, i) => (
+                <tr key={i}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {pack.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {pack.assetType.slice(0, 10)}...
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {pack.quantity}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${(pack.price / 1e6).toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        pack.active
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {pack.active ? "Active" : "Inactive"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {(!data?.assetPacks || data.assetPacks.length === 0) && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                    No asset packs found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Unit Prices */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Unit Prices
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600">Hint Price</p>
+              <p className="text-xl font-bold text-gray-900">
+                ${((data?.unitPrices?.hint ?? 0) / 1e6).toFixed(2)}
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600">Streak Freeze Price</p>
+              <p className="text-xl font-bold text-gray-900">
+                ${((data?.unitPrices?.streakFreeze ?? 0) / 1e6).toFixed(2)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Daily Pass */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Gift className="h-5 w-5" />
+            Daily Pass
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600">Price</p>
+              <p className="text-xl font-bold text-gray-900">
+                ${((data?.dailyPassPrice ?? 0) / 1e6).toFixed(2)}
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600">Duration (seconds)</p>
+              <p className="text-xl font-bold text-gray-900">
+                {data?.dailyPassDuration ?? 0}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Grant to User — signed by connected wallet */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Grant to User</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Grant assets to a user directly from your connected wallet (requires GRANTER_ROLE on
+            the GameAssets contract).
+          </p>
+          <GrantAssetForm onSuccess={() => fetchData()} />
+        </div>
+      </div>
+    </Navigation>
+  );
+}
+
+/* ─── Grant Asset Form (wallet-signed) ─── */
+
+function GrantAssetForm({ onSuccess }: { onSuccess: () => void }) {
+  const [wallet, setWallet] = useState("");
+  const [assetType, setAssetType] = useState("hint");
+  const [quantity, setQuantity] = useState("1");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const { address: connectedWallet, isConnected } = useAccount();
+  const { writeContractAsync } = useWriteContract();
+
+  // Check if connected wallet has GRANTER_ROLE
+  const { data: hasRole, isLoading: roleLoading } = useReadContract({
+    address: GAME_ASSETS_CONTRACT,
+    abi: GAME_ASSETS_ABI,
+    functionName: "hasRole",
+    args: [GRANTER_ROLE_HASH as `0x${string}`, connectedWallet!],
+    query: { enabled: isConnected && !!connectedWallet },
+  });
+
+  const handleSubmit = async () => {
+    setError(null);
+    setSuccess(false);
+    try {
+      const assetTypeHash =
+        assetType === "hint" ? GAME_ASSET_TYPES.HINT : GAME_ASSET_TYPES.STREAK_FREEZE;
+
+      await writeContractAsync({
+        address: GAME_ASSETS_CONTRACT,
+        abi: GAME_ASSETS_ABI,
+        functionName: "grantAsset",
+        args: [wallet as `0x${string}`, assetTypeHash, BigInt(parseInt(quantity, 10))],
+      });
+      setSuccess(true);
+      onSuccess();
+    } catch (e: any) {
+      setError(e?.shortMessage || e?.message || "Grant failed");
+    }
+  };
+
+  const canGrant = isConnected && hasRole === true;
+
+  return (
+    <div>
+      {!isConnected && (
+        <p className="text-sm text-amber-600 mb-3">Connect your wallet to grant assets.</p>
+      )}
+      {isConnected && !roleLoading && hasRole === false && (
+        <p className="text-sm text-amber-600 mb-3">
+          Your connected wallet does not have GRANTER_ROLE on the GameAssets contract. Contact the
+          contract owner to grant this role.
+        </p>
+      )}
+      <div className="flex flex-wrap gap-3 items-end">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Wallet Address</label>
+          <input
+            type="text"
+            value={wallet}
+            onChange={(e) => setWallet(e.target.value)}
+            placeholder="0x..."
+            className="block w-64 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Asset Type</label>
+          <select
+            value={assetType}
+            onChange={(e) => setAssetType(e.target.value)}
+            className="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          >
+            <option value="hint">Hint</option>
+            <option value="streakFreeze">Streak Freeze</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+          <input
+            type="number"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            min="1"
+            className="block w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          />
+        </div>
+        <button
+          onClick={handleSubmit}
+          disabled={!canGrant || !wallet}
+          className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {!isConnected ? "Connect Wallet" : roleLoading ? "Checking role..." : "Grant"}
+        </button>
+      </div>
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {success && <p className="mt-2 text-sm text-green-600">Asset granted successfully!</p>}
+    </div>
+  );
+}

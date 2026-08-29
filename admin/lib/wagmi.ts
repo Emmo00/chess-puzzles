@@ -1,21 +1,7 @@
 import { http, fallback, createConfig } from "wagmi";
 import { celo } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
-// Re-export from shared contracts package
-export {
-  SUPPORTED_CURRENCIES,
-  ALLOWLISTED_STABLECOINS,
-  CUSD_ADDRESSES,
-  PAYMENT_RECIPIENT,
-  PAYOUT_CLAIM_CONTRACT,
-  GAME_ASSETS_CONTRACT,
-  GAME_ASSET_TYPES,
-} from "@workspace/contracts";
-import {
-  SUPPORTED_CURRENCIES,
-  CUSD_ADDRESSES,
-  GAME_ASSETS_CONTRACT,
-} from "@workspace/contracts";
+import { PAYOUT_CLAIM_CONTRACT, GAME_ASSETS_CONTRACT } from "@workspace/contracts";
 
 const rpcUrl = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || "https://forno.celo.org";
 
@@ -35,21 +21,13 @@ export const config = createConfig({
   },
 });
 
-// Preferred chain (Celo mainnet only)
-export const PREFERRED_CHAIN = celo;
+// Re-export contract addresses for convenience
+export { PAYOUT_CLAIM_CONTRACT, GAME_ASSETS_CONTRACT };
 
 // Helper to check if user is on correct chain
 export const isOnCorrectChain = (chainId?: number): boolean => {
   if (!chainId) return false;
   return chainId === celo.id;
-};
-
-// MiniPay detection helper
-export const isMiniPay = (): boolean => {
-  if (typeof window !== "undefined" && window.ethereum) {
-    return Boolean(window.ethereum.isMiniPay);
-  }
-  return false;
 };
 
 declare module "wagmi" {

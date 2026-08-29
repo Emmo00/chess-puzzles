@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "2.1.177",
+    "@workspace/contracts": "workspace:*",
+    "@workspace/db": "workspace:*",
     "@celo/abis": "^14.0.1",
     "@celo/identity": "^5.1.2",
     "@hookform/resolvers": "^3.10.0",

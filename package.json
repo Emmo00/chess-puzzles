@@ -3,7 +3,9 @@
   "private": true,
   "workspaces": [
     "frontend",
-    "backend"
+    "backend",
+    "admin",
+    "packages/*"
   ],
   "scripts": {
     "dev:frontend": "bun --filter chess-puzzles-frontend dev",
