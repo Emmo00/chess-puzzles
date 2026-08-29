@@ -13,9 +13,6 @@ Chess Puzzles is a Next.js Mini App for solving chess puzzles with on-chain paym
 
 ## Smart contract configuration
 
-- Payment recipient: https://celoscan.io/address/0xEA22ca862C3AFDA79Ef7Fb5Ae8f13D245354f05b
-- Payout claims contract: https://celoscan.io/address/0x4DF823F6A36b35A3983afc41f7c3584C1DCBFDf1
-
 These values are currently defined in `lib/config/wagmi.ts`.
 
 ## Tech stack
