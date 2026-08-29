@@ -90,9 +90,7 @@
     "typescript": "^5.9.3",
     "vitest": "^2.1.9"
   },
-  "pnpm": {
-    "overrides": {
-      "@coinbase/cdp-sdk": "1.51.2"
-    }
+  "overrides": {
+    "@coinbase/cdp-sdk": "1.51.2"
   }
 }

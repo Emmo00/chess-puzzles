@@ -53,11 +53,15 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
             export BUN_INSTALL="$HOME/.bun"
             export PATH="$BUN_INSTALL/bin:$PATH"
 
             cd /var/www/chess-puzzles
             git pull
             bun install
-            cd backend && bun run build
+            cd backend
+            bun run build
             pm2 restart chess-puzzles-backend
