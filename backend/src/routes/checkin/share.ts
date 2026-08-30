@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import dbConnect from "../../lib/db";
+import { dbConnect } from "@workspace/db";
 import { getDailyChallengeShareData } from "../../lib/services/daily-challenge-share.service";
 
 const router: Router = Router();

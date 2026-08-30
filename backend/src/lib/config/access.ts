@@ -17,15 +17,15 @@ export const ACCESS_CONFIG_DEFAULTS: AccessConfig = {
 let cachedAccessConfig: AccessConfig | null = null;
 
 async function loadAppConfigModel() {
-  const mod = await import("../models/appConfig.model");
-  return mod.default;
+  const mod = await import("@workspace/db");
+  return mod.AppConfig;
 }
 
 export async function getAccessConfig(): Promise<AccessConfig> {
   if (cachedAccessConfig) return cachedAccessConfig;
   try {
     const appConfigModel = await loadAppConfigModel();
-    const dbConnect = (await import("../db")).default;
+    const { dbConnect } = await import("@workspace/db");
     await dbConnect();
     const doc = await appConfigModel.findOne({ key: "access" }).lean();
     if (doc?.value && typeof doc.value === "object") {
@@ -53,7 +53,7 @@ export async function getAccessConfig(): Promise<AccessConfig> {
 
 export async function saveAccessConfig(config: AccessConfig): Promise<AccessConfig> {
   const appConfigModel = await loadAppConfigModel();
-  const dbConnect = (await import("../db")).default;
+  const { dbConnect } = await import("@workspace/db");
   await dbConnect();
   const merged: AccessConfig = {
     dailyFreePuzzles:

@@ -13,11 +13,12 @@ import { PAYOUT_CLAIM_CONTRACT } from "@/lib/config/wagmi";
 import {
   CheckInReservation,
   ICheckInReservation,
-} from "@/lib/models/checkInReservation.model";
-import { DailyChallenge, IDailyChallenge } from "@/lib/models/dailyChallenge.model";
+  DailyChallenge,
+  IDailyChallenge,
+} from "@workspace/db";
 import { HttpException } from "./users.service";
 import { getDateAfterMinutes, getUtcDayNumber } from "@/lib/utils/time";
-import userPuzzlesModel from "@/lib/models/userPuzzles.model";
+import { UserPuzzle as userPuzzlesModel } from "@workspace/db";
 import PuzzleAPIClient from "./puzzle-api.client";
 import CheckInContractService from "./checkin-contract.service";
 import CheckInSigningService from "./checkin-signing.service";

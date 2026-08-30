@@ -66,3 +66,38 @@ export interface StreakData {
 export interface AuthenticatedRequest {
   user?: WalletUser | null;
 }
+
+// Payment types
+export enum PaymentType {
+  DAILY_ACCESS = "daily_access",
+  STORE_PURCHASE = "store_purchase",
+}
+
+export interface PaymentStatus {
+  hasDailyAccess: boolean;
+  dailyAccessDate?: string;
+}
+
+export interface PaymentVerification {
+  transactionHash: string;
+  amount: string;
+  recipient: string;
+  sender: string;
+  chainId: number;
+  timestamp: number;
+}
+
+export interface UserPaymentData {
+  walletAddress: string;
+  paymentType: PaymentType;
+  transactionHash: string;
+  amount: string;
+  chainId: number;
+  createdAt: string;
+  expiresAt?: string;
+}
+
+// Puzzle Rush types
+export type PuzzleRushMode = "3m" | "5m" | "survival";
+
+export const PUZZLE_RUSH_MODES: PuzzleRushMode[] = ["3m", "5m", "survival"];

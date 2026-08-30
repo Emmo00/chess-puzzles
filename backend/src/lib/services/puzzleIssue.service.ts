@@ -1,11 +1,9 @@
 import { randomInt } from "crypto";
-import { Puzzle } from "../types";
+import { Puzzle } from "@workspace/db";
 import { HttpException } from "./users.service";
 import PuzzleAPIClient from "./puzzle-api.client";
-import puzzleRushSessionModel, {
-  type PuzzleRushSessionDoc,
-} from "../models/puzzleRushSession.model";
-import issuedPuzzleModel from "../models/issuedPuzzle.model";
+import { PuzzleRushSession as puzzleRushSessionModel, IssuedPuzzle as issuedPuzzleModel } from "@workspace/db";
+import type { PuzzleRushSessionDoc } from "@workspace/db";
 import type { Types } from "mongoose";
 
 export const ISSUE_LOW_WATER = 4;

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import dbConnect from "../../lib/db";
+import { dbConnect } from "@workspace/db";
 import PuzzleRushService from "../../lib/services/puzzleRush.service";
 
 const router: Router = Router();

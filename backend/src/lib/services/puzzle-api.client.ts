@@ -1,4 +1,4 @@
-import { Puzzle } from "../types";
+import { Puzzle } from "@workspace/db";
 import { HttpException } from "./users.service";
 
 export interface PuzzleAPIResponse {

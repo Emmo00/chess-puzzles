@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
 import crypto from "crypto";
-import dbConnect from "../../lib/db";
-import nonceModel from "../../lib/models/nonce.model";
+import { dbConnect, Nonce } from "@workspace/db";
 
 const router: Router = Router();
 
@@ -27,7 +26,7 @@ router.post("/", async (req: Request, res: Response) => {
     await dbConnect();
     const nonce = crypto.randomBytes(32).toString("hex");
 
-    await nonceModel.create({
+    await Nonce.create({
       nonce,
       walletAddress: address.toLowerCase(),
       createdAt: new Date(),

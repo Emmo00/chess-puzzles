@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import dbConnect from "../../lib/db";
+import { dbConnect } from "@workspace/db";
 import PuzzleService from "../../lib/services/puzzles.service";
 import { authenticateWallet } from "../../middleware/auth";
 import { getAccessConfig } from "../../lib/config/access";

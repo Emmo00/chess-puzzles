@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { type Hex } from "viem";
-import dbConnect from "../../lib/db";
+import { dbConnect } from "@workspace/db";
 import { authenticateWallet } from "../../middleware/auth";
 import UserService from "../../lib/services/users.service";
 import { GAME_ASSETS_CONTRACT } from "../../lib/config/wagmi";

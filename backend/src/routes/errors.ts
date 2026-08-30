@@ -1,6 +1,5 @@
 import { Router, Request, Response } from "express";
-import dbConnect from "../lib/db";
-import { FrontendError } from "../lib/models/frontendError.model";
+import { dbConnect, FrontendError } from "@workspace/db";
 
 const router: Router = Router();
 

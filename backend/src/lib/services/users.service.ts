@@ -1,5 +1,4 @@
-import { WalletUser, UserStats, UserSettings } from "../types";
-import userModel from "../models/users.model";
+import { WalletUser, UserStats, UserSettings, User as userModel } from "@workspace/db";
 import { getUtcDayNumber } from "@/lib/utils/time";
 import { generateDisplayName } from "../utils/nameGenerator";
 import HintsService from "./hints.service";

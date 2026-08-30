@@ -1,8 +1,9 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { PaymentType } from "./types";
 
 export interface IPayment extends Document {
   walletAddress: string;
-  paymentType: string;
+  paymentType: PaymentType;
   transactionHash: string;
   amount: string;
   chainId: number;
@@ -23,6 +24,7 @@ const PaymentSchema = new Schema<IPayment>({
   paymentType: {
     type: String,
     required: true,
+    enum: Object.values(PaymentType),
   },
   transactionHash: {
     type: String,

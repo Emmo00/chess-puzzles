@@ -4,7 +4,7 @@ import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 import { env } from "./config/env";
-import { connectDB } from "./config/mongoose";
+import { dbConnect } from "@workspace/db";
 import { connectRedis } from "./config/redis";
 import { errorHandler } from "./middleware/errorHandler";
 import { requestLoggerMiddleware } from "./middleware/logging";
@@ -41,7 +41,7 @@ app.use(errorHandler);
 
 async function start() {
   try {
-    await connectDB();
+    await dbConnect();
     await connectRedis();
 
     const port = parseInt(env.PORT, 10);

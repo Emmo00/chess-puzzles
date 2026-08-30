@@ -1,7 +1,6 @@
 import { formatUnits } from "viem";
 
-import dbConnect from "@/lib/db";
-import { DailyChallenge } from "@/lib/models/dailyChallenge.model";
+import { dbConnect, DailyChallenge } from "@workspace/db";
 import CheckInContractService from "./checkin-contract.service";
 import { getDateFromUtcDayNumber, getUtcDayNumber } from "@/lib/utils/time";
 

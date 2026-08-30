@@ -27,15 +27,15 @@ export const SCORING_CONFIG_DEFAULTS: ScoringConfig = {
 let cachedScoringConfig: ScoringConfig | null = null;
 
 async function loadAppConfigModel() {
-  const mod = await import("../models/appConfig.model");
-  return mod.default;
+  const mod = await import("@workspace/db");
+  return mod.AppConfig;
 }
 
 export async function getScoringConfig(): Promise<ScoringConfig> {
   if (cachedScoringConfig) return cachedScoringConfig;
   try {
     const appConfigModel = await loadAppConfigModel();
-    const dbConnect = (await import("../db")).default;
+    const { dbConnect } = await import("@workspace/db");
     await dbConnect();
     const doc = await appConfigModel.findOne({ key: "scoring" }).lean();
     if (doc?.value && typeof doc.value === "object") {
@@ -55,7 +55,7 @@ export async function getScoringConfig(): Promise<ScoringConfig> {
 
 export async function saveScoringConfig(config: ScoringConfig): Promise<ScoringConfig> {
   const appConfigModel = await loadAppConfigModel();
-  const dbConnect = (await import("../db")).default;
+  const { dbConnect } = await import("@workspace/db");
   await dbConnect();
   const merged: ScoringConfig = { ...SCORING_CONFIG_DEFAULTS };
   for (const key of Object.keys(SCORING_CONFIG_DEFAULTS)) {

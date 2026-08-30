@@ -1,5 +1,4 @@
-import userModel from "../models/users.model";
-import userPuzzleModel from "../models/userPuzzles.model";
+import { User as userModel, UserPuzzle as userPuzzleModel } from "@workspace/db";
 import {
   getCurrentSeasonStart,
   getCurrentSeasonEnd,

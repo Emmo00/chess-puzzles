@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
 import { recoverMessageAddress } from "viem";
-import dbConnect from "../../lib/db";
-import nonceModel from "../../lib/models/nonce.model";
+import { dbConnect, Nonce } from "@workspace/db";
 import { signSession } from "../../lib/admin/jwt";
 
 const router: Router = Router();
@@ -23,7 +22,7 @@ router.post("/", async (req: Request, res: Response) => {
 
     await dbConnect();
 
-    const doc = await nonceModel.findOne({ nonce }).lean();
+    const doc = await Nonce.findOne({ nonce }).lean();
     if (!doc) {
       res.status(401).json({ error: "Unknown nonce" });
       return;
@@ -60,19 +59,19 @@ router.post("/", async (req: Request, res: Response) => {
     try {
       recovered = await recoverMessageAddress({ message, signature: signature as `0x${string}` });
     } catch {
-      await nonceModel.updateOne({ nonce }, { $set: { used: true } });
+      await Nonce.updateOne({ nonce }, { $set: { used: true } });
       res.status(401).json({ error: "Signature verification failed" });
       return;
     }
 
     if (recovered.toLowerCase() !== address.toLowerCase() || recovered.toLowerCase() !== adminWallet) {
-      await nonceModel.updateOne({ nonce }, { $set: { used: true } });
+      await Nonce.updateOne({ nonce }, { $set: { used: true } });
       console.error(`Admin auth failed: recovered=${recovered}, address=${address}, admin=${adminWallet}`);
       res.status(401).json({ error: "Signature does not match admin wallet" });
       return;
     }
 
-    await nonceModel.updateOne({ nonce }, { $set: { used: true } });
+    await Nonce.updateOne({ nonce }, { $set: { used: true } });
 
     const token = await signSession({ address: adminWallet, role: "admin" });
 

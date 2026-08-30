@@ -1,10 +1,10 @@
 import { Router, Request, Response } from "express";
-import dbConnect from "../../lib/db";
+import { dbConnect } from "@workspace/db";
 import PuzzleService from "../../lib/services/puzzles.service";
 import UserService from "../../lib/services/users.service";
 import { calculateEarnedPoints } from "../../lib/scoring";
 import { authenticateWallet } from "../../middleware/auth";
-import { UserPuzzle } from "../../lib/types";
+import type { UserPuzzleType } from "@workspace/db";
 
 const router: Router = Router();
 
@@ -34,7 +34,7 @@ router.post("/", authenticateWallet, async (req: Request, res: Response) => {
     });
     const points = breakdown.points;
 
-    const userPuzzleData: Partial<UserPuzzle> = {
+    const userPuzzleData: Partial<UserPuzzleType> = {
       userWalletAddress: req.walletAddress!,
       puzzleId,
       type: "daily",

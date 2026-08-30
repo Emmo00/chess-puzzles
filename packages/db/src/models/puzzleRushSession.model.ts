@@ -1,4 +1,5 @@
 import * as mongoose from "mongoose";
+import { PUZZLE_RUSH_MODES, type PuzzleRushMode } from "./types";
 
 export type PuzzleRushSessionStatus = "active" | "completed";
 
@@ -12,7 +13,7 @@ export interface PuzzleRushPuzzleResult {
 
 export interface PuzzleRushSessionDoc {
   userWalletAddress: string;
-  mode: string;
+  mode: PuzzleRushMode;
   startTime: Date;
   endTime?: Date;
   durationSec?: number;
@@ -49,7 +50,7 @@ const PuzzleRushPuzzleResultSchema = new mongoose.Schema(
 const PuzzleRushSessionSchema = new mongoose.Schema(
   {
     userWalletAddress: { type: String, required: true, index: true },
-    mode: { type: String, required: true },
+    mode: { type: String, enum: PUZZLE_RUSH_MODES, required: true },
     startTime: { type: Date, required: true },
     endTime: { type: Date },
     durationSec: { type: Number, default: 0 },

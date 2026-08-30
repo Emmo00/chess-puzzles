@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import dbConnect from "../../lib/db";
+import { dbConnect } from "@workspace/db";
 import LeaderboardService from "../../lib/services/leaderboard.service";
 import type { League } from "../../lib/leagues";
 

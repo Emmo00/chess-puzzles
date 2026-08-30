@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { requireAdmin } from "../../middleware/adminAuth";
-import dbConnect from "../../lib/db";
+import { dbConnect } from "@workspace/db";
 import PuzzleRushService from "../../lib/services/puzzleRush.service";
 import { getPuzzleRushConfig, mergePuzzleRushConfig } from "../../lib/config/puzzleRush";
 

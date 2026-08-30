@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
-import dbConnect from "../../lib/db";
+import { dbConnect, User as userModel } from "@workspace/db";
 import { authenticateWallet } from "../../middleware/auth";
-import userModel from "../../lib/models/users.model";
 
 const router: Router = Router();
 

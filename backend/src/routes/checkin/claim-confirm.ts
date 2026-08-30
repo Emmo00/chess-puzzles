@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { randomUUID } from "crypto";
 import { decodeFunctionData } from "viem";
 
-import dbConnect from "../../lib/db";
+import { dbConnect } from "@workspace/db";
 import CheckInService from "../../lib/services/checkin.service";
 import CheckInContractService from "../../lib/services/checkin-contract.service";
 import { authenticateWallet } from "../../middleware/auth";

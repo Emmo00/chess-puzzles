@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@workspace/contracts": "workspace:*",
+    "@workspace/db": "workspace:*",
     "compression": "^1.7.5",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",

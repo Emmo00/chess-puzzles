@@ -1,4 +1,4 @@
-import userModel from "../models/users.model";
+import { User as userModel } from "@workspace/db";
 import { HttpException } from "./users.service";
 
 const DEFAULT_EFFECTIVE_RATING = 1000;

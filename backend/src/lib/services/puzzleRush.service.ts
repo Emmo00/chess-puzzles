@@ -12,16 +12,13 @@ import {
 import { GAME_ASSETS_CONTRACT } from "../config/wagmi";
 import { GAME_ASSETS_ABI } from "../abi/gameAssets";
 import { getUtcDayNumber, getUtcDayRange } from "../utils/time";
-import userModel from "../models/users.model";
-import puzzleRushSessionModel, {
-  type PuzzleRushSessionDoc,
-} from "../models/puzzleRushSession.model";
+import { User as userModel, PuzzleRushSession as puzzleRushSessionModel } from "@workspace/db";
+import type { PuzzleRushSessionDoc } from "@workspace/db";
 import type { Types } from "mongoose";
 import PuzzleAPIClient from "./puzzle-api.client";
 import UserService, { HttpException } from "./users.service";
 import { calculatePuzzleRushPuzzleScore } from "../puzzle-rush/scoring";
-import { Puzzle } from "../types";
-import issuedPuzzleModel from "../models/issuedPuzzle.model";
+import { Puzzle, IssuedPuzzle as issuedPuzzleModel } from "@workspace/db";
 
 const celoClient = createPublicClient({ chain: celo, transport: http() });
 

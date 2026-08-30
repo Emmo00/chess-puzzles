@@ -1,6 +1,6 @@
-import { UserPuzzle, Puzzle, UserSettings } from "../types";
+import { Puzzle, UserSettings, type UserPuzzleType } from "@workspace/db";
+import { UserPuzzle as userPuzzlesModel } from "@workspace/db";
 import { HttpException } from "./users.service";
-import userPuzzlesModel from "../models/userPuzzles.model";
 import { randomInt } from "crypto";
 import PuzzleAPIClient from "./puzzle-api.client";
 import { DEFAULT_THEMES } from "../config/puzzleThemes";
@@ -88,7 +88,7 @@ class PuzzleService {
     return puzzle;
   }
 
-  public async createUserPuzzle(userPuzzleData: Partial<UserPuzzle>): Promise<UserPuzzle> {
+  public async createUserPuzzle(userPuzzleData: Partial<UserPuzzleType>): Promise<UserPuzzleType> {
     const newUserPuzzle = await this.userPuzzles.create(userPuzzleData);
     return newUserPuzzle;
   }
@@ -100,7 +100,7 @@ class PuzzleService {
     attempts,
     type,
     points,
-  }: Partial<UserPuzzle>) {
+  }: Partial<UserPuzzleType>) {
     const updatedUserPuzzle = await this.userPuzzles.findOneAndUpdate(
       { userWalletAddress, puzzleId },
       { completed, attempts, type, points, solvedAt: completed ? new Date() : undefined },

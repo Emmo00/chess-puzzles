@@ -25,4 +25,6 @@ export type { PuzzleRushSessionDoc, PuzzleRushPuzzleResult, PuzzleRushSessionSta
 export type { IssuedPuzzleDoc, IssuedPuzzleRow } from "./models/issuedPuzzle.model";
 export type { IAdminAction } from "./models/adminAction.model";
 export type { IPayment } from "./models/payment.model";
-export type { WalletUser, UserStats, UserSettings, UserPuzzle as UserPuzzleType } from "./models/types";
+export type { WalletUser, UserStats, UserSettings, UserPuzzle as UserPuzzleType, Puzzle, PuzzleRushMode } from "./models/types";
+export { PaymentType, PUZZLE_RUSH_MODES } from "./models/types";
+export type { PaymentStatus, PaymentVerification, UserPaymentData } from "./models/types";

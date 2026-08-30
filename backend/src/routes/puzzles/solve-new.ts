@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import dbConnect from "../../lib/db";
+import { dbConnect } from "@workspace/db";
 import PuzzleService from "../../lib/services/puzzles.service";
 import UserService from "../../lib/services/users.service";
 import AdaptiveService from "../../lib/services/adaptive.service";
@@ -8,7 +8,7 @@ import { getAccessConfig } from "../../lib/config/access";
 import { GAME_ASSETS_CONTRACT } from "../../lib/config/wagmi";
 import { GAME_ASSETS_ABI } from "../../lib/abi/gameAssets";
 import { publicClient } from "../../config/publicClient";
-import { Puzzle } from "../../lib/types";
+import { Puzzle } from "@workspace/db";
 
 const router: Router = Router();
 

@@ -1,10 +1,9 @@
 import { Router, Request, Response } from "express";
 import { parseUnits } from "viem";
 import { celo } from "viem/chains";
-import { Payment } from "../../lib/models/payment.model";
-import { PaymentType } from "../../lib/types/payment";
+import { Payment, PaymentType } from "@workspace/db";
 import { PAYMENT_RECIPIENT, SUPPORTED_CURRENCIES } from "../../lib/config/wagmi";
-import dbConnect from "../../lib/db";
+import { dbConnect } from "@workspace/db";
 import { getAccessConfig } from "../../lib/config/access";
 import { authenticateWallet } from "../../middleware/auth";
 import { maskAddress } from "../../middleware/logging";

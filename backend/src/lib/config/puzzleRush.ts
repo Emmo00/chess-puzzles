@@ -78,8 +78,8 @@ export const PUZZLE_RUSH_CONFIG_DEFAULTS: PuzzleRushConfig = {
 let cachedPuzzleRushConfig: PuzzleRushConfig | null = null;
 
 async function loadAppConfigModel() {
-  const mod = await import("../models/appConfig.model");
-  return mod.default;
+  const mod = await import("@workspace/db");
+  return mod.AppConfig;
 }
 
 const isFiniteNumber = (v: unknown): v is number =>
@@ -254,7 +254,7 @@ export async function getPuzzleRushConfig(): Promise<PuzzleRushConfig> {
   if (cachedPuzzleRushConfig) return cachedPuzzleRushConfig;
   try {
     const appConfigModel = await loadAppConfigModel();
-    const dbConnect = (await import("../db")).default;
+    const { dbConnect } = await import("@workspace/db");
     await dbConnect();
     const doc = await appConfigModel.findOne({ key: "puzzleRush" }).lean();
     if (doc?.value && typeof doc.value === "object") {
@@ -271,7 +271,7 @@ export async function savePuzzleRushConfig(
   config: PuzzleRushConfig
 ): Promise<PuzzleRushConfig> {
   const appConfigModel = await loadAppConfigModel();
-  const dbConnect = (await import("../db")).default;
+  const { dbConnect } = await import("@workspace/db");
   await dbConnect();
   const merged: PuzzleRushConfig = sanitizePuzzleRushConfig(config);
   await appConfigModel.updateOne(

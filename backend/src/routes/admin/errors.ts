@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
 import { requireAdmin } from "../../middleware/adminAuth";
-import dbConnect from "../../lib/db";
-import { FrontendError } from "../../lib/models/frontendError.model";
+import { dbConnect, FrontendError } from "@workspace/db";
 
 const router: Router = Router();
 
