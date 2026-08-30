@@ -59,7 +59,7 @@ export function BackgroundMusic() {
     if (!audioEl.src) {
       audioEl.src = getSessionTrack();
     }
-    audioEl.volume = 0.25;
+    audioEl.volume = 0.125;
 
     if (!enabled) {
       audioEl.pause();
