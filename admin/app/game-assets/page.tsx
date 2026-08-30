@@ -3,11 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { Navigation } from "@/components/Navigation";
-import {
-  GAME_ASSETS_CONTRACT,
-  GAME_ASSETS_ABI,
-  GAME_ASSET_TYPES,
-} from "@/lib/contracts";
+import { GAME_ASSETS_CONTRACT, GAME_ASSETS_ABI, GAME_ASSET_TYPES } from "@/lib/contracts";
 import { Package, DollarSign, Gift, Plus } from "lucide-react";
 
 interface AssetPack {
@@ -27,8 +23,7 @@ interface GameAssetsData {
   paymentTokens: string[];
 }
 
-const GRANTER_ROLE_HASH =
-  "0x61630608d0e4afdd9f601bd4ed4bcfbf7e5b0c4e8a98a130e7c95daf2f1e0882";
+const GRANTER_ROLE_HASH = "0x2dee5dd865e09c7ce6788d674a03682994f0b44339403ca07ac129a9de4bed6a";
 
 export default function GameAssetsPage() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -104,24 +99,18 @@ export default function GameAssetsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {data?.assetPacks?.map((pack, i) => (
                 <tr key={i}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {pack.name}
-                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{pack.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
                     {pack.assetType.slice(0, 10)}…
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {pack.quantity}
-                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{pack.quantity}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     ${(pack.price / 1e6).toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        pack.active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                        pack.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                       }`}
                     >
                       {pack.active ? "Active" : "Inactive"}
@@ -146,15 +135,11 @@ export default function GameAssetsPage() {
             <DollarSign className="h-5 w-5" />
             Unit Prices
           </h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Current on-chain prices. Change requires contract owner wallet.
-          </p>
+          <p className="text-sm text-gray-500 mb-4">Current on-chain prices. Change requires contract owner wallet.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-600">Hint Price</p>
-              <p className="text-xl font-bold text-gray-900">
-                ${((data?.unitPrices?.hint ?? 0) / 1e6).toFixed(2)}
-              </p>
+              <p className="text-xl font-bold text-gray-900">${((data?.unitPrices?.hint ?? 0) / 1e6).toFixed(2)}</p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-600">Streak Freeze Price</p>
@@ -185,27 +170,18 @@ export default function GameAssetsPage() {
             <Gift className="h-5 w-5" />
             Daily Pass
           </h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Controls the Puzzle Rush daily pass price.
-          </p>
+          <p className="text-sm text-gray-500 mb-4">Controls the Puzzle Rush daily pass price.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-600">Price</p>
-              <p className="text-xl font-bold text-gray-900">
-                ${((data?.dailyPassPrice ?? 0) / 1e6).toFixed(2)}
-              </p>
+              <p className="text-xl font-bold text-gray-900">${((data?.dailyPassPrice ?? 0) / 1e6).toFixed(2)}</p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-600">Duration</p>
-              <p className="text-xl font-bold text-gray-900">
-                {data?.dailyPassDuration ?? 0}s
-              </p>
+              <p className="text-xl font-bold text-gray-900">{data?.dailyPassDuration ?? 0}s</p>
             </div>
           </div>
-          <SetDailyPassPriceCard
-            currentValue={data?.dailyPassPrice ?? 0}
-            onSuccess={() => fetchData()}
-          />
+          <SetDailyPassPriceCard currentValue={data?.dailyPassPrice ?? 0} onSuccess={() => fetchData()} />
         </div>
 
         {/* ── Create Asset Pack (wallet-signed) ── */}
@@ -214,9 +190,7 @@ export default function GameAssetsPage() {
             <Plus className="h-5 w-5" />
             Create Asset Pack
           </h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Mint a new pack on-chain. Requires contract owner wallet.
-          </p>
+          <p className="text-sm text-gray-500 mb-4">Mint a new pack on-chain. Requires contract owner wallet.</p>
           <CreateAssetPackCard onSuccess={() => fetchData()} />
         </div>
 
@@ -308,13 +282,7 @@ function SetUnitPriceCard({
    Set Daily Pass Price (wallet-signed)
    ═══════════════════════════════════════════════════════ */
 
-function SetDailyPassPriceCard({
-  currentValue,
-  onSuccess,
-}: {
-  currentValue: number;
-  onSuccess: () => void;
-}) {
+function SetDailyPassPriceCard({ currentValue, onSuccess }: { currentValue: number; onSuccess: () => void }) {
   const [price, setPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -389,8 +357,7 @@ function CreateAssetPackCard({ onSuccess }: { onSuccess: () => void }) {
     setError(null);
     setSuccess(false);
     try {
-      const assetTypeHash =
-        assetType === "hint" ? GAME_ASSET_TYPES.HINT : GAME_ASSET_TYPES.STREAK_FREEZE;
+      const assetTypeHash = assetType === "hint" ? GAME_ASSET_TYPES.HINT : GAME_ASSET_TYPES.STREAK_FREEZE;
       const wei = BigInt(Math.round(parseFloat(price) * 1e6));
 
       await writeContractAsync({
@@ -489,12 +456,13 @@ function GrantAssetForm({ onSuccess }: { onSuccess: () => void }) {
     query: { enabled: isConnected && !!connectedWallet },
   });
 
+  console.log(connectedWallet, "has the", GRANTER_ROLE_HASH, "role:", hasRole);
+
   const handleSubmit = async () => {
     setError(null);
     setSuccess(false);
     try {
-      const assetTypeHash =
-        assetType === "hint" ? GAME_ASSET_TYPES.HINT : GAME_ASSET_TYPES.STREAK_FREEZE;
+      const assetTypeHash = assetType === "hint" ? GAME_ASSET_TYPES.HINT : GAME_ASSET_TYPES.STREAK_FREEZE;
 
       await writeContractAsync({
         address: GAME_ASSETS_CONTRACT,
@@ -513,9 +481,7 @@ function GrantAssetForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div>
-      {!isConnected && (
-        <p className="text-sm text-amber-600 mb-3">Connect your wallet to grant assets.</p>
-      )}
+      {!isConnected && <p className="text-sm text-amber-600 mb-3">Connect your wallet to grant assets.</p>}
       {isConnected && !roleLoading && hasRole === false && (
         <p className="text-sm text-amber-600 mb-3">
           Your wallet does not have GRANTER_ROLE on the GameAssets contract.
