@@ -1,0 +1,23 @@
+{
+  "$schema": "https://knip.dev/schema.json",
+  "ignore": [".agents/**"],
+  "ignoreBinaries": ["tsc", "eslint"],
+  "workspaces": {
+    "frontend": {
+      "entry": ["app/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"]
+    },
+    "backend": {
+      "entry": ["src/**/*.{ts,tsx}"],
+      "project": ["src/**/*.ts"],
+      "ignoreExportsUsedInFile": true
+    },
+    "admin": {
+      "entry": ["app/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
+      "project": ["**/*.{ts,tsx,css}"]
+    },
+    "packages/*": {
+      "entry": ["src/**/*.ts"],
+      "project": ["src/**/*.ts"]
+    }
+  }
+}

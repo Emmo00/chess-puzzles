@@ -12,6 +12,10 @@
     "dev:backend": "bun --filter chess-puzzles-backend dev",
     "dev": "bun run --parallel dev:frontend dev:backend",
     "build": "bun --filter chess-puzzles-frontend build && bun --filter chess-puzzles-backend build",
-    "test": "bun --filter chess-puzzles-frontend test"
+    "test": "bun --filter chess-puzzles-frontend test",
+    "knip": "knip"
+  },
+  "devDependencies": {
+    "knip": "^6.33.0"
   }
 }

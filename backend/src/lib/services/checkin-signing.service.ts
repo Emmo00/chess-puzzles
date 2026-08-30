@@ -16,7 +16,7 @@ interface SignedClaimPayload {
   signature: `0x${string}`;
 }
 
-export class CheckInSigningService {
+class CheckInSigningService {
   public generateNonce(): string {
     const hex = randomBytes(16).toString("hex");
     return BigInt(`0x${hex}`).toString();

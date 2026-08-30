@@ -52,7 +52,7 @@ CELO_RPC_URL=https://forno.celo.org
 PUZZLE_API_URL=https://your-api-domain.com
 
 # Optional (required only for server-signed check-in claim flows)
-CHECKIN_SIGNER_PRIVATE_KEY=0xyourprivatekey
+CHECKIN_SIGNER_PRIVATE_KEY=0xYourPrivatekey
 
 # Required for game asset operations on the smart contract
 # ASSET_CONSUMPTION_KEY=0x...  # Server wallet with CONSUMER_ROLE (spends user assets)

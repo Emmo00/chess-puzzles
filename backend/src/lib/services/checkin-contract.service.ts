@@ -26,7 +26,7 @@ const publicClient = createPublicClient({
 let cachedValues: CheckInContractValues | null = null;
 let cacheAt = 0;
 
-export class CheckInContractService {
+class CheckInContractService {
   public async getCheckInContractValues(
     forceRefresh = false
   ): Promise<CheckInContractValues> {
