@@ -10,8 +10,6 @@
   "dependencies": {
     "@workspace/contracts": "workspace:*",
     "@workspace/db": "workspace:*",
-    "@celo/abis": "^14.0.1",
-    "axios": "^1.15.2",
     "compression": "^1.7.5",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
