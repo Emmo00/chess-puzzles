@@ -29,7 +29,7 @@ export default function SolvePuzzlesPage() {
     hasDailyAccess?: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [accessConfig, setAccessConfig] = useState<{ dailyFreePuzzles: number; unlockAmountUsd: string } | null>(null);
+  const [accessConfig, setAccessConfig] = useState<{ dailyFreePuzzles: number; unlockAmountUsd: string }>({ dailyFreePuzzles: 3, unlockAmountUsd: "0.02" });
   const [mistakeCount, setMistakeCount] = useState(0);
   const [puzzleProgress, setPuzzleProgress] = useState(0);
   const [currentPuzzle, setCurrentPuzzle] = useState<Puzzle | null>(null);
@@ -53,6 +53,8 @@ export default function SolvePuzzlesPage() {
   const [hintStage, setHintStage] = useState<HintStage>('none');
   const [hintCount, setHintCount] = useState(0);
   const [highlightedSquares, setHighlightedSquares] = useState<{ from?: string; to?: string } | null>(null);
+  const [hintLoading, setHintLoading] = useState(false);
+  const [hintPulse, setHintPulse] = useState(false);
   
   // History navigation state
   const [canGoBack, setCanGoBack] = useState(false);
@@ -111,7 +113,7 @@ export default function SolvePuzzlesPage() {
   const autoFetchedRef = useRef(false);
 
   useEffect(() => {
-    if (!mounted || !address || loading || autoFetchedRef.current || !accessConfig) return;
+    if (!mounted || !address || loading || autoFetchedRef.current) return;
     const limit = paymentStatus?.hasDailyAccess ? 999 : accessConfig.dailyFreePuzzles;
     if (solvedPuzzlesCount < limit && !currentPuzzle && !isCompleted) {
       autoFetchedRef.current = true;
@@ -262,7 +264,10 @@ export default function SolvePuzzlesPage() {
   };
 
   const handleShowHint = async () => {
+    if (hintLoading) return;
+
     if (hintBalance <= 0) {
+      setHintLoading(true);
       setHintShopLoading(true);
       setShowHintShop(true);
       try {
@@ -315,34 +320,51 @@ export default function SolvePuzzlesPage() {
       } catch {
         setHintShopItems([]);
       } finally {
+        setHintLoading(false);
         setHintShopLoading(false);
       }
       return;
     }
-    if (hintStage === 'none') {
+
+    // Pre-check: avoid showing an optimistic hint that's doomed to fail.
+    if (hintBalance <= 0) {
+      toast.error("Out of hints", { description: "Buy more in the Store." });
+      return;
+    }
+
+    // Snapshot state so a failed background consume can be rolled back.
+    const prevStage = hintStage;
+    const prevHighlighted = highlightedSquares;
+    const prevHintCount = hintCount;
+
+    const targetStage: HintStage = hintStage === 'none' ? 'piece' : 'move';
+    const nextMove = chessBoardRef.current?.getNextMove();
+
+    // Reveal immediately — no network wait.
+    setHintLoading(true);
+    setHintStage(targetStage);
+    setHintCount(c => c + 1);
+    if (nextMove) {
+      setHighlightedSquares(
+        targetStage === 'piece'
+          ? { from: nextMove.from }
+          : { from: nextMove.from, to: nextMove.to }
+      );
+    }
+
+    // Consume in the background. Roll back ONLY on failure.
+    try {
       const ok = await consumeHint();
-      if (!ok) {
-        toast.error("Out of hints", { description: "Buy more in the Store." });
-        return;
-      }
-      setHintCount(prev => prev + 1);
-      setHintStage('piece');
-      const nextMove = chessBoardRef.current?.getNextMove();
-      if (nextMove) {
-        setHighlightedSquares({ from: nextMove.from });
-      }
-    } else if (hintStage === 'piece') {
-      const ok = await consumeHint();
-      if (!ok) {
-        toast.error("Out of hints", { description: "Buy more in the Store." });
-        return;
-      }
-      setHintCount(prev => prev + 1);
-      setHintStage('move');
-      const nextMove = chessBoardRef.current?.getNextMove();
-      if (nextMove) {
-        setHighlightedSquares({ from: nextMove.from, to: nextMove.to });
-      }
+      if (!ok) throw new Error("consume failed");
+    } catch {
+      setHintStage(prevStage);
+      setHighlightedSquares(prevHighlighted);
+      setHintCount(prevHintCount);
+      toast.error("Hint couldn't be confirmed", {
+        description: "That hint was reverted — please try again.",
+      });
+    } finally {
+      setHintLoading(false);
     }
   };
 
@@ -379,7 +401,7 @@ export default function SolvePuzzlesPage() {
 
   const handleUnlockUnlimited = () => {
     setPaymentStoreItem(null);
-    setPaymentDefaultPrice(accessConfig?.unlockAmountUsd || "0.01");
+    setPaymentDefaultPrice(accessConfig.unlockAmountUsd);
     setPaymentModalKey((k) => k + 1);
     setShowPaymentModal(true);
   };
@@ -400,6 +422,19 @@ export default function SolvePuzzlesPage() {
     setMovePulse(true);
     window.setTimeout(() => setMovePulse(false), 360);
   };
+
+  // Pulse the board wrapper continuously while a hint is showing.
+  // Uses hintStage instead of a one-shot flash so the orange glow persists
+  // and is impossible to miss.
+  useEffect(() => {
+    if (hintStage === 'none') {
+      setHintPulse(false);
+      return;
+    }
+    setHintPulse(true);
+    const id = window.setInterval(() => setHintPulse((v) => !v), 500);
+    return () => window.clearInterval(id);
+  }, [hintStage]);
 
   const handleStartNewPuzzle = () => {
     setCurrentPuzzle(null);
@@ -452,7 +487,7 @@ export default function SolvePuzzlesPage() {
   }
 
   // Calculate limits based on payment status
-  const MAX_DAILY_PUZZLES = accessConfig?.dailyFreePuzzles ?? 3;
+  const MAX_DAILY_PUZZLES = accessConfig.dailyFreePuzzles;
   const isAccessExhausted = solvedPuzzlesCount >= MAX_DAILY_PUZZLES && !paymentStatus?.hasDailyAccess;
 
   return (
@@ -581,7 +616,13 @@ export default function SolvePuzzlesPage() {
                 </div>
               )}
 
-              <div className={`w-full max-w-[560px] transition-shadow duration-200 ${movePulse ? 'shadow-[0_0_0_4px_rgba(255,214,0,0.8)]' : ''}`}>
+              <div className={`w-full max-w-[560px] transition-shadow duration-300 ${
+                movePulse
+                  ? 'shadow-[0_0_0_4px_rgba(255,214,0,0.8)]'
+                  : hintPulse
+                  ? 'shadow-[0_0_0_5px_rgba(255,120,0,0.9)]'
+                  : ''
+              }`}>
                 <ChessBoard
                   ref={chessBoardRef}
                   puzzle={currentPuzzle}
@@ -648,23 +689,47 @@ export default function SolvePuzzlesPage() {
               {/* Full-width Hint Button (animated collapse on wrong move) */}
               {!isCompleted && (
                 <div className={`overflow-hidden transition-all duration-300 ${
-                  isWrongMoveActive ? 'max-h-0 opacity-0' : 'max-h-16 opacity-100'
+                  isWrongMoveActive ? 'max-h-0 opacity-0' : 'max-h-28 opacity-100'
                 }`}>
+                  {/* Persistent hint-active indicator */}
+                  {hintStage !== 'none' && (
+                    <div className="bg-orange-300 border-2 border-black px-3 py-2 font-black text-xs uppercase text-center inline-flex items-center gap-1.5 justify-center w-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] mb-2 animate-in fade-in duration-200">
+                      <Lightbulb className="w-3.5 h-3.5 shrink-0" />
+                      {hintStage === 'piece'
+                        ? "Hint active — piece to move is highlighted"
+                        : "Hint active — full move is shown"}
+                    </div>
+                  )}
+
                   {hintStage !== 'move' ? (
                     <button
                       onClick={handleShowHint}
-                      className="w-full text-black py-3 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all bg-yellow-400 inline-flex items-center justify-center gap-2"
+                      disabled={hintLoading}
+                      className={`w-full text-black py-3 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all bg-yellow-400 inline-flex items-center justify-center gap-2 ${
+                        hintLoading
+                          ? "opacity-60 cursor-wait"
+                          : "hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px"
+                      }`}
                     >
-                      <Lightbulb className="w-4 h-4" />
-                      {hintBalance > 0 ? (
+                      {hintLoading ? (
                         <>
-                          <span>Hint</span>
-                          <span className="bg-black text-yellow-400 px-2 py-0.5 text-xs font-black">{hintBalance}</span>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Showing…</span>
                         </>
                       ) : (
                         <>
-                          <span>Get Hints</span>
-                          <span className="bg-black text-yellow-400 px-1.5 py-0.5 text-xs font-black">+</span>
+                          <Lightbulb className="w-4 h-4" />
+                          {hintBalance > 0 ? (
+                            <>
+                              <span>Hint</span>
+                              <span className="bg-black text-yellow-400 px-2 py-0.5 text-xs font-black">{hintBalance}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Get Hints</span>
+                              <span className="bg-black text-yellow-400 px-1.5 py-0.5 text-xs font-black">+</span>
+                            </>
+                          )}
                         </>
                       )}
                     </button>
@@ -721,7 +786,7 @@ export default function SolvePuzzlesPage() {
                 Daily Limit Reached! <Ban className="w-8 h-8 shrink-0" />
               </h2>
               <p className="text-lg font-bold text-black uppercase">You&apos;ve used all {MAX_DAILY_PUZZLES} free puzzles today.</p>
-              <p className="text-md font-bold text-black mt-2 uppercase">Pay ${accessConfig?.unlockAmountUsd ?? "0.01"} USDT to unlock unlimited puzzles for the rest of the day — or come back tomorrow!</p>
+              <p className="text-md font-bold text-black mt-2 uppercase">Pay ${accessConfig.unlockAmountUsd} USDT to unlock unlimited puzzles for the rest of the day — or come back tomorrow!</p>
               <TelegramSupportLink />
             </div>
 
@@ -729,7 +794,7 @@ export default function SolvePuzzlesPage() {
               onClick={handleUnlockUnlimited}
               className="w-full bg-lime-400 text-black py-4 px-6 font-black text-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
             >
-              UNLOCK UNLIMITED · ${accessConfig?.unlockAmountUsd ?? "0.01"}
+              UNLOCK UNLIMITED · ${accessConfig.unlockAmountUsd}
             </button>
 
             <Link

@@ -26,13 +26,15 @@ export function useHintBalance(): HintBalanceState {
   const consume = useCallback(async (): Promise<boolean> => {
     if (!address || !isConnected) return false;
     try {
-      const res = await apiFetch("/api/hints/consume", {
+      await apiFetch("/api/hints/consume", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${address}`,
         },
       });
-      if (!res.ok) return false;
+      // Reaching here without an thrown error means the request succeeded
+      // (apiFetch throws on non-2xx responses). No need to check res.ok —
+      // apiFetch returns the parsed JSON body, not a Response object.
       void refresh();
       return true;
     } catch {

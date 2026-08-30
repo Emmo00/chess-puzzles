@@ -35,6 +35,7 @@ import adminScoringConfig from "./admin/scoring-config";
 import adminAccessConfig from "./admin/access-config";
 import adminPuzzleRushConfig from "./admin/puzzle-rush-config";
 import adminErrors from "./admin/errors";
+import configPublic from "./config/public";
 import errors from "./errors";
 
 export const routes: Router = Router();
@@ -86,6 +87,9 @@ routes.use("/admin/auth/nonce", adminAuthNonce);
 routes.use("/admin/auth/verify", adminAuthVerify);
 routes.use("/admin/auth/me", adminAuthMe);
 routes.use("/admin/auth/logout", adminAuthLogout);
+
+// Public config
+routes.use("/config/public", configPublic);
 
 // Admin config
 routes.use("/admin/scoring-config", adminScoringConfig);

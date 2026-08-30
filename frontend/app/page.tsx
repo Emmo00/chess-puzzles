@@ -40,6 +40,21 @@ export default function Home() {
   const [streakPopupDismissed, setStreakPopupDismissed] = useState(false);
   const [musicEnabled, setMusicEnabledState] = useState(true);
 
+  // Key the dismissal to the specific streak event (status + puzzle date)
+  const streakEventKey = `${streakStatus}:${userStats?.lastPuzzleDate ?? "none"}`;
+
+  // Sync dismissal state from localStorage on mount / when the event changes
+  useEffect(() => {
+    if (!mounted) return;
+    const dismissedKey = localStorage.getItem("streakPopupDismissedFor");
+    setStreakPopupDismissed(dismissedKey === streakEventKey);
+  }, [mounted, streakEventKey]);
+
+  const dismissStreakPopup = useCallback(() => {
+    setStreakPopupDismissed(true);
+    localStorage.setItem("streakPopupDismissedFor", streakEventKey);
+  }, [streakEventKey]);
+
   const showStreakPopup = streakStatus !== "alive" && !streakPopupDismissed && isConnected;
 
   const currentNodeRef = useRef<HTMLDivElement | null>(null);
@@ -276,7 +291,7 @@ export default function Home() {
       {/* Streak awareness popup — at_risk / broken */}
       {showStreakPopup && (streakStatus === "at_risk" || streakStatus === "broken") && (
         <div className="fixed inset-0 z-50 p-4 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/80" onClick={() => setStreakPopupDismissed(true)} />
+          <div className="absolute inset-0 bg-black/80" onClick={dismissStreakPopup} />
           <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] max-w-sm w-full">
             <div className={`${streakStatus === "at_risk" ? "bg-orange-400" : "bg-red-400"} border-b-4 border-black p-4 flex justify-between items-center`}>
               <h2 className="font-black text-lg uppercase text-black inline-flex items-center gap-2">
@@ -284,7 +299,7 @@ export default function Home() {
                 {streakStatus === "at_risk" ? "Streak at Risk!" : "Streak Ended"}
               </h2>
               <button
-                onClick={() => setStreakPopupDismissed(true)}
+                onClick={dismissStreakPopup}
                 className="w-7 h-7 bg-red-500 border-2 border-black text-black flex items-center justify-center"
               >
                 <X className="w-3.5 h-3.5" />
@@ -299,7 +314,7 @@ export default function Home() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => { setStreakPopupDismissed(true); router.push("/solve-puzzles"); }}
+                    onClick={() => { dismissStreakPopup(); router.push("/solve-puzzles"); }}
                     className="w-full bg-black text-white py-3 font-black text-sm uppercase tracking-wide border-2 border-black hover:bg-gray-800 transition-all inline-flex items-center justify-center gap-2"
                   >
                     <Puzzle className="w-4 h-4" /> Solve Now
@@ -315,7 +330,7 @@ export default function Home() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => { setStreakPopupDismissed(true); router.push("/store"); }}
+                    onClick={() => { dismissStreakPopup(); router.push("/store"); }}
                     className="w-full bg-black text-white py-3 font-black text-sm uppercase tracking-wide border-2 border-black hover:bg-gray-800 transition-all inline-flex items-center justify-center gap-2"
                   >
                     <ShoppingCart className="w-4 h-4" /> Get Streak Freeze
@@ -324,7 +339,7 @@ export default function Home() {
               )}
 
               <button
-                onClick={() => setStreakPopupDismissed(true)}
+                onClick={dismissStreakPopup}
                 className="w-full text-center text-xs font-bold text-black/50 hover:text-black transition-colors uppercase"
               >
                 Dismiss

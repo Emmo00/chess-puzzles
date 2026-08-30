@@ -33,6 +33,8 @@ export default function DailyChallengePage() {
   const [hintStage, setHintStage] = useState<HintStage>("none");
   const [hintCount, setHintCount] = useState(0);
   const [highlightedSquares, setHighlightedSquares] = useState<{ from?: string; to?: string } | null>(null);
+  const [hintLoading, setHintLoading] = useState(false);
+  const [hintPulse, setHintPulse] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [isWrongMoveActive, setIsWrongMoveActive] = useState(false);
@@ -227,6 +229,19 @@ export default function DailyChallengePage() {
     return Math.max(diff, 0);
   }, [status?.reservation?.pendingExpiresAt, currentPuzzle]);
 
+  // Pulse the board wrapper continuously while a hint is showing.
+  // Uses hintStage instead of a one-shot flash so the orange glow persists
+  // and is impossible to miss.
+  useEffect(() => {
+    if (hintStage === 'none') {
+      setHintPulse(false);
+      return;
+    }
+    setHintPulse(true);
+    const id = window.setInterval(() => setHintPulse((v) => !v), 500);
+    return () => window.clearInterval(id);
+  }, [hintStage]);
+
   const rewardLabel = useMemo(() => {
     const rawAmount = Number(status?.checkInAmountDisplay || 0);
     const amount = Number.isFinite(rawAmount)
@@ -364,7 +379,10 @@ export default function DailyChallengePage() {
   };
 
   const handleShowHint = async () => {
+    if (hintLoading) return;
+
     if (hintBalance <= 0) {
+      setHintLoading(true);
       setHintShopLoading(true);
       setShowHintShop(true);
       try {
@@ -417,37 +435,51 @@ export default function DailyChallengePage() {
       } catch {
         setHintShopItems([]);
       } finally {
+        setHintLoading(false);
         setHintShopLoading(false);
       }
       return;
     }
-    if (hintStage === "none") {
-      const ok = await consumeHint();
-      if (!ok) {
-        toast.error("Out of hints", { description: "Buy more in the Store." });
-        return;
-      }
-      setHintCount((prev) => prev + 1);
-      setHintStage("piece");
-      const nextMove = chessBoardRef.current?.getNextMove();
-      if (nextMove) {
-        setHighlightedSquares({ from: nextMove.from });
-      }
+
+    // Pre-check: avoid showing an optimistic hint that's doomed to fail.
+    if (hintBalance <= 0) {
+      toast.error("Out of hints", { description: "Buy more in the Store." });
       return;
     }
 
-    if (hintStage === "piece") {
+    // Snapshot state so a failed background consume can be rolled back.
+    const prevStage = hintStage;
+    const prevHighlighted = highlightedSquares;
+    const prevHintCount = hintCount;
+
+    const targetStage: HintStage = hintStage === "none" ? "piece" : "move";
+    const nextMove = chessBoardRef.current?.getNextMove();
+
+    // Reveal immediately — no network wait.
+    setHintLoading(true);
+    setHintStage(targetStage);
+    setHintCount((c) => c + 1);
+    if (nextMove) {
+      setHighlightedSquares(
+        targetStage === "piece"
+          ? { from: nextMove.from }
+          : { from: nextMove.from, to: nextMove.to }
+      );
+    }
+
+    // Consume in the background. Roll back ONLY on failure.
+    try {
       const ok = await consumeHint();
-      if (!ok) {
-        toast.error("Out of hints", { description: "Buy more in the Store." });
-        return;
-      }
-      setHintCount((prev) => prev + 1);
-      setHintStage("move");
-      const nextMove = chessBoardRef.current?.getNextMove();
-      if (nextMove) {
-        setHighlightedSquares({ from: nextMove.from, to: nextMove.to });
-      }
+      if (!ok) throw new Error("consume failed");
+    } catch {
+      setHintStage(prevStage);
+      setHighlightedSquares(prevHighlighted);
+      setHintCount(prevHintCount);
+      toast.error("Hint couldn't be confirmed", {
+        description: "That hint was reverted — please try again.",
+      });
+    } finally {
+      setHintLoading(false);
     }
   };
 
@@ -659,7 +691,9 @@ export default function DailyChallengePage() {
               )}
 
               {/* Board */}
-              <div className="w-full max-w-[560px] aspect-square">
+              <div className={`w-full max-w-[560px] aspect-square transition-shadow duration-300 ${
+                hintPulse ? 'shadow-[0_0_0_5px_rgba(255,120,0,0.9)]' : ''
+              }`}>
                 <ChessBoard
                   ref={chessBoardRef}
                   puzzle={currentPuzzle}
@@ -718,26 +752,50 @@ export default function DailyChallengePage() {
                 </button>
               </div>
 
-              {/* Full-width Hint Button */}
+              {/* Full-width Hint Button (animated collapse on wrong move) */}
               {!isCompleted && (
                 <div className={`overflow-hidden transition-all duration-300 ${
-                  isWrongMoveActive ? 'max-h-0 opacity-0' : 'max-h-16 opacity-100'
+                  isWrongMoveActive ? 'max-h-0 opacity-0' : 'max-h-28 opacity-100'
                 }`}>
+                  {/* Persistent hint-active indicator */}
+                  {hintStage !== 'none' && (
+                    <div className="bg-orange-300 border-2 border-black px-3 py-2 font-black text-xs uppercase text-center inline-flex items-center gap-1.5 justify-center w-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] mb-2 animate-in fade-in duration-200">
+                      <Lightbulb className="w-3.5 h-3.5 shrink-0" />
+                      {hintStage === 'piece'
+                        ? "Hint active — piece to move is highlighted"
+                        : "Hint active — full move is shown"}
+                    </div>
+                  )}
+
                   {hintStage !== 'move' ? (
                     <button
                       onClick={handleShowHint}
-                      className="w-full text-black py-3 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px transition-all bg-yellow-400 inline-flex items-center justify-center gap-2"
+                      disabled={hintLoading}
+                      className={`w-full text-black py-3 px-4 font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all bg-yellow-400 inline-flex items-center justify-center gap-2 ${
+                        hintLoading
+                          ? "opacity-60 cursor-wait"
+                          : "hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px"
+                      }`}
                     >
-                      <Lightbulb className="w-4 h-4" />
-                      {hintBalance > 0 ? (
+                      {hintLoading ? (
                         <>
-                          <span>Hint</span>
-                          <span className="bg-black text-yellow-400 px-2 py-0.5 text-xs font-black">{hintBalance}</span>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Showing…</span>
                         </>
                       ) : (
                         <>
-                          <span>Get Hints</span>
-                          <span className="bg-black text-yellow-400 px-1.5 py-0.5 text-xs font-black">+</span>
+                          <Lightbulb className="w-4 h-4" />
+                          {hintBalance > 0 ? (
+                            <>
+                              <span>Hint</span>
+                              <span className="bg-black text-yellow-400 px-2 py-0.5 text-xs font-black">{hintBalance}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Get Hints</span>
+                              <span className="bg-black text-yellow-400 px-1.5 py-0.5 text-xs font-black">+</span>
+                            </>
+                          )}
                         </>
                       )}
                     </button>

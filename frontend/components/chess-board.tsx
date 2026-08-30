@@ -37,6 +37,7 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
   const [wrongMoveSquares, setWrongMoveSquares] = useState<Record<string, React.CSSProperties>>({});
   const [isWrongMoveActive, setIsWrongMoveActive] = useState(false);
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [hintPulseOn, setHintPulseOn] = useState(false);
   
   // Move history for back/forward navigation
   const [moveHistory, setMoveHistory] = useState<{ fen: string; moveIndex: number }[]>([]);
@@ -190,6 +191,29 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
   useEffect(() => {
     onWrongMoveStateChange?.(isWrongMoveActive);
   }, [isWrongMoveActive, onWrongMoveStateChange]);
+
+  // Whenever a hint highlight is set, clear any leftover manual-selection
+  // markers (yellow "selected square" + move-dot squares) so they never
+  // visually compete with or obscure the hint highlight.
+  useEffect(() => {
+    if (highlightedSquares) {
+      setMoveFrom("");
+      setOptionSquares({});
+    }
+  }, [highlightedSquares]);
+
+  // Pulse the hint squares continuously by toggling a boolean every 500ms.
+  // This is more reliable than CSS `animation` in inline styles, which
+  // react-chessboard v5 may silently drop from squareStyles.
+  useEffect(() => {
+    if (!highlightedSquares) {
+      setHintPulseOn(false);
+      return;
+    }
+    setHintPulseOn(true);
+    const id = window.setInterval(() => setHintPulseOn((v) => !v), 500);
+    return () => window.clearInterval(id);
+  }, [highlightedSquares]);
 
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
@@ -564,18 +588,29 @@ const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(({ puzzle, onCompl
 
   if (!mounted) return null;
 
-  // Build highlight styles for hint (supports both from and to squares)
+  // Build highlight styles for hint (supports both from and to squares).
+  // Uses a React-driven pulse (hintPulseOn toggles every 500ms) instead of
+  // CSS animation, because react-chessboard v5 may silently strip the
+  // `animation` property from squareStyles inline styles.
   const hintSquareStyles: Record<string, React.CSSProperties> = {};
   if (highlightedSquares?.from) {
     hintSquareStyles[highlightedSquares.from] = {
-      background: "rgba(255, 200, 0, 0.7)",
-      boxShadow: "inset 0 0 0 4px rgba(255, 150, 0, 1)",
+      background: hintPulseOn
+        ? "rgba(255, 190, 0, 0.85)"
+        : "rgba(255, 160, 0, 0.65)",
+      boxShadow: hintPulseOn
+        ? "inset 0 0 0 6px rgba(255, 100, 0, 1)"
+        : "inset 0 0 0 3px rgba(255, 140, 0, 0.7)",
     };
   }
   if (highlightedSquares?.to) {
     hintSquareStyles[highlightedSquares.to] = {
-      background: "rgba(100, 200, 100, 0.7)",
-      boxShadow: "inset 0 0 0 4px rgba(50, 150, 50, 1)",
+      background: hintPulseOn
+        ? "rgba(80, 210, 80, 0.85)"
+        : "rgba(100, 180, 100, 0.65)",
+      boxShadow: hintPulseOn
+        ? "inset 0 0 0 6px rgba(30, 160, 30, 1)"
+        : "inset 0 0 0 3px rgba(40, 150, 40, 0.7)",
     };
   }
 
